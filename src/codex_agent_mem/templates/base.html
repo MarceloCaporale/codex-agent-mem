@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}codex-agent-mem{% endblock %}</title>
+  <link rel="stylesheet" href="/static/inspector.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div>
+        <a class="brand" href="/ui">codex-agent-mem</a>
+        <p class="subtitle">Local memory inspector for Codex turns, observations, and decisions.</p>
+      </div>
+      <div class="meta">
+        <span class="pill">DB</span>
+        <code>{{ db_path }}</code>
+      </div>
+    </header>
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

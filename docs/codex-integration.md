@@ -1,9 +1,13 @@
 # Codex Integration
 
-`codex-agent-mem` integrates with Codex using two surfaces:
+`codex-agent-mem` integrates with Codex using two runtime surfaces:
 
 1. `notify` for turn capture
 2. MCP stdio for retrieval
+
+It also exposes a local FastAPI inspector for humans:
+
+3. `/ui` for project, session, turn, and observation browsing
 
 ## Capture flow
 

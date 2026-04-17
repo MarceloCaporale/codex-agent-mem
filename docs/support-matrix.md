@@ -16,7 +16,7 @@
 | Codex App Server ingestion | Not yet supported | Deferred |
 | Ollama adapter | Not yet supported | Deferred |
 | Vector search / embeddings | Not yet supported | Deferred |
-| UI | Not yet supported | Deferred |
+| Local inspection UI | Supported | Served by FastAPI at `/ui` |
 
 ## Version support
 

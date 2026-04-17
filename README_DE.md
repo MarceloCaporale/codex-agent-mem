@@ -8,7 +8,7 @@ codex-agent-mem speichert dauerhafte Erkenntnisse aus Agent-Turns in lokalem SQL
 
 ## Status
 
-`0.2.1` ist die aktuelle öffentliche Basis-Release.
+`0.3.0` ist die aktuelle öffentliche Basis-Release.
 
 Was heute funktioniert:
 
@@ -16,6 +16,7 @@ Was heute funktioniert:
 - lokale SQLite-Persistenz mit FTS5
 - heuristische Extraktion von `session_summary` und `decision`
 - FastAPI-Inspektions-API
+- lokale Inspektions-UI unter `/ui`
 - MCP-stdio-Server mit:
   - `mem_search`
   - `mem_get`
@@ -27,7 +28,6 @@ Was bewusst noch nicht im Scope ist:
 
 - Embeddings
 - Vector Stores
-- UI
 - Codex App Server Ingestion
 - Codex-Hooks-Adapter
 - Ollama-Adapter
@@ -86,6 +86,12 @@ Die Inspektions-API starten:
 
 ```powershell
 codex-agent-mem-api --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+Danach im Browser öffnen:
+
+```text
+http://127.0.0.1:37770/ui
 ```
 
 Den MCP-Server starten:

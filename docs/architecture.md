@@ -7,6 +7,7 @@ codex-agent-mem stays intentionally narrow in the current release line:
 3. the event is persisted into local SQLite
 4. heuristics extract a `session_summary` and zero or more `decision` observations
 5. Codex or another client reads those observations through MCP
+6. the local FastAPI inspector renders projects, sessions, turns, and observations from the same store
 
 ## Design choices
 
@@ -27,7 +28,6 @@ codex-agent-mem stays intentionally narrow in the current release line:
 
 - embeddings
 - vector search
-- UI
 - App Server capture
 - hooks capture
 - Ollama adapter

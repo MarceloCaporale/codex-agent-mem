@@ -37,6 +37,12 @@ Start the inspection API:
 codex-agent-mem-api --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
+Then open the local inspector:
+
+```text
+http://127.0.0.1:37770/ui
+```
+
 Start the MCP server:
 
 ```powershell

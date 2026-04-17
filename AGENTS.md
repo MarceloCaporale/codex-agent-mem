@@ -14,12 +14,13 @@ This repository is intentionally optimized for coding agents, deep-research tool
 - Current durable store: local SQLite
 - Current retrieval surface: MCP stdio
 - Current capture path: Codex `notify` on `agent-turn-complete`
+- Current inspection surface: local FastAPI UI at `/ui`
 - Current extraction strategy: heuristic `session_summary` and `decision` extraction
 
 ## What this project is not yet
 
 - Not an embeddings or vector database platform
-- Not a UI product
+- Not a full analytics UI product
 - Not an App Server capture layer
 - Not a hooks-based Codex integration
 - Not a multi-agent orchestration framework

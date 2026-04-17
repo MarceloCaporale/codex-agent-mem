@@ -2,3 +2,5 @@ include README.md
 include LICENSE
 include CHANGELOG.md
 recursive-include src/codex_agent_mem *.sql
+recursive-include src/codex_agent_mem/templates *.html
+recursive-include src/codex_agent_mem/static *.css

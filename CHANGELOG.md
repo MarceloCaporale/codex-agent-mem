@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0 - 2026-04-17
+
+- Added a local inspection UI served by FastAPI for projects, sessions, turns, observations, and decisions.
+- Added packaged HTML templates and CSS so the inspector works from installed wheels, not just from source checkouts.
+- Expanded the store and tests to cover inspector views and turn-level browsing.
+
 ## 0.2.1 - 2026-04-17
 
 - Updated the generated Codex config snippet to auto-approve the read-only MCP retrieval tools.

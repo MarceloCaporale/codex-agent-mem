@@ -8,7 +8,7 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 
 ## 状态
 
-`0.2.1` 是当前的公开基础版本。
+`0.3.0` 是当前的公开基础版本。
 
 当前已实现：
 
@@ -16,6 +16,7 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 - 基于 FTS5 的本地 SQLite 持久化
 - 对 `session_summary` 和 `decision` 的启发式提取
 - FastAPI 检查 API
+- 位于 `/ui` 的本地检查界面
 - 通过 stdio 运行的 MCP 服务器，包含：
   - `mem_search`
   - `mem_get`
@@ -27,7 +28,6 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 
 - embeddings
 - 向量存储
-- UI
 - Codex App Server 写入
 - Codex hooks 适配器
 - Ollama 适配器
@@ -86,6 +86,12 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 
 ```powershell
 codex-agent-mem-api --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+然后在浏览器打开：
+
+```text
+http://127.0.0.1:37770/ui
 ```
 
 启动 MCP 服务器：

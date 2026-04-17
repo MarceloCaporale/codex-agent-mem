@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Inspector | codex-agent-mem{% endblock %}
+
+{% block content %}
+  <section class="hero">
+    <div>
+      <h1>Memory Inspector</h1>
+      <p>Browse captured projects, recent observations, and search across durable memory without leaving the local machine.</p>
+    </div>
+    <form class="searchbar" method="get" action="/ui">
+      <input type="search" name="q" value="{{ query }}" placeholder="Search observations, summaries, or decisions">
+      <input type="text" name="project_key" value="{{ project_key }}" placeholder="Optional project key">
+      <button type="submit">Search</button>
+    </form>
+  </section>
+
+  <section class="layout two-up">
+    <article class="panel">
+      <div class="panel-head">
+        <h2>Projects</h2>
+        <span class="count">{{ projects|length }}</span>
+      </div>
+      {% if projects %}
+        <div class="project-list">
+          {% for project in projects %}
+            <a class="project-card" href="/ui/projects/{{ project.project_key }}">
+              <div class="project-card-top">
+                <strong>{{ project.name }}</strong>
+                <code>{{ project.project_key }}</code>
+              </div>
+              <p class="muted">{{ project.root_path or "No root path captured yet" }}</p>
+              <div class="stats">
+                <span>{{ project.sessions }} sessions</span>
+                <span>{{ project.turns }} turns</span>
+                <span>{{ project.observations }} observations</span>
+                <span>{{ project.active_decisions }} decisions</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No projects captured yet.</div>
+      {% endif %}
+    </article>
+
+    <article class="panel">
+      <div class="panel-head">
+        <h2>{% if query %}Search Results{% else %}Recent Observations{% endif %}</h2>
+        <span class="count">{% if query %}{{ search_results|length }}{% else %}{{ recent_observations|length }}{% endif %}</span>
+      </div>
+
+      {% if query %}
+        {% if search_results %}
+          <div class="observation-list">
+            {% for item in search_results %}
+              <a class="observation-row" href="/ui/projects/{{ item.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
+                <div class="observation-row-top">
+                  <span class="type">{{ item.type }}</span>
+                  <code>{{ item.project_key }}</code>
+                </div>
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.summary }}</p>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">No results matched this query.</div>
+        {% endif %}
+      {% else %}
+        {% if recent_observations %}
+          <div class="observation-list">
+            {% for item in recent_observations %}
+              <a class="observation-row" href="/ui/projects/{{ item.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
+                <div class="observation-row-top">
+                  <span class="type">{{ item.type }}</span>
+                  <code>{{ item.project_key }}</code>
+                </div>
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.summary }}</p>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">No observations captured yet.</div>
+        {% endif %}
+      {% endif %}
+    </article>
+  </section>
+{% endblock %}

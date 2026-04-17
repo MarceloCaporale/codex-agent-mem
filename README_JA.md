@@ -8,7 +8,7 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 
 ## 状態
 
-`0.2.1` は現在の公開ベースリリースです。
+`0.3.0` は現在の公開ベースリリースです。
 
 現在動作しているもの:
 
@@ -16,6 +16,7 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 - FTS5 を使ったローカル SQLite 永続化
 - `session_summary` と `decision` のヒューリスティック抽出
 - FastAPI ベースの検査 API
+- `/ui` で開けるローカル検査 UI
 - 以下を提供する MCP stdio サーバー:
   - `mem_search`
   - `mem_get`
@@ -27,7 +28,6 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 
 - embeddings
 - ベクターストア
-- UI
 - Codex App Server 取り込み
 - Codex hooks アダプター
 - Ollama アダプター
@@ -86,6 +86,12 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 
 ```powershell
 codex-agent-mem-api --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+その後、ブラウザで次を開きます:
+
+```text
+http://127.0.0.1:37770/ui
 ```
 
 MCP サーバーを起動:

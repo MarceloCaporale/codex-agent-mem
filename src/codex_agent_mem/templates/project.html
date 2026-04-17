@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} | codex-agent-mem{% endblock %}
+
+{% block content %}
+  <section class="hero compact">
+    <div>
+      <a class="backlink" href="/ui">← All projects</a>
+      <h1>{{ project.name }}</h1>
+      <p><code>{{ project.project_key }}</code></p>
+      <p class="muted">{{ project.root_path or "No root path captured yet" }}</p>
+    </div>
+    <div class="stats large">
+      <span>{{ counts.sessions }} sessions</span>
+      <span>{{ counts.turns }} turns</span>
+      <span>{{ counts.observations }} observations</span>
+      <span>{{ counts.active_decisions }} active decisions</span>
+    </div>
+  </section>
+
+  <form class="searchbar" method="get" action="/ui/projects/{{ project.project_key }}">
+    {% if selected_session %}<input type="hidden" name="session_id" value="{{ selected_session.id }}">{% endif %}
+    {% if selected_turn %}<input type="hidden" name="turn_id" value="{{ selected_turn.id }}">{% endif %}
+    <input type="search" name="q" value="{{ query }}" placeholder="Search within this project">
+    <button type="submit">Search</button>
+  </form>
+
+  <section class="layout inspector-grid">
+    <article class="panel">
+      <div class="panel-head">
+        <h2>Sessions</h2>
+        <span class="count">{{ sessions|length }}</span>
+      </div>
+      {% if sessions %}
+        <div class="session-list">
+          {% for session in sessions %}
+            <a class="session-card {% if selected_session and session.id == selected_session.id %}active{% endif %}" href="/ui/projects/{{ project.project_key }}?session_id={{ session.id }}">
+              <strong>{{ session.display_label }}</strong>
+              <p class="muted">{{ session.display_subtitle }}</p>
+              <small class="secondary-code">{{ session.external_session_id }}</small>
+              <div class="stats">
+                <span>{{ session.turn_count }} turns</span>
+                <span>{{ session.observation_count }} observations</span>
+              </div>
+              <small>{{ session.last_turn_at or session.display_started_at }}</small>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No sessions captured for this project.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
+        <h2>Turns</h2>
+        <span class="count">{{ turns|length }}</span>
+      </div>
+      {% if turns %}
+        <div class="turn-list">
+          {% for turn in turns %}
+            <a class="turn-row {% if selected_turn and turn.id == selected_turn.id %}active{% endif %}" href="/ui/projects/{{ project.project_key }}?session_id={{ turn.session_id }}&turn_id={{ turn.id }}">
+              <strong>{{ turn.external_turn_id }}</strong>
+              <p>{{ turn.assistant_preview or "No assistant message" }}</p>
+              <div class="stats">
+                <span>{{ turn.observation_count }} observations</span>
+                <span>{{ turn.captured_at }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">Select a session to inspect its turns.</div>
+      {% endif %}
+    </article>
+
+    <article class="panel wide">
+      <div class="panel-head">
+        <h2>Selected Turn</h2>
+        {% if selected_turn %}<a class="inline-link" href="/ui/turns/{{ selected_turn.id }}">Open full view</a>{% endif %}
+      </div>
+
+      {% if selected_turn %}
+        <div class="turn-meta">
+          <span class="pill">Session</span>
+          <span>{{ selected_session.display_label if selected_session else selected_turn.external_session_id }}</span>
+          <span class="pill">Turn</span>
+          <code>{{ selected_turn.external_turn_id }}</code>
+        </div>
+        <p class="muted session-technical-id">{{ selected_turn.external_session_id }}</p>
+
+        <div class="chat-block">
+          <h3>User input</h3>
+          {% for message in selected_turn.input_messages %}
+            <pre class="message user">{{ message }}</pre>
+          {% endfor %}
+          {% if not selected_turn.input_messages %}
+            <div class="empty">No input messages captured.</div>
+          {% endif %}
+        </div>
+
+        <div class="chat-block">
+          <h3>Assistant message</h3>
+          <pre class="message assistant">{{ selected_turn.assistant_message }}</pre>
+        </div>
+
+        <div class="chat-block">
+          <h3>Observations extracted from this turn</h3>
+          {% if selected_turn.observations %}
+            <div class="observation-list">
+              {% for item in selected_turn.observations %}
+                <div class="observation-row static">
+                  <div class="observation-row-top">
+                    <span class="type">{{ item.type }}</span>
+                    <span>#{{ item.id }}</span>
+                  </div>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.summary }}</p>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty">No observations extracted from this turn.</div>
+          {% endif %}
+        </div>
+
+        <details class="details-block">
+          <summary>Raw payload</summary>
+          <pre>{{ selected_turn.raw_payload | tojson(indent=2) }}</pre>
+        </details>
+      {% else %}
+        <div class="empty">No turn selected yet.</div>
+      {% endif %}
+    </article>
+
+    <article class="panel">
+      <div class="panel-head">
+        <h2>{% if query %}Project Search{% else %}Recent Observations{% endif %}</h2>
+        <span class="count">{% if query %}{{ search_results|length }}{% else %}{{ recent_observations|length }}{% endif %}</span>
+      </div>
+      <div class="observation-list">
+        {% set items = search_results if query else recent_observations %}
+        {% if items %}
+          {% for item in items %}
+            <a class="observation-row" href="/ui/projects/{{ project.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
+              <div class="observation-row-top">
+                <span class="type">{{ item.type }}</span>
+                <span>{{ item.updated_at }}</span>
+              </div>
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.summary }}</p>
+            </a>
+          {% endfor %}
+        {% else %}
+          <div class="empty">No observations to show.</div>
+        {% endif %}
+      </div>
+
+      <div class="panel-head nested">
+        <h2>Recent Decisions</h2>
+        <span class="count">{{ recent_decisions|length }}</span>
+      </div>
+      {% if recent_decisions %}
+        <div class="decision-list">
+          {% for decision in recent_decisions %}
+            <div class="decision-card">
+              <strong>{{ decision.title }}</strong>
+              <p>{{ decision.decision_text }}</p>
+              <small>{{ decision.updated_at }}</small>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No decisions extracted yet.</div>
+      {% endif %}
+    </article>
+  </section>
+{% endblock %}

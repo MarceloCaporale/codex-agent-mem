@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Turn {{ turn.external_turn_id }} | codex-agent-mem{% endblock %}
+
+{% block content %}
+  <section class="hero compact">
+    <div>
+      <a class="backlink" href="/ui/projects/{{ turn.project_key }}?session_id={{ turn.session_id }}&turn_id={{ turn.id }}">← Back to project</a>
+      <h1>Turn {{ turn.external_turn_id }}</h1>
+      <p><code>{{ turn.project_key }}</code></p>
+    </div>
+    <div class="stats large">
+      <span>{{ turn.captured_at }}</span>
+      <span>{{ turn.observations|length }} observations</span>
+    </div>
+  </section>
+
+  <section class="layout one-up">
+    <article class="panel wide">
+      <div class="chat-block">
+        <h2>User input</h2>
+        {% for message in turn.input_messages %}
+          <pre class="message user">{{ message }}</pre>
+        {% endfor %}
+        {% if not turn.input_messages %}
+          <div class="empty">No input messages captured.</div>
+        {% endif %}
+      </div>
+
+      <div class="chat-block">
+        <h2>Assistant message</h2>
+        <pre class="message assistant">{{ turn.assistant_message }}</pre>
+      </div>
+
+      <div class="chat-block">
+        <h2>Tool events</h2>
+        {% if turn.tool_events %}
+          <pre>{{ turn.tool_events | tojson(indent=2) }}</pre>
+        {% else %}
+          <div class="empty">No tool events captured for this turn.</div>
+        {% endif %}
+      </div>
+
+      <div class="chat-block">
+        <h2>Observations</h2>
+        {% if turn.observations %}
+          <div class="observation-list">
+            {% for item in turn.observations %}
+              <div class="observation-row static">
+                <div class="observation-row-top">
+                  <span class="type">{{ item.type }}</span>
+                  <span>#{{ item.id }}</span>
+                </div>
+                <strong>{{ item.title }}</strong>
+                <p>{{ item.summary }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">No observations extracted.</div>
+        {% endif %}
+      </div>
+
+      <details class="details-block" open>
+        <summary>Raw payload</summary>
+        <pre>{{ turn.raw_payload | tojson(indent=2) }}</pre>
+      </details>
+    </article>
+  </section>
+{% endblock %}

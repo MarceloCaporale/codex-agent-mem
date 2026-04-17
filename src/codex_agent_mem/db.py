@@ -210,13 +210,26 @@ class CodexAgentMemStore:
 
     def list_projects(self) -> list[dict[str, Any]]:
         rows = self.conn.execute(
-            "SELECT id, project_key, name, root_path, updated_at FROM projects ORDER BY updated_at DESC"
+            """
+            SELECT
+              p.id,
+              p.project_key,
+              p.name,
+              p.root_path,
+              p.updated_at,
+              (SELECT COUNT(*) FROM sessions s WHERE s.project_id = p.id) AS sessions,
+              (SELECT COUNT(*) FROM turns t JOIN sessions s ON s.id = t.session_id WHERE s.project_id = p.id) AS turns,
+              (SELECT COUNT(*) FROM observations o WHERE o.project_id = p.id) AS observations,
+              (SELECT COUNT(*) FROM decisions d WHERE d.project_id = p.id AND d.status = 'active') AS active_decisions
+            FROM projects p
+            ORDER BY p.updated_at DESC
+            """
         ).fetchall()
         return [dict(row) for row in rows]
 
     def recent_observations(self, project_key: str | None = None, limit: int = 10) -> list[dict[str, Any]]:
         sql = """
-        SELECT o.id, p.project_key, o.type, o.title, o.summary, o.status, o.updated_at
+        SELECT o.id, p.project_key, o.session_id, o.turn_id, o.type, o.title, o.summary, o.status, o.updated_at
         FROM observations o
         JOIN projects p ON p.id = o.project_id
         {where}
@@ -244,7 +257,7 @@ class CodexAgentMemStore:
         try:
             rows = self.conn.execute(
                 f"""
-                SELECT o.id, p.project_key, o.type, o.title, o.summary, o.status, o.updated_at,
+                SELECT o.id, p.project_key, o.session_id, o.turn_id, o.type, o.title, o.summary, o.status, o.updated_at,
                        bm25(observations_fts) AS rank
                 FROM observations_fts
                 JOIN observations o ON o.id = observations_fts.rowid
@@ -265,7 +278,7 @@ class CodexAgentMemStore:
             params.append(limit)
             rows = self.conn.execute(
                 f"""
-                SELECT o.id, p.project_key, o.type, o.title, o.summary, o.status, o.updated_at
+                SELECT o.id, p.project_key, o.session_id, o.turn_id, o.type, o.title, o.summary, o.status, o.updated_at
                 FROM observations o
                 JOIN projects p ON p.id = o.project_id
                 WHERE (o.title LIKE ? OR o.summary LIKE ? OR o.detail LIKE ?) {where}
@@ -294,6 +307,118 @@ class CodexAgentMemStore:
             (observation_id,),
         ).fetchall()
         result["files"] = [f["file_path"] for f in files]
+        return result
+
+    def list_sessions(self, project_key: str, limit: int = 50) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT
+              s.id,
+              s.project_id,
+              s.runtime,
+              s.external_session_id,
+              s.started_at,
+              s.ended_at,
+              s.cwd,
+              s.metadata_json,
+              (
+                SELECT t_first.input_messages_json
+                FROM turns t_first
+                WHERE t_first.session_id = s.id
+                ORDER BY t_first.captured_at ASC, t_first.id ASC
+                LIMIT 1
+              ) AS first_input_messages_json,
+              COUNT(DISTINCT t.id) AS turn_count,
+              COUNT(DISTINCT o.id) AS observation_count,
+              MAX(t.captured_at) AS last_turn_at
+            FROM sessions s
+            JOIN projects p ON p.id = s.project_id
+            LEFT JOIN turns t ON t.session_id = s.id
+            LEFT JOIN observations o ON o.session_id = s.id
+            WHERE p.project_key = ?
+            GROUP BY s.id
+            ORDER BY COALESCE(MAX(t.captured_at), s.started_at) DESC, s.id DESC
+            LIMIT ?
+            """,
+            (project_key, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_session(self, session_id: int) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            """
+            SELECT
+              s.*,
+              p.project_key,
+              p.name AS project_name,
+              (
+                SELECT t_first.input_messages_json
+                FROM turns t_first
+                WHERE t_first.session_id = s.id
+                ORDER BY t_first.captured_at ASC, t_first.id ASC
+                LIMIT 1
+              ) AS first_input_messages_json,
+              (SELECT COUNT(*) FROM turns t WHERE t.session_id = s.id) AS turn_count,
+              (SELECT COUNT(*) FROM observations o WHERE o.session_id = s.id) AS observation_count
+            FROM sessions s
+            JOIN projects p ON p.id = s.project_id
+            WHERE s.id = ?
+            """,
+            (session_id,),
+        ).fetchone()
+        return dict(row) if row is not None else None
+
+    def list_turns(self, session_id: int, limit: int = 50) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT
+              t.id,
+              t.session_id,
+              t.external_turn_id,
+              t.captured_at,
+              t.assistant_message,
+              SUBSTR(REPLACE(t.assistant_message, CHAR(10), ' '), 1, 180) AS assistant_preview,
+              COUNT(o.id) AS observation_count
+            FROM turns t
+            LEFT JOIN observations o ON o.turn_id = t.id
+            WHERE t.session_id = ?
+            GROUP BY t.id
+            ORDER BY t.captured_at DESC, t.id DESC
+            LIMIT ?
+            """,
+            (session_id, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_turn(self, turn_id: int) -> dict[str, Any] | None:
+        row = self.conn.execute(
+            """
+            SELECT
+              t.*,
+              s.external_session_id,
+              s.cwd,
+              p.project_key,
+              p.name AS project_name
+            FROM turns t
+            JOIN sessions s ON s.id = t.session_id
+            JOIN projects p ON p.id = s.project_id
+            WHERE t.id = ?
+            """,
+            (turn_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        result = dict(row)
+        observations = self.conn.execute(
+            """
+            SELECT id, project_id, session_id, turn_id, type, title, summary, status, updated_at
+            FROM observations
+            WHERE turn_id = ?
+            ORDER BY updated_at DESC, id DESC
+            """,
+            (turn_id,),
+        ).fetchall()
+        result["observations"] = [dict(obs) for obs in observations]
         return result
 
     def project_brief(self, project_key: str) -> dict[str, Any] | None:

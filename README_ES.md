@@ -8,7 +8,7 @@ codex-agent-mem persiste hallazgos durables de los turnos del agente en SQLite l
 
 ## Estado
 
-`0.2.1` es la release pública base actual.
+`0.3.0` es la release pública base actual.
 
 Hoy funciona:
 
@@ -16,6 +16,7 @@ Hoy funciona:
 - persistencia local en SQLite con FTS5
 - extraccion heuristica de `session_summary` y `decision`
 - API de inspeccion con FastAPI
+- UI local de inspeccion en `/ui`
 - servidor MCP por stdio con:
   - `mem_search`
   - `mem_get`
@@ -27,7 +28,6 @@ Lo que todavia queda fuera de alcance a proposito:
 
 - embeddings
 - vector stores
-- UI
 - ingesta desde Codex App Server
 - adaptador de hooks de Codex
 - adaptador para Ollama
@@ -86,6 +86,12 @@ Levanta la API de inspeccion:
 
 ```powershell
 codex-agent-mem-api --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+Luego abre:
+
+```text
+http://127.0.0.1:37770/ui
 ```
 
 Levanta el servidor MCP:

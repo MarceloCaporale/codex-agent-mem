@@ -10,7 +10,7 @@ Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex
 
 ## Status
 
-`0.2.1` is the current public baseline release.
+`0.3.0` is the current public baseline release.
 
 What works today:
 
@@ -18,6 +18,7 @@ What works today:
 - local SQLite persistence with FTS5
 - heuristic extraction of `session_summary` and `decision`
 - FastAPI inspection API
+- local inspection UI at `/ui`
 - MCP stdio server with:
   - `mem_search`
   - `mem_get`
@@ -29,7 +30,6 @@ What is intentionally not in scope yet:
 
 - embeddings
 - vector stores
-- UI
 - Codex App Server ingestion
 - Codex hooks adapter
 - Ollama adapter
@@ -111,6 +111,12 @@ Start the inspection API:
 
 ```powershell
 codex-agent-mem-api --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+Then open:
+
+```text
+http://127.0.0.1:37770/ui
 ```
 
 Start the MCP server:
