@@ -1,0 +1,15 @@
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tmp/
+.tmp-smoke/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.sqlite
+*.sqlite3
+*.egg-info/
+dist/
+build/

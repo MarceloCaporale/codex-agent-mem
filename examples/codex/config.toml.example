@@ -1,0 +1,21 @@
+# Example for ~/.codex/config.toml
+# Use single-quoted TOML strings on Windows so backslashes stay literal.
+# Replace the paths with your real install paths.
+
+notify = [
+  'C:\Path\To\python.exe',
+  '-m',
+  'codex_agent_mem.codex_notify',
+  '--project-from-cwd',
+  '--db-path',
+  'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db'
+]
+
+[mcp_servers."codex-agent-mem"]
+command = 'C:\Path\To\python.exe'
+args = [
+  '-m',
+  'codex_agent_mem.mcp_stdio',
+  '--db-path',
+  'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db'
+]

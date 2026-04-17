@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CodexNotifyAgentTurnComplete",
+  "type": "object",
+  "properties": {
+    "type": {"type": "string"},
+    "thread-id": {"type": "string"},
+    "turn-id": {"type": "string"},
+    "cwd": {"type": ["string", "null"]},
+    "input-messages": {
+      "type": "array",
+      "items": {"type": ["string", "object"]}
+    },
+    "last-assistant-message": {"type": ["string", "null"]},
+    "timestamp": {"type": ["string", "null"]}
+  },
+  "required": ["type"]
+}

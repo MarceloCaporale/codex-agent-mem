@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-agent-mem"
+version = "0.2.0"
+description = "Portable local-first memory for Codex and coding-agent workflows"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+keywords = ["codex", "mcp", "memory", "sqlite", "agents"]
+dependencies = [
+  "fastapi>=0.111",
+  "pydantic>=2.8",
+  "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "httpx>=0.27",
+  "pytest>=8.2",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+codex-agent-mem-api = "codex_agent_mem.api:main"
+codex-agent-mem-bootstrap-codex = "codex_agent_mem.bootstrap_codex:main"
+codex-agent-mem-codex-notify = "codex_agent_mem.codex_notify:main"
+codex-agent-mem-mcp = "codex_agent_mem.mcp_stdio:main"
+codex-agent-mem-smoke = "codex_agent_mem.smoke:main"
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+codex_agent_mem = ["schema.sql"]

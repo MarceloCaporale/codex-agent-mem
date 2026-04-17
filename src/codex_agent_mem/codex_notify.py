@@ -1,0 +1,117 @@
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+from typing import Any
+from urllib import request
+
+from codex_agent_mem.config import AppConfig
+from codex_agent_mem.db import CodexAgentMemStore
+from codex_agent_mem.ingest import now_iso, normalize_event
+
+
+def _flatten_input_messages(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        return [str(value)]
+    messages: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            messages.append(item)
+        elif isinstance(item, dict):
+            if isinstance(item.get("text"), str):
+                messages.append(item["text"])
+            elif isinstance(item.get("content"), str):
+                messages.append(item["content"])
+            else:
+                messages.append(json.dumps(item, ensure_ascii=False, sort_keys=True))
+        else:
+            messages.append(str(item))
+    return messages
+
+
+def derive_project_key(payload: dict[str, Any], explicit: str | None, project_from_cwd: bool) -> str:
+    if explicit:
+        return explicit
+    cwd = payload.get("cwd") or payload.get("cwd_path")
+    if project_from_cwd and cwd:
+        name = Path(str(cwd)).name.strip()
+        if name:
+            return name
+    return "default-project"
+
+
+def codex_notify_to_generic(payload: dict[str, Any], project_key: str) -> dict[str, Any]:
+    return {
+        "runtime": "codex",
+        "project_key": project_key,
+        "session_id": payload.get("thread-id") or payload.get("thread_id") or "unknown-session",
+        "turn_id": payload.get("turn-id") or payload.get("turn_id") or "unknown-turn",
+        "cwd": payload.get("cwd"),
+        "timestamp": payload.get("timestamp") or payload.get("emitted-at") or now_iso(),
+        "input_messages": _flatten_input_messages(payload.get("input-messages") or payload.get("input_messages")),
+        "assistant_message": payload.get("last-assistant-message") or payload.get("last_assistant_message") or "",
+        "tool_events": [],
+        "artifacts": [],
+        "metadata": {
+            "codex_notification_type": payload.get("type"),
+        },
+    }
+
+
+def ingest_via_http(api_base: str, raw_payload: dict[str, Any], project_key: str) -> None:
+    body = {
+        "payload": raw_payload,
+        "project_key": project_key,
+        "project_from_cwd": False,
+    }
+    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    req = request.Request(
+        api_base.rstrip("/") + "/ingest/codex-notify",
+        data=data,
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with request.urlopen(req, timeout=5) as resp:
+        _ = resp.read()
+
+
+def ingest_direct(db_path: Path, raw_payload: dict[str, Any], generic_payload: dict[str, Any]) -> None:
+    store = CodexAgentMemStore(db_path=db_path)
+    event = normalize_event(generic_payload)
+    store.ingest_event(raw_payload, event)
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Persist Codex notify events into codex_agent_mem")
+    parser.add_argument("payload_json", nargs="?", help="Raw JSON payload emitted by Codex notify")
+    parser.add_argument("--project-key", dest="project_key")
+    parser.add_argument("--project-from-cwd", action="store_true")
+    parser.add_argument("--db-path", type=Path, default=AppConfig().db_path)
+    parser.add_argument("--api-base", help="Optional local API base, e.g. http://127.0.0.1:37770")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    raw = args.payload_json or sys.stdin.read().strip()
+    if not raw:
+        return 0
+    payload = json.loads(raw)
+    if payload.get("type") != "agent-turn-complete":
+        return 0
+    project_key = derive_project_key(payload, explicit=args.project_key, project_from_cwd=args.project_from_cwd)
+    generic_payload = codex_notify_to_generic(payload, project_key)
+    if args.api_base:
+        ingest_via_http(args.api_base, payload, project_key)
+    else:
+        ingest_direct(args.db_path, payload, generic_payload)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
