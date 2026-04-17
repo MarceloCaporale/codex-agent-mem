@@ -5,7 +5,7 @@
 | Version line | Status |
 | --- | --- |
 | `0.2.x` | Supported |
-| `< 0.2.0` | Not supported |
+| `< 0.2.1` | Not supported |
 
 ## Scope
 

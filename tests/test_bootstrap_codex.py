@@ -12,3 +12,8 @@ def test_bootstrap_codex_snippet_uses_literal_paths():
     assert "'C:\\Tools\\Python\\python.exe'" in snippet
     assert "'C:\\Users\\YOU\\.codex_agent_mem\\codex_agent_mem.db'" in snippet
     assert "--project-from-cwd" in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_search]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_get]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_recent]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_project_brief]' in snippet
+    assert snippet.count('approval_mode = "approve"') == 4

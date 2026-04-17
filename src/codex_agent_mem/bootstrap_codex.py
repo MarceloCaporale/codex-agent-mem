@@ -7,6 +7,14 @@ from pathlib import Path
 from codex_agent_mem.config import AppConfig
 
 
+READ_ONLY_MCP_TOOLS = (
+    "mem_search",
+    "mem_get",
+    "mem_recent",
+    "mem_project_brief",
+)
+
+
 def build_codex_toml_snippet(
     *,
     python_exe: str,
@@ -39,6 +47,14 @@ def build_codex_toml_snippet(
             "]",
         ]
     )
+    for tool_name in READ_ONLY_MCP_TOOLS:
+        lines.extend(
+            [
+                "",
+                f'[mcp_servers."{server_name}".tools.{tool_name}]',
+                'approval_mode = "approve"',
+            ]
+        )
     return "\n".join(lines)
 
 

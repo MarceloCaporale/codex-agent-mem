@@ -27,6 +27,7 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 ```
 
 Paste the generated output into `~/.codex/config.toml`.
+The snippet already includes read-only MCP tool approvals needed for non-interactive Codex runs.
 
 ## 4. Optional local services
 

@@ -8,7 +8,7 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 
 ## 状態
 
-`0.2.0` は現在の公開ベースリリースです。
+`0.2.1` は現在の公開ベースリリースです。
 
 現在動作しているもの:
 
@@ -76,7 +76,7 @@ codex-agent-mem-smoke
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-このコマンドは `notify` と `[mcp_servers."codex-agent-mem"]` のブロックを出力するので、`~/.codex/config.toml` に貼り付けられます。
+このコマンドは `notify`、`[mcp_servers."codex-agent-mem"]`、そして読み取り専用 MCP ツールの承認ブロックを出力するので、`~/.codex/config.toml` に貼り付けられます。
 
 サンプルファイルは [examples/codex](./examples/codex/) にもあります。
 

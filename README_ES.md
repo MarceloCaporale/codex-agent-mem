@@ -8,7 +8,7 @@ codex-agent-mem persiste hallazgos durables de los turnos del agente en SQLite l
 
 ## Estado
 
-`0.2.0` es la release pública base actual.
+`0.2.1` es la release pública base actual.
 
 Hoy funciona:
 
@@ -76,7 +76,7 @@ Genera un snippet listo para pegar:
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-Eso imprime los bloques `notify` y `[mcp_servers."codex-agent-mem"]` para pegar en `~/.codex/config.toml`.
+Eso imprime el bloque `notify`, el bloque `[mcp_servers."codex-agent-mem"]` y las aprobaciones read-only de las tools MCP para pegar en `~/.codex/config.toml`.
 
 Tambien hay ejemplos en [examples/codex](./examples/codex/).
 

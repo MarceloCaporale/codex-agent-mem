@@ -31,7 +31,18 @@ The generated config uses:
 
 - `notify`
 - `[mcp_servers."codex-agent-mem"]`
+- per-tool `approval_mode = "approve"` for the read-only retrieval tools
 - Python module targets under `codex_agent_mem`
+
+## MCP tool approvals
+
+The generated snippet also marks the read-only retrieval tools as:
+
+```toml
+approval_mode = "approve"
+```
+
+That matters for non-interactive Codex runs such as `codex exec`, where MCP tool prompts can otherwise be cancelled before returning data.
 
 ## Windows note
 

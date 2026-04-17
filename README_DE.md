@@ -8,7 +8,7 @@ codex-agent-mem speichert dauerhafte Erkenntnisse aus Agent-Turns in lokalem SQL
 
 ## Status
 
-`0.2.0` ist die aktuelle öffentliche Basis-Release.
+`0.2.1` ist die aktuelle öffentliche Basis-Release.
 
 Was heute funktioniert:
 
@@ -76,7 +76,7 @@ Ein sofort einsetzbares Snippet erzeugen:
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-Das gibt die Blöcke `notify` und `[mcp_servers."codex-agent-mem"]` aus, die du in `~/.codex/config.toml` einfügen kannst.
+Das gibt den `notify`-Block, den Block `[mcp_servers."codex-agent-mem"]` und die Read-only-Freigaben für die MCP-Tools aus, die du in `~/.codex/config.toml` einfügen kannst.
 
 Beispieldateien liegen außerdem unter [examples/codex](./examples/codex/).
 

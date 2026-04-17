@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 - 2026-04-17
+
+- Updated the generated Codex config snippet to auto-approve the read-only MCP retrieval tools.
+- Updated the Codex config example and integration docs to match the real non-interactive Codex behavior.
+
 ## 0.2.0 - 2026-04-17
 
 - Restructured the project into a GitHub-ready repository root.

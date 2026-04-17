@@ -8,7 +8,7 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 
 ## 状态
 
-`0.2.0` 是当前的公开基础版本。
+`0.2.1` 是当前的公开基础版本。
 
 当前已实现：
 
@@ -76,7 +76,7 @@ codex-agent-mem-smoke
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-该命令会输出 `notify` 和 `[mcp_servers."codex-agent-mem"]` 配置块，可直接粘贴到 `~/.codex/config.toml`。
+该命令会输出 `notify`、`[mcp_servers."codex-agent-mem"]` 以及只读 MCP 工具的审批配置，可直接粘贴到 `~/.codex/config.toml`。
 
 示例文件也位于 [examples/codex](./examples/codex/)。
 

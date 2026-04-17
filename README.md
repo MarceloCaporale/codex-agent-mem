@@ -10,7 +10,7 @@ Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex
 
 ## Status
 
-`0.2.0` is the current public baseline release.
+`0.2.1` is the current public baseline release.
 
 What works today:
 
@@ -101,7 +101,7 @@ Generate a ready-to-paste snippet:
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-That prints the `notify` and `[mcp_servers."codex-agent-mem"]` blocks you can paste into `~/.codex/config.toml`.
+That prints the `notify` block, the `[mcp_servers."codex-agent-mem"]` block, and read-only MCP tool approvals you can paste into `~/.codex/config.toml`.
 
 Example files also live under [examples/codex](./examples/codex/).
 
