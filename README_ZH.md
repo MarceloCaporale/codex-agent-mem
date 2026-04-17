@@ -51,7 +51,7 @@ Codex 目前还不能通过一个 GitHub URL 一步安装任意 MCP 工具。
 直接从仓库地址安装：
 
 ```powershell
-pipx install "git+https://github.com/<org>/codex-agent-mem.git"
+pipx install "git+https://github.com/MarceloCaporale/codex-agent-mem.git"
 codex-agent-mem-smoke
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
@@ -59,7 +59,7 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 ### 方案 B：本地开发安装
 
 ```powershell
-git clone <repo-url>
+git clone https://github.com/MarceloCaporale/codex-agent-mem.git
 cd codex-agent-mem
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1

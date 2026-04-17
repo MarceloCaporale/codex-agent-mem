@@ -51,7 +51,7 @@ Este repositorio esta preparado para que ese flujo sea limpio y repetible.
 Instala directo desde la URL del repositorio:
 
 ```powershell
-pipx install "git+https://github.com/<org>/codex-agent-mem.git"
+pipx install "git+https://github.com/MarceloCaporale/codex-agent-mem.git"
 codex-agent-mem-smoke
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
@@ -59,7 +59,7 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 ### Opcion B: instalacion local de desarrollo
 
 ```powershell
-git clone <repo-url>
+git clone https://github.com/MarceloCaporale/codex-agent-mem.git
 cd codex-agent-mem
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1

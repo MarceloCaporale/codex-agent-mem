@@ -5,7 +5,7 @@ This is the shortest path from clone to a working local setup.
 ## 1. Clone and install
 
 ```powershell
-git clone <repo-url>
+git clone https://github.com/MarceloCaporale/codex-agent-mem.git
 cd codex-agent-mem
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1

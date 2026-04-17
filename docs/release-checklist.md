@@ -9,6 +9,6 @@
 - install the built wheel in a clean venv and rerun `codex-agent-mem-smoke`
 - verify Windows example config
 - review [discoverability metadata](./discoverability.md)
-- set final project URLs in `pyproject.toml` if the public repository location is already defined
+- verify `pyproject.toml` points at the live public repository URL
 - tag release
 - attach changelog

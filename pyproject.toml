@@ -36,6 +36,11 @@ dependencies = [
   "uvicorn>=0.30",
 ]
 
+[project.urls]
+Homepage = "https://github.com/MarceloCaporale/codex-agent-mem"
+Repository = "https://github.com/MarceloCaporale/codex-agent-mem"
+Issues = "https://github.com/MarceloCaporale/codex-agent-mem/issues"
+
 [project.optional-dependencies]
 dev = [
   "build>=1.2",
