@@ -1,8 +1,8 @@
 # codex-agent-mem
 
-Memoria portable y local-first para Codex y flujos con agentes de programacion.
+Otros idiomas: [English](./README.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
-English version: [README.md](./README.md)
+Memoria portable y local-first para Codex y flujos con agentes de programacion.
 
 codex-agent-mem persiste hallazgos durables de los turnos del agente en SQLite local, expone recuperacion compacta via MCP y mantiene la capa de memoria auditable y bajo control del runtime, en lugar de esconderla dentro de un unico runtime proveedor.
 

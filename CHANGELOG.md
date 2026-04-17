@@ -10,6 +10,8 @@
 - Aligned `--api-base` ingestion with the same `/ingest/codex-notify` contract used by direct Codex notify capture.
 - Hardened search with fallback behavior when FTS queries are malformed.
 - Expanded test coverage beyond the original v0.1 slice.
+- Added agent-facing and public-facing repository docs: `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, quickstart, integration, support matrix, design decisions, and discoverability metadata.
+- Updated package metadata to reflect Apache 2.0 licensing and stronger public discoverability keywords.
 
 ## 0.1.0 - 2026-04-17
 

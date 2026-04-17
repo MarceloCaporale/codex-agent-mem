@@ -5,10 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "codex-agent-mem"
 version = "0.2.0"
-description = "Portable local-first memory for Codex and coding-agent workflows"
+description = "Portable, auditable, local-first memory layer for Codex and other agent workflows"
 readme = "README.md"
 requires-python = ">=3.12"
-license = "MIT"
+license = "Apache-2.0"
 license-files = ["LICENSE"]
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -20,7 +20,16 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-keywords = ["codex", "mcp", "memory", "sqlite", "agents"]
+keywords = [
+  "codex",
+  "mcp",
+  "model-context-protocol",
+  "sqlite",
+  "agent-memory",
+  "coding-agents",
+  "local-first",
+  "fastapi",
+]
 dependencies = [
   "fastapi>=0.111",
   "pydantic>=2.8",

@@ -1,0 +1,59 @@
+# Codex Integration
+
+`codex-agent-mem` integrates with Codex using two surfaces:
+
+1. `notify` for turn capture
+2. MCP stdio for retrieval
+
+## Capture flow
+
+- Codex emits `agent-turn-complete`
+- `codex_agent_mem.codex_notify` normalizes the payload
+- the event is persisted into local SQLite
+- heuristic extraction produces `session_summary` and `decision` observations
+
+## Retrieval flow
+
+- Codex connects to the MCP server
+- the MCP server exposes:
+  - `mem_search`
+  - `mem_get`
+  - `mem_recent`
+  - `mem_project_brief`
+
+## Generate the config snippet
+
+```powershell
+codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+The generated config uses:
+
+- `notify`
+- `[mcp_servers."codex-agent-mem"]`
+- Python module targets under `codex_agent_mem`
+
+## Windows note
+
+Use single-quoted TOML strings so backslashes stay literal.
+
+See:
+
+- [examples/codex/config.toml.example](../examples/codex/config.toml.example)
+
+## Optional HTTP ingest
+
+The default and simplest path is direct DB ingestion through `notify`.
+
+An optional HTTP wrapper also exists:
+
+- [examples/codex/notify_writer.py](../examples/codex/notify_writer.py)
+
+That path is useful only if you explicitly want `notify -> HTTP -> local API`.
+
+## Current limits
+
+- no one-click GitHub MCP install
+- no Codex hooks adapter yet
+- no Codex App Server adapter yet
+- no automatic semantic memory layer
