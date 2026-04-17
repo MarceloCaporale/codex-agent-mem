@@ -1,8 +1,8 @@
 # codex-agent-mem
 
-Portable, local-first memory for Codex and coding-agent workflows.
+Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
-Spanish version: [README_ES.md](./README_ES.md)
+Portable, local-first memory for Codex and coding-agent workflows.
 
 codex-agent-mem persists durable findings from agent turns into local SQLite, exposes compact retrieval over MCP, and keeps the memory layer auditable and runtime-owned instead of hiding it inside one vendor runtime.
 
