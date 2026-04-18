@@ -49,6 +49,11 @@ INLINE_LABEL_SPLIT_RE = re.compile(
 )
 STATE_VALUE_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
 NOISY_STATE_VALUES = {"and", "or"}
+DIAGNOSTIC_TURN_PATTERNS = [
+    re.compile(r"use the codex-agent-mem mcp tool", re.IGNORECASE),
+    re.compile(r"respond exactly as\s*:", re.IGNORECASE),
+    re.compile(r"without using tools or reading files", re.IGNORECASE),
+]
 
 
 class HeuristicSummarizer:
@@ -188,7 +193,14 @@ class HeuristicSummarizer:
                     seen.add(dedupe_key)
         return observations
 
+    @staticmethod
+    def _is_diagnostic_turn(event: GenericEventEnvelope) -> bool:
+        combined = "\n".join(event.input_messages or [])
+        return any(pattern.search(combined) for pattern in DIAGNOSTIC_TURN_PATTERNS)
+
     def extract_observations(self, event: GenericEventEnvelope) -> list[Observation]:
+        if self._is_diagnostic_turn(event):
+            return []
         observations: list[Observation] = [
             Observation(
                 type="session_summary",

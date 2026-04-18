@@ -14,6 +14,9 @@
 | False-completion guardrails | Supported | The generated pack explicitly tells Codex not to declare completion while pending work remains |
 | MCP stdio retrieval | Supported | Current primary retrieval path |
 | `mem_context_pack` compact retrieval | Supported | Returns the compressed continuity pack and approximate token budget |
+| `mem_context_pack` auto budget | Supported | Selects the smallest fitting budget profile from `micro`, `normal`, and `full` |
+| `mem_recent_changes` delta retrieval | Supported | Summarizes what changed since the last meaningful continuity baseline |
+| `mem_scope_guard` continuity guard | Supported | Exposes must-not-drop scope, active constraints, and closure conflicts |
 | FastAPI inspection API | Supported | Local inspection surface |
 | Context sync metrics | Supported | Pack sync/skip events are stored per project and exposed through API/UI |
 | Optional HTTP notify wrapper | Supported | Secondary path only |
@@ -21,7 +24,7 @@
 | Codex App Server ingestion | Not yet supported | Deferred |
 | Ollama adapter | Not yet supported | Deferred |
 | Vector search / embeddings | Not yet supported | Deferred |
-| Local inspection UI | Supported | Served by FastAPI at `/ui` |
+| Local inspection UI | Supported | Served by FastAPI at `/ui`, including recent changes, scope guard, closure, and sync metrics |
 
 ## Version support
 

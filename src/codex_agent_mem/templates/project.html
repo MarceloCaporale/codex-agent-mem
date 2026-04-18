@@ -25,6 +25,41 @@
     <button type="submit">Search</button>
   </form>
 
+  {% if ui_summary %}
+    <section class="overview-grid">
+      <article class="overview-card tone-{{ ui_summary.status_tone }}">
+        <span class="eyebrow">Current Status</span>
+        <strong>{{ ui_summary.status_label }}</strong>
+        <small>{{ ui_summary.status_reason }}</small>
+      </article>
+      <article class="overview-card">
+        <span class="eyebrow">Pending Work</span>
+        <strong>{{ ui_summary.pending_count }}</strong>
+        <small>{{ "Still open" if ui_summary.pending_count else "No pending items" }}</small>
+      </article>
+      <article class="overview-card">
+        <span class="eyebrow">Blockers</span>
+        <strong>{{ ui_summary.blocker_count }}</strong>
+        <small>{{ "Need resolution" if ui_summary.blocker_count else "No blockers" }}</small>
+      </article>
+      <article class="overview-card">
+        <span class="eyebrow">DoD Gaps</span>
+        <strong>{{ ui_summary.dod_missing_count }}</strong>
+        <small>{{ "Definition of Done still incomplete" if ui_summary.dod_missing_count else "DoD covered" }}</small>
+      </article>
+      <article class="overview-card">
+        <span class="eyebrow">Current Pack Savings</span>
+        {% if ui_summary.saved_tokens is not none %}
+          <strong>{{ ui_summary.saved_tokens }} tokens</strong>
+          <small>~{{ ui_summary.saved_percent }}% smaller · {{ ui_summary.selected_budget }} budget</small>
+        {% else %}
+          <strong>n/a</strong>
+          <small>No favorable compression yet</small>
+        {% endif %}
+      </article>
+    </section>
+  {% endif %}
+
   <section class="layout inspector-grid">
     <article class="panel">
       <div class="panel-head">
@@ -78,10 +113,31 @@
         {% if selected_turn %}<a class="inline-link" href="/ui/turns/{{ selected_turn.id }}">Open full view</a>{% endif %}
       </div>
 
+      {% if ui_summary %}
+        <div class="status-banner tone-{{ ui_summary.status_tone }}">
+          <div>
+            <strong>{{ ui_summary.status_label }}</strong>
+            <p>
+              {{ ui_summary.status_reason }} · pending {{ ui_summary.pending_count }} · blockers {{ ui_summary.blocker_count }} · DoD gaps {{ ui_summary.dod_missing_count }}
+            </p>
+          </div>
+          <div class="banner-meta">
+            <span class="mini-pill">must not drop {{ ui_summary.must_not_drop_count }}</span>
+            {% if ui_summary.selected_budget %}
+              <span class="mini-pill">{{ ui_summary.selected_budget }} budget</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
       {% if context_pack %}
         <div class="chat-block">
           <h3>Generated Working Memory</h3>
-          <p class="muted">Budget {{ context_pack.stats.budget }} · approx {{ context_pack.stats.approx_pack_tokens }} tokens from {{ context_pack.stats.approx_source_tokens }} source tokens.</p>
+          <p class="muted">
+            Budget {{ context_pack.stats.budget }} · approx {{ context_pack.stats.approx_pack_tokens }} tokens from {{ context_pack.stats.approx_source_tokens }} source tokens.
+            {% if context_pack.stats.budget_reason %}Chosen because {{ context_pack.stats.budget_reason }}.{% endif %}
+          </p>
+          <p class="muted">This is the compact continuity block that gets synced into <code>AGENTS.md</code> only when compression is actually favorable.</p>
           <pre class="message assistant">{{ context_pack.text }}</pre>
         </div>
       {% endif %}
@@ -288,6 +344,125 @@
         </div>
       {% else %}
         <div class="empty">No closure metrics yet.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
+        <h2>Recent Changes</h2>
+        <span class="count">
+          {% if recent_changes and recent_changes.has_changes %}changed{% else %}stable{% endif %}
+        </span>
+      </div>
+      {% if recent_changes %}
+        <div class="decision-list">
+          <div class="decision-card">
+            <strong>Baseline</strong>
+            <p>{{ recent_changes.baseline_source }}</p>
+            <small>{{ recent_changes.since or "project start" }}</small>
+          </div>
+          <div class="decision-card">
+            <strong>Delta summary</strong>
+            <p>
+              +{{ recent_changes.new_pending_items|length }} pending ·
+              -{{ recent_changes.resolved_pending_items|length }} resolved ·
+              +{{ recent_changes.new_blockers|length }} blockers ·
+              -{{ recent_changes.cleared_blockers|length }} cleared ·
+              +{{ recent_changes.new_dod_gaps|length }} DoD gaps
+            </p>
+            <small>{{ "Changes detected" if recent_changes.has_changes else "No meaningful changes since baseline" }}</small>
+          </div>
+          {% if recent_changes.latest_user_request %}
+            <div class="decision-card">
+              <strong>Latest user request</strong>
+              <p>{{ recent_changes.latest_user_request.summary }}</p>
+              <small>{{ recent_changes.latest_user_request.updated_at }}</small>
+            </div>
+          {% endif %}
+          {% if recent_changes.new_pending_items %}
+            <div class="decision-card">
+              <strong>New pending</strong>
+              <ul class="compact-list">
+                {% for item in recent_changes.new_pending_items %}
+                  <li>{{ item.summary }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+          {% if recent_changes.resolved_pending_items %}
+            <div class="decision-card">
+              <strong>Resolved pending</strong>
+              <ul class="compact-list">
+                {% for item in recent_changes.resolved_pending_items %}
+                  <li>{{ item.summary }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+          {% if recent_changes.new_decisions %}
+            <div class="decision-card">
+              <strong>New decisions</strong>
+              <ul class="compact-list">
+                {% for item in recent_changes.new_decisions %}
+                  <li>{{ item.title or item.decision_text }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty">No recent change summary yet.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
+        <h2>Scope Guard</h2>
+        <span class="count">
+          {% if scope_guard and scope_guard.has_open_work %}open work{% else %}clear{% endif %}
+        </span>
+      </div>
+      {% if scope_guard %}
+        <div class="decision-list">
+          <div class="decision-card">
+            <strong>Guard state</strong>
+            <p>{{ "Open work remains" if scope_guard.has_open_work else "No open work detected" }}</p>
+            <small>
+              {{ scope_guard.pending_items|length }} pending ·
+              {{ scope_guard.blockers|length }} blockers ·
+              {{ scope_guard.dod_missing|length }} DoD gaps
+            </small>
+          </div>
+          {% if scope_guard.conflict_flags %}
+            <div class="decision-card">
+              <strong>Conflict flags</strong>
+              <p class="tag-row">
+                {% for item in scope_guard.conflict_flags %}
+                  <span class="mini-pill">{{ item }}</span>
+                {% endfor %}
+              </p>
+              <small>{{ "Closure cannot be trusted yet" if scope_guard.completion_check and scope_guard.completion_check.closure_mismatch else "No closure conflicts detected" }}</small>
+            </div>
+          {% endif %}
+          {% if scope_guard.must_not_drop %}
+            <div class="decision-card">
+              <strong>Must not drop</strong>
+              <ul class="compact-list">
+                {% for item in scope_guard.must_not_drop %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+          {% if scope_guard.guardrails %}
+            <div class="decision-card">
+              <strong>Guardrails</strong>
+              <ul class="compact-list">
+                {% for item in scope_guard.guardrails %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty">No scope guard derived yet.</div>
       {% endif %}
     </article>
   </section>

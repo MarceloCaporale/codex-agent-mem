@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 - 2026-04-18
+
+- Added `mem_recent_changes` to expose open-work deltas since the last meaningful sync baseline.
+- Added `mem_scope_guard` to surface must-not-drop continuity, active constraints, and closure conflicts.
+- Added `budget=auto` for context packs, selecting the smallest fitting reinjection profile from `micro`, `normal`, and `full`.
+- Persisted context-sync metrics by budget, including event counts and average compression ratio per budget.
+- Filtered diagnostic MCP and no-tools verification turns out of derived operational state so inspection runs do not pollute continuity.
+- Expanded the local inspection UI to surface recent changes and scope guard state alongside closure and sync metrics.
+
 ## 0.6.0 - 2026-04-18
 
 - Added hierarchical Definition of Done tracking across project, mission, and session scopes.

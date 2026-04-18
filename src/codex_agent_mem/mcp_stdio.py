@@ -87,13 +87,35 @@ class CodexAgentMemMCPServer:
                 },
             },
             {
+                "name": "mem_recent_changes",
+                "description": "Return changes since the last stable context sync: new pending items, resolved work, blocker changes, DoD gap changes, and new decisions.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_scope_guard",
+                "description": "Return compact scope guardrails for one project: constraints, must-not-drop items, and closure conflicts.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
                 "name": "mem_context_pack",
                 "description": "Return a compact continuity pack optimized to carry project context forward with fewer tokens.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "project_key": {"type": "string"},
-                        "budget": {"type": "string", "enum": ["micro", "normal", "full"]},
+                        "budget": {"type": "string", "enum": ["auto", "micro", "normal", "full"]},
                         "max_chars": {"type": "integer", "minimum": 400, "maximum": 6000},
                     },
                     "required": ["project_key"],
@@ -161,11 +183,19 @@ class CodexAgentMemMCPServer:
                     data = self.store.completion_check(arguments["project_key"], record=True)
                     if data is None:
                         raise ValueError("Project not found")
+                elif name == "mem_recent_changes":
+                    data = self.store.recent_changes(arguments["project_key"])
+                    if data is None:
+                        raise ValueError("Project not found")
+                elif name == "mem_scope_guard":
+                    data = self.store.scope_guard(arguments["project_key"])
+                    if data is None:
+                        raise ValueError("Project not found")
                 elif name == "mem_context_pack":
                     data = self.store.context_pack(
                         arguments["project_key"],
-                        budget=str(arguments.get("budget", "normal")),
-                        max_chars=int(arguments.get("max_chars", 2200)),
+                        budget=str(arguments.get("budget", "auto")),
+                        max_chars=int(arguments["max_chars"]) if arguments.get("max_chars") is not None else None,
                     )
                     if data is None:
                         raise ValueError("Project not found")

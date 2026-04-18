@@ -14,6 +14,8 @@ READ_ONLY_MCP_TOOLS = (
     "mem_project_brief",
     "mem_open_work",
     "mem_completion_check",
+    "mem_recent_changes",
+    "mem_scope_guard",
     "mem_context_pack",
 )
 

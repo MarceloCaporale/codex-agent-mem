@@ -51,11 +51,11 @@ def test_api_ingest_and_read(tmp_path: Path):
     assert brief.status_code == 200
     assert brief.json()["counts"]["observations"] >= 1
 
-    context_pack = client.get("/projects/demo-repo/context-pack", params={"budget": "micro"})
+    context_pack = client.get("/projects/demo-repo/context-pack", params={"budget": "auto"})
     assert context_pack.status_code == 200
     assert "Working Memory" in context_pack.json()["text"]
     assert "Pending work" in context_pack.json()["text"]
-    assert context_pack.json()["stats"]["budget"] == "micro"
+    assert context_pack.json()["stats"]["budget"] in {"micro", "normal", "full"}
 
     operational_state = client.get("/projects/demo-repo/operational-state")
     assert operational_state.status_code == 200
@@ -71,9 +71,18 @@ def test_api_ingest_and_read(tmp_path: Path):
     assert completion_check.json()["done"] is False
     assert completion_check.json()["dod_missing_count"] >= 1
 
+    recent_changes = client.get("/projects/demo-repo/recent-changes")
+    assert recent_changes.status_code == 200
+    assert "baseline_source" in recent_changes.json()
+
+    scope_guard = client.get("/projects/demo-repo/scope-guard")
+    assert scope_guard.status_code == 200
+    assert scope_guard.json()["must_not_drop"]
+
     context_metrics = client.get("/projects/demo-repo/context-metrics")
     assert context_metrics.status_code == 200
     assert context_metrics.json()["total_events"] >= 1
+    assert "budget_counts" in context_metrics.json()
 
     closure_metrics = client.get("/projects/demo-repo/closure-metrics")
     assert closure_metrics.status_code == 200
@@ -93,13 +102,25 @@ def test_inspector_routes_render(tmp_path: Path):
     assert home.status_code == 200
     assert "Memory Inspector" in home.text
     assert "demo-repo" in home.text
+    assert "Inspector" in home.text
+    assert "Projects" in home.text
+    assert "Sessions / Threads" in home.text
+    assert "Recent Activity" in home.text
+    assert "Recent" in home.text
 
     project = client.get("/ui/projects/demo-repo")
     assert project.status_code == 200
+    assert "Project" in project.text
+    assert "Selected turn" in project.text
+    assert "Current Status" in project.text
+    assert "Current Pack Savings" in project.text
+    assert "Not ready to close" in project.text
     assert "Generated Working Memory" in project.text
     assert "Operational State" in project.text
     assert "Context Sync Metrics" in project.text
     assert "Closure Control" in project.text
+    assert "Recent Changes" in project.text
+    assert "Scope Guard" in project.text
     assert "Selected Turn" in project.text
     assert "demo repo · 2026-04-17 00:00" in project.text
     assert "finish auth continuity" in project.text
@@ -107,5 +128,6 @@ def test_inspector_routes_render(tmp_path: Path):
 
     turn = client.get(f"/ui/turns/{turn_id}")
     assert turn.status_code == 200
+    assert "Selected turn" in turn.text
     assert "Raw payload" in turn.text
     assert "Decision: keep sqlite for local memory" in turn.text

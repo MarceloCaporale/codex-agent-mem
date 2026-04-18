@@ -61,8 +61,8 @@ def sync_project_doc(
     store: CodexAgentMemStore,
     project_key: str,
     cwd: Path,
-    budget: str = "normal",
-    max_chars: int = 2200,
+    budget: str = "auto",
+    max_chars: int | None = None,
 ) -> dict[str, Any] | None:
     if not cwd.exists() or not cwd.is_dir():
         return None

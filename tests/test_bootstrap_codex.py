@@ -19,5 +19,7 @@ def test_bootstrap_codex_snippet_uses_literal_paths():
     assert '[mcp_servers."codex-agent-mem".tools.mem_project_brief]' in snippet
     assert '[mcp_servers."codex-agent-mem".tools.mem_open_work]' in snippet
     assert '[mcp_servers."codex-agent-mem".tools.mem_completion_check]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_recent_changes]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_scope_guard]' in snippet
     assert '[mcp_servers."codex-agent-mem".tools.mem_context_pack]' in snippet
-    assert snippet.count('approval_mode = "approve"') == 7
+    assert snippet.count('approval_mode = "approve"') == 9

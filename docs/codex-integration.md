@@ -32,7 +32,13 @@ And it can reinject compressed continuity automatically:
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_open_work`
+  - `mem_completion_check`
+  - `mem_recent_changes`
+  - `mem_scope_guard`
   - `mem_context_pack`
+
+`mem_context_pack` also supports `budget=auto`, so the runtime can select the smallest fitting reinjection profile instead of always forcing one fixed budget.
 
 ## Generate the config snippet
 

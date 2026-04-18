@@ -8,7 +8,7 @@ codex-agent-mem speichert dauerhafte Erkenntnisse aus Agent-Turns in lokalem SQL
 
 ## Status
 
-`0.6.0` ist die aktuelle öffentliche Basis-Release.
+`0.7.0` ist die aktuelle Basis-Release.
 
 Was heute funktioniert:
 
@@ -21,10 +21,13 @@ Was heute funktioniert:
 - automatische `AGENTS.md`-Synchronisierung, wenn das Pack wirklich kleiner als der Quellkontext ist
 - Weitergabe von Operational State, damit die nächste Session Ziel, offene Punkte, Blocker und Scope-Guardrails wiederherstellen kann
 - deterministische Closure-Control mit `mem_open_work` und `mem_completion_check`
+- Delta-Sicht auf neue Änderungen über `mem_recent_changes`
+- Scope-Continuity und Must-not-drop-Guardrails über `mem_scope_guard`
 - Guardrails gegen falsches „fertig“, wenn noch Pending Items, Blocker oder DoD-Lücken offen sind
 - persistierte Closure- und Kompressionsmetriken pro Projekt
+- automatische Budgetwahl für Context-Packs bei `budget=auto`
 - FastAPI-Inspektions-API
-- lokale Inspektions-UI unter `/ui`
+- lokale Inspektions-UI unter `/ui`, inklusive Recent Changes und Scope Guard
 - MCP-stdio-Server mit:
   - `mem_search`
   - `mem_get`
@@ -32,6 +35,8 @@ Was heute funktioniert:
   - `mem_project_brief`
   - `mem_open_work`
   - `mem_completion_check`
+  - `mem_recent_changes`
+  - `mem_scope_guard`
   - `mem_context_pack`
 - automatisierte Tests
 

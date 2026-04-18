@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS context_sync_events (
   approx_source_tokens INTEGER NOT NULL,
   approx_pack_tokens INTEGER NOT NULL,
   compression_ratio REAL NOT NULL,
+  budget TEXT NOT NULL DEFAULT 'normal',
   generated_at TEXT NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(id)
 );

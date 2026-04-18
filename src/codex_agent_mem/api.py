@@ -61,6 +61,15 @@ def _humanize_name(raw: str) -> str:
     return raw.replace("_", " ").replace("-", " ").strip()
 
 
+def _humanize_reason(raw: str | None) -> str:
+    if not raw:
+        return "No blocking reason recorded"
+    text = raw.replace("_", " ").strip()
+    if text.lower() == "dod incomplete":
+        return "DoD incomplete"
+    return text[:1].upper() + text[1:]
+
+
 def _session_display_parts(session: dict, project: dict | None = None) -> dict[str, str | None]:
     cwd = session.get("cwd") or (project or {}).get("root_path") or ""
     raw_source_name = Path(cwd).name if cwd else ((project or {}).get("name") or "Session")
@@ -79,6 +88,42 @@ def _session_display_parts(session: dict, project: dict | None = None) -> dict[s
         "display_label": label,
         "display_subtitle": subtitle,
         "display_started_at": started_label,
+    }
+
+
+def _project_ui_summary(
+    brief: dict,
+    context_pack: dict | None,
+) -> dict[str, object]:
+    completion_check = brief.get("completion_check") or {}
+    scope_guard = brief.get("scope_guard") or {}
+    open_work = brief.get("open_work") or {}
+    pack_stats = (context_pack or {}).get("stats") or {}
+
+    source_tokens = pack_stats.get("approx_source_tokens")
+    pack_tokens = pack_stats.get("approx_pack_tokens")
+    saved_tokens = None
+    saved_percent = None
+    if isinstance(source_tokens, int) and isinstance(pack_tokens, int) and source_tokens > 0:
+        saved_tokens = max(source_tokens - pack_tokens, 0)
+        saved_percent = round((saved_tokens / source_tokens) * 100)
+
+    status_ready = bool(completion_check.get("done"))
+    return {
+        "status_label": "Ready to close" if status_ready else "Not ready to close",
+        "status_tone": "ready" if status_ready else "open",
+        "status_reason": _humanize_reason(completion_check.get("primary_reason")),
+        "pending_count": int(completion_check.get("pending_count") or 0),
+        "blocker_count": int(completion_check.get("blocker_count") or 0),
+        "dod_missing_count": int(completion_check.get("dod_missing_count") or 0),
+        "must_not_drop_count": len(scope_guard.get("must_not_drop") or []),
+        "saved_tokens": saved_tokens,
+        "saved_percent": saved_percent,
+        "pack_tokens": pack_tokens,
+        "source_tokens": source_tokens,
+        "selected_budget": pack_stats.get("budget"),
+        "budget_reason": pack_stats.get("budget_reason"),
+        "has_open_work": bool(open_work.get("has_open_work")),
     }
 
 
@@ -138,7 +183,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return result
 
     @app.get("/projects/{project_key}/context-pack")
-    def project_context_pack(project_key: str, budget: str = "normal", max_chars: int = 2200):
+    def project_context_pack(project_key: str, budget: str = "auto", max_chars: int | None = None):
         result = store.context_pack(project_key, max_chars=max_chars, budget=budget)
         if result is None:
             raise HTTPException(status_code=404, detail="Project not found")
@@ -161,6 +206,20 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/projects/{project_key}/completion-check")
     def project_completion_check(project_key: str, record: bool = False):
         result = store.completion_check(project_key, record=record)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
+    @app.get("/projects/{project_key}/recent-changes")
+    def project_recent_changes(project_key: str):
+        result = store.recent_changes(project_key)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
+    @app.get("/projects/{project_key}/scope-guard")
+    def project_scope_guard(project_key: str):
+        result = store.scope_guard(project_key)
         if result is None:
             raise HTTPException(status_code=404, detail="Project not found")
         return result
@@ -189,10 +248,22 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)
     def ui_home(request: Request, q: str | None = None, project_key: str | None = None):
         query = (q or "").strip()
+        recent_sessions = store.list_recent_sessions(limit=18)
+        for session in recent_sessions:
+            session.update(
+                _session_display_parts(
+                    session,
+                    {
+                        "name": session.get("project_name"),
+                        "root_path": session.get("root_path"),
+                    },
+                )
+            )
         context = {
             "request": request,
             "db_path": str(config.db_path),
             "projects": store.list_projects(),
+            "recent_sessions": recent_sessions,
             "recent_observations": store.recent_observations(limit=12),
             "query": query,
             "project_key": project_key or "",
@@ -241,15 +312,19 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
                         turn_detail["raw_payload"] = _loads_json(turn_detail.get("raw_payload_json"), {})
 
         query = (q or "").strip()
+        context_pack = store.context_pack(project_key, max_chars=2200)
         context = {
             "request": request,
             "db_path": str(config.db_path),
             "project": brief["project"],
             "counts": brief["counts"],
-            "context_pack": store.context_pack(project_key, max_chars=2200),
+            "context_pack": context_pack,
+            "ui_summary": _project_ui_summary(brief, context_pack),
             "operational_state": brief["operational_state"],
             "open_work": brief["open_work"],
             "completion_check": brief["completion_check"],
+            "recent_changes": brief["recent_changes"],
+            "scope_guard": brief["scope_guard"],
             "context_metrics": brief["context_metrics"],
             "closure_metrics": brief["closure_metrics"],
             "sessions": sessions,

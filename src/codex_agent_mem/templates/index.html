@@ -15,76 +15,119 @@
     </form>
   </section>
 
-  <section class="layout two-up">
-    <article class="panel">
-      <div class="panel-head">
-        <h2>Projects</h2>
-        <span class="count">{{ projects|length }}</span>
-      </div>
-      {% if projects %}
-        <div class="project-list">
-          {% for project in projects %}
-            <a class="project-card" href="/ui/projects/{{ project.project_key }}">
-              <div class="project-card-top">
-                <strong>{{ project.name }}</strong>
-                <code>{{ project.project_key }}</code>
-              </div>
-              <p class="muted">{{ project.root_path or "No root path captured yet" }}</p>
-              <div class="stats">
-                <span>{{ project.sessions }} sessions</span>
-                <span>{{ project.turns }} turns</span>
-                <span>{{ project.observations }} observations</span>
-                <span>{{ project.active_decisions }} decisions</span>
-              </div>
-            </a>
-          {% endfor %}
+  <section class="layout one-up">
+    <details class="accordion-panel" id="projects" open>
+      <summary class="accordion-summary">
+        <div>
+          <strong>Projects</strong>
+          <p class="muted">Top-level workspaces captured in local memory.</p>
         </div>
-      {% else %}
-        <div class="empty">No projects captured yet.</div>
-      {% endif %}
-    </article>
-
-    <article class="panel">
-      <div class="panel-head">
-        <h2>{% if query %}Search Results{% else %}Recent Observations{% endif %}</h2>
-        <span class="count">{% if query %}{{ search_results|length }}{% else %}{{ recent_observations|length }}{% endif %}</span>
+        <span class="accordion-count">{{ projects|length }}</span>
+      </summary>
+      <div class="accordion-body">
+        {% if projects %}
+          <div class="project-list">
+            {% for project in projects %}
+              <a class="project-card" href="/ui/projects/{{ project.project_key }}">
+                <div class="project-card-top">
+                  <strong>{{ project.name }}</strong>
+                  <code>{{ project.project_key }}</code>
+                </div>
+                <p class="muted">{{ project.root_path or "No root path captured yet" }}</p>
+                <div class="stats">
+                  <span>{{ project.sessions }} sessions</span>
+                  <span>{{ project.turns }} turns</span>
+                  <span>{{ project.observations }} observations</span>
+                  <span>{{ project.active_decisions }} decisions</span>
+                </div>
+              </a>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty">No projects captured yet.</div>
+        {% endif %}
       </div>
+    </details>
 
-      {% if query %}
-        {% if search_results %}
-          <div class="observation-list">
-            {% for item in search_results %}
-              <a class="observation-row" href="/ui/projects/{{ item.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
-                <div class="observation-row-top">
-                  <span class="type">{{ item.type }}</span>
-                  <code>{{ item.project_key }}</code>
+    <details class="accordion-panel" id="threads" open>
+      <summary class="accordion-summary">
+        <div>
+          <strong>Sessions / Threads</strong>
+          <p class="muted">Recent captured runs across all projects.</p>
+        </div>
+        <span class="accordion-count">{{ recent_sessions|length }}</span>
+      </summary>
+      <div class="accordion-body">
+        {% if recent_sessions %}
+          <div class="session-list">
+            {% for session in recent_sessions %}
+              <a class="session-card" href="/ui/projects/{{ session.project_key }}?session_id={{ session.id }}">
+                <div class="project-card-top">
+                  <strong>{{ session.display_label }}</strong>
+                  <code>{{ session.project_key }}</code>
                 </div>
-                <strong>{{ item.title }}</strong>
-                <p>{{ item.summary }}</p>
+                <p class="muted">{{ session.display_subtitle }}</p>
+                <small class="secondary-code">{{ session.external_session_id }}</small>
+                <div class="stats">
+                  <span>{{ session.turn_count }} turns</span>
+                  <span>{{ session.observation_count }} observations</span>
+                  <span>{{ session.project_name }}</span>
+                </div>
+                <small>{{ session.last_turn_at or session.display_started_at }}</small>
               </a>
             {% endfor %}
           </div>
         {% else %}
-          <div class="empty">No results matched this query.</div>
+          <div class="empty">No sessions captured yet.</div>
         {% endif %}
-      {% else %}
-        {% if recent_observations %}
-          <div class="observation-list">
-            {% for item in recent_observations %}
-              <a class="observation-row" href="/ui/projects/{{ item.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
-                <div class="observation-row-top">
-                  <span class="type">{{ item.type }}</span>
-                  <code>{{ item.project_key }}</code>
-                </div>
-                <strong>{{ item.title }}</strong>
-                <p>{{ item.summary }}</p>
-              </a>
-            {% endfor %}
-          </div>
+      </div>
+    </details>
+
+    <details class="accordion-panel" id="recent" {% if query %}open{% endif %}>
+      <summary class="accordion-summary">
+        <div>
+          <strong>{% if query %}Search Results{% else %}Recent Activity{% endif %}</strong>
+          <p class="muted">{% if query %}Cross-project observation matches.{% else %}Recent observations and summaries across the local database.{% endif %}</p>
+        </div>
+        <span class="accordion-count">{% if query %}{{ search_results|length }}{% else %}{{ recent_observations|length }}{% endif %}</span>
+      </summary>
+      <div class="accordion-body">
+        {% if query %}
+          {% if search_results %}
+            <div class="observation-list">
+              {% for item in search_results %}
+                <a class="observation-row" href="/ui/projects/{{ item.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
+                  <div class="observation-row-top">
+                    <span class="type">{{ item.type }}</span>
+                    <code>{{ item.project_key }}</code>
+                  </div>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.summary }}</p>
+                </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty">No results matched this query.</div>
+          {% endif %}
         {% else %}
-          <div class="empty">No observations captured yet.</div>
+          {% if recent_observations %}
+            <div class="observation-list">
+              {% for item in recent_observations %}
+                <a class="observation-row" href="/ui/projects/{{ item.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
+                  <div class="observation-row-top">
+                    <span class="type">{{ item.type }}</span>
+                    <code>{{ item.project_key }}</code>
+                  </div>
+                  <strong>{{ item.title }}</strong>
+                  <p>{{ item.summary }}</p>
+                </a>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="empty">No observations captured yet.</div>
+          {% endif %}
         {% endif %}
-      {% endif %}
-    </article>
+      </div>
+    </details>
   </section>
 {% endblock %}

@@ -66,6 +66,10 @@ def _state_text_matches(left: str, right: str) -> bool:
     return False
 
 
+def state_text_matches(left: str, right: str) -> bool:
+    return _state_text_matches(left, right)
+
+
 def _is_resolved(pending_key: str, completed_keys: set[str]) -> bool:
     for completed_key in completed_keys:
         if _state_text_matches(pending_key, completed_key):

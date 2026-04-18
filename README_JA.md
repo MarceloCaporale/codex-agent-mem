@@ -8,7 +8,7 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 
 ## 状態
 
-`0.6.0` は現在の公開ベースリリースです。
+`0.7.0` は現在のベースリリースです。
 
 現在動作しているもの:
 
@@ -21,10 +21,13 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 - pack が元のコンテキストより実際に小さい場合の `AGENTS.md` 自動同期
 - 次のセッションで目的、未完了項目、blocker、スコープガードを復元するための operational state 持ち越し
 - `mem_open_work` と `mem_completion_check` による決定的な closure control
+- `mem_recent_changes` による最近変更の差分取得
+- `mem_scope_guard` によるスコープ継続性と must-not-drop ガード
 - pending、blocker、DoD ギャップが残っているのに「完了」と言ってしまうのを防ぐ guardrail
 - プロジェクト単位で closure と compression のメトリクスを永続化
+- `budget=auto` のときに最小で適切な budget を自動選択
 - FastAPI ベースの検査 API
-- `/ui` で開けるローカル検査 UI
+- `/ui` で開けるローカル検査 UI。recent changes と scope guard も表示
 - 以下を提供する MCP stdio サーバー:
   - `mem_search`
   - `mem_get`
@@ -32,6 +35,8 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
   - `mem_project_brief`
   - `mem_open_work`
   - `mem_completion_check`
+  - `mem_recent_changes`
+  - `mem_scope_guard`
   - `mem_context_pack`
 - 自動テスト
 

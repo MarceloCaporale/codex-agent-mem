@@ -41,6 +41,7 @@ PACK_BUDGETS: dict[str, dict[str, int]] = {
         "guardrail_limit": 3,
     },
 }
+AUTO_BUDGET_ORDER = ("micro", "normal", "full")
 
 
 def _compact_line(value: str, limit: int = 90) -> str:
@@ -62,6 +63,32 @@ def resolve_pack_budget(budget: str = "normal", max_chars: int | None = None) ->
     return selected
 
 
+def choose_auto_budget(
+    operational_state: dict[str, Any] | None = None,
+    *,
+    max_chars: int | None = None,
+) -> tuple[str, str]:
+    operational_state = operational_state or {}
+    pending_count = len(operational_state.get("pending_items") or [])
+    blocker_count = len(operational_state.get("blockers") or [])
+    dod_missing_count = len(((operational_state.get("dod_missing") or {}).get("all_items") or []))
+    constraint_count = len(operational_state.get("constraints") or [])
+    summary_count = 1 if operational_state.get("user_requests") else 0
+
+    required = {
+        "pending_limit": pending_count,
+        "blocker_limit": blocker_count,
+        "dod_missing_limit": dod_missing_count,
+        "constraint_limit": constraint_count,
+        "summary_limit": summary_count,
+    }
+    for name in AUTO_BUDGET_ORDER:
+        profile = resolve_pack_budget(name, max_chars=max_chars)
+        if all(int(profile[key]) >= value for key, value in required.items()):
+            return name, "fits_open_work_profile"
+    return "full", "requires_full_profile"
+
+
 def build_context_pack(
     *,
     project: dict[str, Any],
@@ -70,7 +97,8 @@ def build_context_pack(
     operational_state: dict[str, Any] | None = None,
     source_turns: list[dict[str, Any]] | None = None,
     budget: str = "normal",
-    max_chars: int = 2200,
+    max_chars: int | None = None,
+    budget_reason: str | None = None,
 ) -> dict[str, Any]:
     operational_state = operational_state or {}
     profile = resolve_pack_budget(budget=budget, max_chars=max_chars)
@@ -199,6 +227,7 @@ def build_context_pack(
             "decision_count": len(unique_decisions),
             "summary_count": len(unique_summaries),
             "budget": profile["budget"],
+            "budget_reason": budget_reason,
             "max_chars": max_chars,
             "section_counts": section_counts,
             "has_open_work": bool(operational_state.get("has_open_work")),

@@ -8,10 +8,27 @@ from pathlib import Path
 from typing import Any
 
 from codex_agent_mem.closure_control import build_completion_check, build_open_work_report
-from codex_agent_mem.context_pack import build_context_pack
+from codex_agent_mem.context_pack import build_context_pack, choose_auto_budget
 from codex_agent_mem.ingest import classify_event, stable_hash
 from codex_agent_mem.models import GenericEventEnvelope, Observation
 from codex_agent_mem.operational_state import STATEFUL_OBSERVATION_TYPES, derive_operational_state
+from codex_agent_mem.scope_control import build_recent_changes, build_scope_guard
+
+RETRIEVAL_TYPE_PRIORITY = {
+    "pending_item": 0,
+    "blocker": 1,
+    "project_dod": 2,
+    "mission_dod": 2,
+    "session_dod": 2,
+    "objective": 3,
+    "constraint": 3,
+    "user_request": 3,
+    "decision": 4,
+    "completed_item": 5,
+    "completion_claim": 6,
+    "session_summary": 7,
+}
+MEANINGFUL_CHANGE_TYPES = sorted(STATEFUL_OBSERVATION_TYPES - {"user_request"})
 
 
 def connect(db_path: Path) -> sqlite3.Connection:
@@ -24,7 +41,19 @@ def connect(db_path: Path) -> sqlite3.Connection:
 
 def bootstrap(conn: sqlite3.Connection, schema_sql: str) -> None:
     conn.executescript(schema_sql)
+    _ensure_schema_columns(conn)
     conn.commit()
+
+
+def _ensure_schema_columns(conn: sqlite3.Connection) -> None:
+    context_sync_columns = {row["name"] for row in conn.execute("PRAGMA table_info(context_sync_events)").fetchall()}
+    if "budget" not in context_sync_columns:
+        conn.execute("ALTER TABLE context_sync_events ADD COLUMN budget TEXT NOT NULL DEFAULT 'normal'")
+
+
+def _type_priority_case(column: str = "o.type") -> str:
+    clauses = [f"WHEN '{name}' THEN {priority}" for name, priority in RETRIEVAL_TYPE_PRIORITY.items()]
+    return f"CASE {column} {' '.join(clauses)} ELSE 50 END"
 
 
 class CodexAgentMemStore:
@@ -262,6 +291,7 @@ class CodexAgentMemStore:
             return self.recent_observations(project_key=project_key, limit=limit)
         params: list[Any] = [query]
         where = ""
+        type_priority_sql = _type_priority_case("o.type")
         if project_key:
             where = "AND p.project_key = ?"
             params.append(project_key)
@@ -275,7 +305,7 @@ class CodexAgentMemStore:
                 JOIN observations o ON o.id = observations_fts.rowid
                 JOIN projects p ON p.id = o.project_id
                 WHERE observations_fts MATCH ? {where}
-                ORDER BY rank, o.updated_at DESC
+                ORDER BY {type_priority_sql}, rank, o.updated_at DESC
                 LIMIT ?
                 """,
                 params,
@@ -294,7 +324,7 @@ class CodexAgentMemStore:
                 FROM observations o
                 JOIN projects p ON p.id = o.project_id
                 WHERE (o.title LIKE ? OR o.summary LIKE ? OR o.detail LIKE ?) {where}
-                ORDER BY o.updated_at DESC
+                ORDER BY {type_priority_sql}, o.updated_at DESC
                 LIMIT ?
                 """,
                 params,
@@ -353,6 +383,43 @@ class CodexAgentMemStore:
             LIMIT ?
             """,
             (project_key, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_recent_sessions(self, limit: int = 50) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT
+              s.id,
+              s.project_id,
+              s.runtime,
+              s.external_session_id,
+              s.started_at,
+              s.ended_at,
+              s.cwd,
+              s.metadata_json,
+              p.project_key,
+              p.name AS project_name,
+              p.root_path,
+              (
+                SELECT t_first.input_messages_json
+                FROM turns t_first
+                WHERE t_first.session_id = s.id
+                ORDER BY t_first.captured_at ASC, t_first.id ASC
+                LIMIT 1
+              ) AS first_input_messages_json,
+              COUNT(DISTINCT t.id) AS turn_count,
+              COUNT(DISTINCT o.id) AS observation_count,
+              MAX(t.captured_at) AS last_turn_at
+            FROM sessions s
+            JOIN projects p ON p.id = s.project_id
+            LEFT JOIN turns t ON t.session_id = s.id
+            LEFT JOIN observations o ON o.session_id = s.id
+            GROUP BY s.id
+            ORDER BY COALESCE(MAX(t.captured_at), s.started_at) DESC, s.id DESC
+            LIMIT ?
+            """,
+            (limit,),
         ).fetchall()
         return [dict(row) for row in rows]
 
@@ -490,6 +557,8 @@ class CodexAgentMemStore:
             "operational_state": self.operational_state(project_key),
             "open_work": self.open_work_report(project_key),
             "completion_check": self.completion_check(project_key),
+            "recent_changes": self.recent_changes(project_key),
+            "scope_guard": self.scope_guard(project_key),
             "context_metrics": self.context_metrics_summary(project_key),
             "closure_metrics": self.closure_metrics_summary(project_key),
         }
@@ -509,24 +578,43 @@ class CodexAgentMemStore:
         return [dict(row) for row in rows]
 
     def operational_observations(self, project_key: str, limit: int = 80) -> list[dict[str, Any]]:
+        return self._operational_observations(project_key, limit=limit)
+
+    def _operational_observations(
+        self,
+        project_key: str,
+        *,
+        limit: int = 80,
+        before: str | None = None,
+        after: str | None = None,
+    ) -> list[dict[str, Any]]:
         placeholders = ",".join("?" for _ in STATEFUL_OBSERVATION_TYPES)
+        filters = ["p.project_key = ?", f"o.type IN ({placeholders})"]
+        params: list[Any] = [project_key, *sorted(STATEFUL_OBSERVATION_TYPES)]
+        if before is not None:
+            filters.append("o.updated_at < ?")
+            params.append(before)
+        if after is not None:
+            filters.append("o.updated_at > ?")
+            params.append(after)
+        params.append(limit)
         rows = self.conn.execute(
             f"""
             SELECT o.id, o.type, o.title, o.summary, o.detail, o.status, o.updated_at
             FROM observations o
             JOIN projects p ON p.id = o.project_id
-            WHERE p.project_key = ? AND o.type IN ({placeholders})
+            WHERE {' AND '.join(filters)}
             ORDER BY o.updated_at DESC, o.id DESC
             LIMIT ?
             """,
-            [project_key, *sorted(STATEFUL_OBSERVATION_TYPES), limit],
+            params,
         ).fetchall()
         return [dict(row) for row in rows]
 
     def operational_state(self, project_key: str) -> dict[str, Any] | None:
         if self._project_row(project_key) is None:
             return None
-        return derive_operational_state(self.operational_observations(project_key, limit=120))
+        return derive_operational_state(self._operational_observations(project_key, limit=120))
 
     def open_work_report(self, project_key: str) -> dict[str, Any] | None:
         state = self.operational_state(project_key)
@@ -555,6 +643,62 @@ class CodexAgentMemStore:
             )
         return result
 
+    def _last_successful_context_sync(self, project_key: str) -> dict[str, Any] | None:
+        rows = self._successful_context_syncs(project_key, limit=1)
+        return rows[0] if rows else None
+
+    def _successful_context_syncs(self, project_key: str, limit: int = 2) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT c.id, c.generated_at, c.budget, c.target_path
+            FROM context_sync_events c
+            JOIN projects p ON p.id = c.project_id
+            WHERE p.project_key = ? AND c.skipped = 0
+            ORDER BY c.generated_at DESC, c.id DESC
+            LIMIT ?
+            """,
+            (project_key, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def _recent_changes_baseline_sync(self, project_key: str) -> tuple[dict[str, Any] | None, str]:
+        latest_change_at = self._latest_meaningful_change_at(project_key)
+        if latest_change_at is not None:
+            row = self.conn.execute(
+                """
+                SELECT c.id, c.generated_at, c.budget, c.target_path
+                FROM context_sync_events c
+                JOIN projects p ON p.id = c.project_id
+                WHERE p.project_key = ? AND c.skipped = 0 AND c.generated_at < ?
+                ORDER BY c.generated_at DESC, c.id DESC
+                LIMIT 1
+                """,
+                (project_key, latest_change_at),
+            ).fetchone()
+            if row is not None:
+                return dict(row), "sync_before_latest_meaningful_change"
+        syncs = self._successful_context_syncs(project_key, limit=2)
+        if len(syncs) >= 2:
+            return syncs[1], "previous_successful_context_sync"
+        if len(syncs) == 1:
+            return syncs[0], "last_successful_context_sync"
+        return None, "project_start"
+
+    def _latest_meaningful_change_at(self, project_key: str) -> str | None:
+        placeholders = ",".join("?" for _ in MEANINGFUL_CHANGE_TYPES)
+        row = self.conn.execute(
+            f"""
+            SELECT MAX(o.updated_at) AS latest_change_at
+            FROM observations o
+            JOIN projects p ON p.id = o.project_id
+            WHERE p.project_key = ? AND o.type IN ({placeholders})
+            """,
+            [project_key, *MEANINGFUL_CHANGE_TYPES],
+        ).fetchone()
+        if row is None:
+            return None
+        return row["latest_change_at"]
+
     def record_context_sync(
         self,
         *,
@@ -572,8 +716,8 @@ class CodexAgentMemStore:
                 """
                 INSERT INTO context_sync_events(
                   project_id, target_path, skipped, reason, source_char_count, pack_char_count,
-                  approx_source_tokens, approx_pack_tokens, compression_ratio, generated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  approx_source_tokens, approx_pack_tokens, compression_ratio, budget, generated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     int(project["id"]),
@@ -585,6 +729,7 @@ class CodexAgentMemStore:
                     int(stats.get("approx_source_tokens") or 0),
                     int(stats.get("approx_pack_tokens") or 0),
                     float(stats.get("compression_ratio") or 0.0),
+                    str(stats.get("budget") or "normal"),
                     self._now(),
                 ),
             )
@@ -593,7 +738,7 @@ class CodexAgentMemStore:
         rows = self.conn.execute(
             """
             SELECT c.id, c.target_path, c.skipped, c.reason, c.source_char_count, c.pack_char_count,
-                   c.approx_source_tokens, c.approx_pack_tokens, c.compression_ratio, c.generated_at
+                   c.approx_source_tokens, c.approx_pack_tokens, c.compression_ratio, c.budget, c.generated_at
             FROM context_sync_events c
             JOIN projects p ON p.id = c.project_id
             WHERE p.project_key = ?
@@ -623,6 +768,20 @@ class CodexAgentMemStore:
             (project_id,),
         ).fetchone()
         result = dict(row)
+        budget_rows = self.conn.execute(
+            """
+            SELECT budget, COUNT(*) AS event_count, ROUND(AVG(compression_ratio), 3) AS avg_ratio
+            FROM context_sync_events
+            WHERE project_id = ?
+            GROUP BY budget
+            ORDER BY budget
+            """,
+            (project_id,),
+        ).fetchall()
+        result["budget_counts"] = {row["budget"]: row["event_count"] for row in budget_rows}
+        result["avg_compression_ratio_by_budget"] = {
+            row["budget"]: row["avg_ratio"] for row in budget_rows if row["avg_ratio"] is not None
+        }
         result["recent_events"] = self.recent_context_sync_events(project_key, limit=5)
         return result
 
@@ -721,7 +880,47 @@ class CodexAgentMemStore:
             "recent_events": self.recent_closure_events(project_key, limit=5),
         }
 
-    def context_pack(self, project_key: str, max_chars: int = 2200, budget: str = "normal") -> dict[str, Any] | None:
+    def recent_changes(self, project_key: str, since: str | None = None) -> dict[str, Any] | None:
+        current_state = self.operational_state(project_key)
+        if current_state is None:
+            return None
+        baseline_source = "explicit_since" if since else "project_start"
+        baseline_timestamp = since
+        if baseline_timestamp is None:
+            baseline_sync, baseline_source = self._recent_changes_baseline_sync(project_key)
+            if baseline_sync is not None:
+                baseline_timestamp = str(baseline_sync["generated_at"])
+
+        previous_state = None
+        if baseline_timestamp is not None:
+            previous_state = derive_operational_state(
+                self._operational_observations(project_key, before=baseline_timestamp, limit=240)
+            )
+
+        decisions = self.recent_decisions(project_key, limit=10)
+        if baseline_timestamp is not None:
+            decisions = [item for item in decisions if (item.get("updated_at") or "") > baseline_timestamp]
+        return build_recent_changes(
+            current_state=current_state,
+            previous_state=previous_state,
+            recent_decisions=decisions,
+            since=baseline_timestamp,
+            baseline_source=baseline_source,
+        )
+
+    def scope_guard(self, project_key: str) -> dict[str, Any] | None:
+        state = self.operational_state(project_key)
+        if state is None:
+            return None
+        check = self.completion_check(project_key, record=False)
+        return build_scope_guard(state, check)
+
+    def context_pack(
+        self,
+        project_key: str,
+        max_chars: int | None = None,
+        budget: str = "auto",
+    ) -> dict[str, Any] | None:
         brief = self.project_brief(project_key)
         if brief is None:
             return None
@@ -730,14 +929,22 @@ class CodexAgentMemStore:
             for item in self.recent_observations(project_key=project_key, limit=12)
             if item.get("type") == "session_summary"
         ]
+        selected_budget = budget
+        budget_reason = None
+        if budget == "auto":
+            selected_budget, budget_reason = choose_auto_budget(
+                brief["operational_state"],
+                max_chars=max_chars,
+            )
         return build_context_pack(
             project=brief["project"],
             decisions=self.recent_decisions(project_key=project_key, limit=8),
             summaries=summaries,
             operational_state=brief["operational_state"],
             source_turns=self.recent_turn_context(project_key=project_key, limit=max(len(summaries), 4)),
-            budget=budget,
+            budget=selected_budget,
             max_chars=max_chars,
+            budget_reason=budget_reason,
         )
 
     @staticmethod

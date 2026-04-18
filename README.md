@@ -31,7 +31,7 @@ It is built for long audits, complex project continuity, and any workflow where 
 
 ## Status
 
-`0.6.0` is the current public baseline release.
+`0.7.0` is the current baseline release.
 
 What works today:
 
@@ -44,10 +44,13 @@ What works today:
 - automatic `AGENTS.md` sync when the generated pack is smaller than the source context
 - operational-state carry-forward so the next run can recover objective, pending work, blockers, and scope guardrails
 - deterministic closure control with `mem_open_work` and `mem_completion_check`
+- recent-change deltas through `mem_recent_changes`
+- scope continuity and must-not-drop guardrails through `mem_scope_guard`
 - false-completion guardrails that keep “done” from overriding open work when pending items, blockers, or DoD gaps still exist
 - context sync and closure metrics persisted per project
+- automatic budget selection for context packs when `budget=auto`
 - FastAPI inspection API
-- local inspection UI at `/ui`
+- local inspection UI at `/ui`, including recent changes and scope guard views
 - MCP stdio server with:
   - `mem_search`
   - `mem_get`
@@ -55,6 +58,8 @@ What works today:
   - `mem_project_brief`
   - `mem_open_work`
   - `mem_completion_check`
+  - `mem_recent_changes`
+  - `mem_scope_guard`
   - `mem_context_pack`
 - automated tests
 

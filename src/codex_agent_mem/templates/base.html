@@ -19,6 +19,26 @@
       </div>
     </header>
 
+    <nav class="topnav" aria-label="Primary">
+      <div class="topnav-inner">
+        <a class="topnav-link {% if request.url.path == '/ui' %}active{% endif %}" href="/ui">Inspector</a>
+        {% if request.url.path == '/ui' %}
+          <a class="topnav-link" href="/ui#projects">Projects</a>
+          <a class="topnav-link" href="/ui#threads">Sessions</a>
+          <a class="topnav-link" href="/ui#recent">Recent</a>
+        {% endif %}
+        {% if project %}
+          <a class="topnav-link {% if request.url.path.startswith('/ui/projects/') %}active{% endif %}" href="/ui/projects/{{ project.project_key }}">Project</a>
+        {% endif %}
+        {% if selected_turn %}
+          <a class="topnav-link {% if request.url.path.startswith('/ui/turns/') %}active{% endif %}" href="/ui/turns/{{ selected_turn.id }}">Selected turn</a>
+        {% elif turn %}
+          <a class="topnav-link" href="/ui/projects/{{ turn.project_key }}?session_id={{ turn.session_id }}&turn_id={{ turn.id }}">Project</a>
+          <a class="topnav-link {% if request.url.path.startswith('/ui/turns/') %}active{% endif %}" href="/ui/turns/{{ turn.id }}">Selected turn</a>
+        {% endif %}
+      </div>
+    </nav>
+
     {% block content %}{% endblock %}
   </div>
 </body>
