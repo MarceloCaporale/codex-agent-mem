@@ -31,3 +31,25 @@ def test_ingest_persists_rows(tmp_path: Path):
     types = {row["type"] for row in recent}
     assert "session_summary" in types
     assert "decision" in types
+
+
+def test_semicolon_separated_operational_labels_are_split(tmp_path: Path):
+    db_path = tmp_path / "codex_agent_mem.db"
+    store = CodexAgentMemStore(db_path)
+    raw_payload = {
+        "runtime": "codex",
+        "project_key": "demo-project",
+        "session_id": "thread-2",
+        "turn_id": "turn-2",
+        "cwd": str(tmp_path),
+        "timestamp": "2026-04-17T00:10:00Z",
+        "input_messages": ["Objective: finish continuity; Pending: verify the pack before closing"],
+        "assistant_message": "Objective: finish continuity; Pending: verify the pack before closing; Blocker: human validation pending",
+        "metadata": {"source": "test"},
+    }
+    store.ingest_event(raw_payload, normalize_event(raw_payload))
+    state = store.operational_state("demo-project")
+    assert state is not None
+    assert state["objective"]["summary"] == "finish continuity"
+    assert state["pending_items"][0]["summary"] == "verify the pack before closing"
+    assert state["blockers"][0]["summary"] == "human validation pending"

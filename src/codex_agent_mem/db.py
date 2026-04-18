@@ -10,6 +10,7 @@ from typing import Any
 from codex_agent_mem.context_pack import build_context_pack
 from codex_agent_mem.ingest import classify_event, stable_hash
 from codex_agent_mem.models import GenericEventEnvelope, Observation
+from codex_agent_mem.operational_state import STATEFUL_OBSERVATION_TYPES, derive_operational_state
 
 
 def connect(db_path: Path) -> sqlite3.Connection:
@@ -445,11 +446,14 @@ class CodexAgentMemStore:
             items.append(payload)
         return items
 
-    def project_brief(self, project_key: str) -> dict[str, Any] | None:
-        project = self.conn.execute(
+    def _project_row(self, project_key: str) -> sqlite3.Row | None:
+        return self.conn.execute(
             "SELECT id, project_key, name, root_path, updated_at FROM projects WHERE project_key = ?",
             (project_key,),
         ).fetchone()
+
+    def project_brief(self, project_key: str) -> dict[str, Any] | None:
+        project = self._project_row(project_key)
         if project is None:
             return None
         project_id = int(project["id"])
@@ -473,6 +477,8 @@ class CodexAgentMemStore:
             "counts": dict(counts),
             "recent_observations": recent,
             "recent_decisions": [dict(row) for row in decisions],
+            "operational_state": self.operational_state(project_key),
+            "context_metrics": self.context_metrics_summary(project_key),
         }
 
     def recent_decisions(self, project_key: str, limit: int = 10) -> list[dict[str, Any]]:
@@ -489,6 +495,97 @@ class CodexAgentMemStore:
         ).fetchall()
         return [dict(row) for row in rows]
 
+    def operational_observations(self, project_key: str, limit: int = 80) -> list[dict[str, Any]]:
+        placeholders = ",".join("?" for _ in STATEFUL_OBSERVATION_TYPES)
+        rows = self.conn.execute(
+            f"""
+            SELECT o.id, o.type, o.title, o.summary, o.detail, o.status, o.updated_at
+            FROM observations o
+            JOIN projects p ON p.id = o.project_id
+            WHERE p.project_key = ? AND o.type IN ({placeholders})
+            ORDER BY o.updated_at DESC, o.id DESC
+            LIMIT ?
+            """,
+            [project_key, *sorted(STATEFUL_OBSERVATION_TYPES), limit],
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def operational_state(self, project_key: str) -> dict[str, Any] | None:
+        if self._project_row(project_key) is None:
+            return None
+        return derive_operational_state(self.operational_observations(project_key, limit=120))
+
+    def record_context_sync(
+        self,
+        *,
+        project_key: str,
+        target_path: str | None,
+        skipped: bool,
+        reason: str | None,
+        stats: dict[str, Any],
+    ) -> None:
+        project = self._project_row(project_key)
+        if project is None:
+            return
+        with self.conn:
+            self.conn.execute(
+                """
+                INSERT INTO context_sync_events(
+                  project_id, target_path, skipped, reason, source_char_count, pack_char_count,
+                  approx_source_tokens, approx_pack_tokens, compression_ratio, generated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(project["id"]),
+                    target_path,
+                    1 if skipped else 0,
+                    reason,
+                    int(stats.get("source_char_count") or 0),
+                    int(stats.get("pack_char_count") or 0),
+                    int(stats.get("approx_source_tokens") or 0),
+                    int(stats.get("approx_pack_tokens") or 0),
+                    float(stats.get("compression_ratio") or 0.0),
+                    self._now(),
+                ),
+            )
+
+    def recent_context_sync_events(self, project_key: str, limit: int = 10) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT c.id, c.target_path, c.skipped, c.reason, c.source_char_count, c.pack_char_count,
+                   c.approx_source_tokens, c.approx_pack_tokens, c.compression_ratio, c.generated_at
+            FROM context_sync_events c
+            JOIN projects p ON p.id = c.project_id
+            WHERE p.project_key = ?
+            ORDER BY c.generated_at DESC, c.id DESC
+            LIMIT ?
+            """,
+            (project_key, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def context_metrics_summary(self, project_key: str) -> dict[str, Any] | None:
+        project = self._project_row(project_key)
+        if project is None:
+            return None
+        project_id = int(project["id"])
+        row = self.conn.execute(
+            """
+            SELECT
+              COUNT(*) AS total_events,
+              SUM(CASE WHEN skipped = 0 THEN 1 ELSE 0 END) AS synced_events,
+              SUM(CASE WHEN skipped = 1 THEN 1 ELSE 0 END) AS skipped_events,
+              ROUND(AVG(compression_ratio), 3) AS avg_compression_ratio,
+              MAX(generated_at) AS last_generated_at
+            FROM context_sync_events
+            WHERE project_id = ?
+            """,
+            (project_id,),
+        ).fetchone()
+        result = dict(row)
+        result["recent_events"] = self.recent_context_sync_events(project_key, limit=5)
+        return result
+
     def context_pack(self, project_key: str, max_chars: int = 2200) -> dict[str, Any] | None:
         brief = self.project_brief(project_key)
         if brief is None:
@@ -502,6 +599,7 @@ class CodexAgentMemStore:
             project=brief["project"],
             decisions=self.recent_decisions(project_key=project_key, limit=8),
             summaries=summaries,
+            operational_state=brief["operational_state"],
             source_turns=self.recent_turn_context(project_key=project_key, limit=max(len(summaries), 4)),
             max_chars=max_chars,
         )

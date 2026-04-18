@@ -80,6 +80,21 @@ CREATE TABLE IF NOT EXISTS decisions (
   FOREIGN KEY(source_observation_id) REFERENCES observations(id)
 );
 
+CREATE TABLE IF NOT EXISTS context_sync_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL,
+  target_path TEXT,
+  skipped INTEGER NOT NULL DEFAULT 0,
+  reason TEXT,
+  source_char_count INTEGER NOT NULL,
+  pack_char_count INTEGER NOT NULL,
+  approx_source_tokens INTEGER NOT NULL,
+  approx_pack_tokens INTEGER NOT NULL,
+  compression_ratio REAL NOT NULL,
+  generated_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id)
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS observations_fts USING fts5(
   title,
   summary,
@@ -110,3 +125,5 @@ CREATE INDEX IF NOT EXISTS idx_turns_session_id ON turns(session_id);
 CREATE INDEX IF NOT EXISTS idx_observations_project_id ON observations(project_id);
 CREATE INDEX IF NOT EXISTS idx_observations_updated_at ON observations(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_decisions_project_id ON decisions(project_id);
+CREATE INDEX IF NOT EXISTS idx_context_sync_events_project_id ON context_sync_events(project_id);
+CREATE INDEX IF NOT EXISTS idx_context_sync_events_generated_at ON context_sync_events(generated_at DESC);

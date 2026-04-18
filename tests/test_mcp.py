@@ -14,8 +14,8 @@ def seed(store: CodexAgentMemStore):
         "turn_id": "turn-1",
         "cwd": "/tmp/demo",
         "timestamp": "2026-04-17T00:00:00Z",
-        "input_messages": ["Audit auth choices"],
-        "assistant_message": "Decision: Keep JWT auth for v1.\nWe should preserve compatibility.",
+        "input_messages": ["Objective: stabilize auth continuity.\nPending: wire scope guard."],
+        "assistant_message": "Decision: Keep JWT auth for v1.\nPending: wire scope guard.",
         "metadata": {},
     }
     store.ingest_event(raw_payload, normalize_event(raw_payload))
@@ -59,4 +59,5 @@ def test_mcp_tools(tmp_path: Path):
         "params": {"name": "mem_context_pack", "arguments": {"project_key": "demo-project"}},
     })
     assert "Working Memory" in pack["result"]["structuredContent"]["text"]
+    assert "Pending work" in pack["result"]["structuredContent"]["text"]
     assert json.dumps(pack, ensure_ascii=True).isascii()

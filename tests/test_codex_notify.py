@@ -68,13 +68,23 @@ def test_direct_ingest_can_sync_project_doc(tmp_path: Path):
     workdir.mkdir()
     db_path = tmp_path / "codex_agent_mem.db"
     payloads = [
-        {
+            {
                 "type": "agent-turn-complete",
                 "thread-id": "th-1",
                 "turn-id": "tu-1",
                 "cwd": str(workdir),
-                "input-messages": ["Keep auth local and simple while preserving migration continuity, previous rollout constraints, and the local-only recovery path for billing work."],
-                "last-assistant-message": "Decision: keep sqlite for local auth memory.\nPreserve the local recovery path, avoid reconstructing old billing context manually, and keep continuity constraints explicit.",
+                "input-messages": [
+                    "Objective: keep billing continuity stable.\n"
+                    "Constraint: keep ETAPA 10 closed.\n"
+                    "Pending: write the audit note.\n"
+                    "This repo needs a compact continuity layer that keeps the objective, the active scope, and the "
+                    "remaining work available without replaying the whole history."
+                ],
+                "last-assistant-message": (
+                    "Decision: keep sqlite for local auth memory.\n"
+                    "Pending: write the audit note.\n"
+                    "The stored continuity needs to preserve the working rules and the unfinished items for the next run."
+                ),
                 "timestamp": "2026-04-17T00:00:00Z",
             },
             {
@@ -82,8 +92,17 @@ def test_direct_ingest_can_sync_project_doc(tmp_path: Path):
                 "thread-id": "th-1",
                 "turn-id": "tu-2",
                 "cwd": str(workdir),
-                "input-messages": ["Do not reopen ETAPA 10 scope in this repo, and keep the migration narrowed to the billing continuity problem rather than expanding to new architectural work."],
-                "last-assistant-message": "Decision: do not reopen ETAPA 10 scope inside this repo.\nStay on the billing continuity problem and keep the migration narrowed to local memory and resumability.",
+                "input-messages": [
+                    "Pending: verify the context pack before closing.\n"
+                    "We still need proof that the next run can resume from compact continuity instead of rebuilding "
+                    "the full billing timeline."
+                ],
+                "last-assistant-message": (
+                    "Decision: do not reopen ETAPA 10 scope inside this repo.\n"
+                    "Completed: write the audit note.\n"
+                    "Pending: verify the context pack before closing.\n"
+                    "Do not announce completion while the verification step is still open."
+                ),
                 "timestamp": "2026-04-17T00:10:00Z",
             },
             {
@@ -91,8 +110,15 @@ def test_direct_ingest_can_sync_project_doc(tmp_path: Path):
                 "thread-id": "th-1",
                 "turn-id": "tu-3",
                 "cwd": str(workdir),
-                "input-messages": ["Summarize the continuity constraints for the next session so the next run can resume without replaying the whole previous conversation or the full migration history."],
-                "last-assistant-message": "Decision: resume from the latest matching item instead of reconstructing everything.\nUse the generated continuity block first, and only fall back to older memory retrieval when the stored pack is not enough.",
+                "input-messages": [
+                    "Summarize the continuity constraints for the next session.\n"
+                    "The next run must remember the open verification item and the rule against false completion."
+                ],
+                "last-assistant-message": (
+                    "Decision: resume from the latest matching item instead of reconstructing everything.\n"
+                    "Status: complete\n"
+                    "Future runs should carry forward the pending verification work even if the assistant claimed completion."
+                ),
                 "timestamp": "2026-04-17T00:20:00Z",
             },
     ]
@@ -118,3 +144,4 @@ def test_direct_ingest_can_sync_project_doc(tmp_path: Path):
     content = agents_path.read_text(encoding="utf-8")
     assert "codex-agent-mem Generated Context" in content
     assert "do not reopen ETAPA 10 scope" in content
+    assert "Scope guard" in content

@@ -86,6 +86,39 @@
         </div>
       {% endif %}
 
+      {% if operational_state %}
+        <div class="chat-block">
+          <h3>Operational State</h3>
+          {% if operational_state.objective %}
+            <p><strong>Objective:</strong> {{ operational_state.objective.summary }}</p>
+          {% endif %}
+          {% if operational_state.pending_items %}
+            <p><strong>Pending:</strong></p>
+            <ul>
+              {% for item in operational_state.pending_items %}
+                <li>{{ item.summary }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if operational_state.blockers %}
+            <p><strong>Blockers:</strong></p>
+            <ul>
+              {% for item in operational_state.blockers %}
+                <li>{{ item.summary }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if operational_state.guardrails %}
+            <p><strong>Scope guard:</strong></p>
+            <ul>
+              {% for item in operational_state.guardrails %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endif %}
+
       {% if selected_turn %}
         <div class="turn-meta">
           <span class="pill">Session</span>
@@ -178,6 +211,29 @@
         </div>
       {% else %}
         <div class="empty">No decisions extracted yet.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
+        <h2>Context Sync Metrics</h2>
+        <span class="count">{{ context_metrics.total_events if context_metrics else 0 }}</span>
+      </div>
+      {% if context_metrics %}
+        <div class="decision-list">
+          <div class="decision-card">
+            <strong>Sync events</strong>
+            <p>{{ context_metrics.synced_events or 0 }} synced · {{ context_metrics.skipped_events or 0 }} skipped</p>
+            <small>Average compression ratio: {{ context_metrics.avg_compression_ratio or "n/a" }}</small>
+          </div>
+          {% for event in context_metrics.recent_events %}
+            <div class="decision-card">
+              <strong>{{ "Synced" if not event.skipped else "Skipped" }}</strong>
+              <p>~{{ event.approx_pack_tokens }} from ~{{ event.approx_source_tokens }} tokens</p>
+              <small>{{ event.generated_at }}</small>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No context sync metrics yet.</div>
       {% endif %}
     </article>
   </section>

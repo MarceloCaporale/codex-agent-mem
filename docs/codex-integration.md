@@ -18,9 +18,11 @@ And it can reinject compressed continuity automatically:
 - Codex emits `agent-turn-complete`
 - `codex_agent_mem.codex_notify` normalizes the payload
 - the event is persisted into local SQLite
-- heuristic extraction produces `session_summary` and `decision` observations
-- the store compiles a working-memory pack from recent turns and durable decisions
+- heuristic extraction produces `session_summary`, `decision`, and operational-state observations
+- the store derives operational state from those observations: objective, constraints, pending items, completed items, blockers, and completion claims
+- the store compiles a working-memory pack from recent turns, durable decisions, and operational state
 - when that pack is smaller than the source context, `AGENTS.md` is updated in the working directory
+- every generated pack event is recorded as a context sync metric for later inspection
 
 ## Retrieval flow
 
@@ -81,3 +83,4 @@ That path is useful only if you explicitly want `notify -> HTTP -> local API`.
 - no Codex App Server adapter yet
 - no automatic semantic memory layer
 - AGENTS sync is intentionally skipped when the generated pack is not smaller than the source context
+- operational state is still heuristic and derived from turn text, not from a dedicated planner protocol

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-agent-mem"
-version = "0.4.1"
+version = "0.5.0"
 description = "Portable, auditable, local-first memory layer for Codex and other agent workflows"
 readme = "README.md"
 requires-python = ">=3.12"

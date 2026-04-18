@@ -14,10 +14,19 @@ def seed(store: CodexAgentMemStore, cwd: Path, project_key: str = "demo-project"
             "turn_id": "turn-1",
             "cwd": str(cwd),
             "timestamp": "2026-04-17T00:00:00Z",
-            "input_messages": ["Keep auth local and simple while preserving previous migration rules."],
+            "input_messages": [
+                "Objective: finish the billing continuity patch.\n"
+                "Constraint: do not reopen ETAPA 10 scope in this repo.\n"
+                "Pending: write the billing audit note.\n"
+                "This workspace needs a compact continuity layer that keeps the billing migration scoped, "
+                "remembers the active deliverables, and avoids replaying the full previous discussion each time."
+            ],
             "assistant_message": (
                 "Decision: keep sqlite for local auth memory.\n"
-                "We should avoid network-only state and keep the migration path compact for future turns."
+                "Constraint: keep the migration path compact for future turns.\n"
+                "Pending: write the billing audit note.\n"
+                "The continuity block should preserve the operating rules, the remaining work, and the local-first "
+                "recovery path so the next run does not reconstruct old context manually."
             ),
             "metadata": {},
         },
@@ -28,10 +37,18 @@ def seed(store: CodexAgentMemStore, cwd: Path, project_key: str = "demo-project"
             "turn_id": "turn-2",
             "cwd": str(cwd),
             "timestamp": "2026-04-17T00:10:00Z",
-            "input_messages": ["Do not reopen ETAPA 10 scope in this repo. Focus on billing migration continuity."],
+            "input_messages": [
+                "Pending: verify the context pack before closing.\n"
+                "Blocker: no human validation yet.\n"
+                "We still need to prove that the next run can resume from a compact state description instead of "
+                "rehashing the entire billing migration history."
+            ],
             "assistant_message": (
                 "Decision: do not reopen ETAPA 10 scope inside this repo.\n"
-                "Continue the billing migration and preserve the local sqlite cache of record."
+                "Completed: write the billing audit note.\n"
+                "Blocker: no human validation yet.\n"
+                "The system must keep the active scope narrow and avoid announcing completion while validation "
+                "and verification work are still pending."
             ),
             "metadata": {},
         },
@@ -42,10 +59,17 @@ def seed(store: CodexAgentMemStore, cwd: Path, project_key: str = "demo-project"
             "turn_id": "turn-3",
             "cwd": str(cwd),
             "timestamp": "2026-04-17T00:20:00Z",
-            "input_messages": ["Summarize the continuity constraints for the next session."],
+            "input_messages": [
+                "Summarize the continuity constraints for the next session.\n"
+                "The next run should know the objective, the remaining work, the blocker, and the rule that it "
+                "must not close the task early."
+            ],
             "assistant_message": (
                 "Decision: preserve the compact migration plan and resume from the latest matching item.\n"
-                "Do not reconstruct old context from scratch when the stored continuity block already covers it."
+                "Pending: verify the context pack before closing.\n"
+                "Status: complete\n"
+                "The generated state should carry forward the open work and the blocker so future runs do not "
+                "misread the task as already finished."
             ),
             "metadata": {},
         },
@@ -69,11 +93,19 @@ def test_sync_project_doc_creates_agents_file(tmp_path: Path):
     assert agents_path.exists()
     content = agents_path.read_text(encoding="utf-8")
     assert "Approx pack size" in content
-    assert (
-        "do not reopen ETAPA 10 scope" in content
-        or "keep sqlite for local auth memory" in content
-        or "preserve the compact migration plan" in content
-    )
+    assert "Pending work" in content
+    assert "Scope guard" in content
+    assert "do not reopen ETAPA 10 scope" in content
+    assert "verify the context pack before closing" in content
+    state = store.operational_state("demo-project")
+    assert state is not None
+    assert state["objective"]["summary"] == "finish the billing continuity patch."
+    assert state["pending_items"]
+    assert state["blockers"]
+    metrics = store.context_metrics_summary("demo-project")
+    assert metrics is not None
+    assert metrics["total_events"] >= 1
+    assert metrics["synced_events"] >= 1
 
 
 def test_sync_project_doc_prefers_override_file(tmp_path: Path):

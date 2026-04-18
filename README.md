@@ -10,15 +10,18 @@ Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex
 
 ## Status
 
-`0.4.0` is the current public baseline release.
+`0.5.0` is the current public baseline release.
 
 What works today:
 
 - Codex `notify` ingestion on `agent-turn-complete`
 - local SQLite persistence with FTS5
-- heuristic extraction of `session_summary` and `decision`
+- heuristic extraction of `session_summary`, `decision`, `objective`, `constraint`, `pending_item`, `completed_item`, `blocker`, and `completion_claim`
 - generated working-memory packs with approximate token budget and compression stats
 - automatic `AGENTS.md` sync when the generated pack is smaller than the source context
+- operational-state carry-forward so the next run can recover objective, pending work, blockers, and scope guardrails
+- false-completion guardrails that keep “done” from overriding open work when pending items or blockers still exist
+- context sync metrics persisted per project
 - FastAPI inspection API
 - local inspection UI at `/ui`
 - MCP stdio server with:
@@ -43,6 +46,7 @@ What is intentionally not in scope yet:
 - Codex workflows often need durable context that stays outside the runtime.
 - Retrieval alone does not solve the bigger failure mode: losing scope and forcing the user to restate prior context.
 - A compressed continuity block that Codex loads automatically can reduce how much prior context must be replayed manually.
+- Carrying only decisions is not enough; the runtime also needs active objective, open work, blockers, and a rule against false closure.
 - SQLite keeps the implementation local-first, auditable, and easy to inspect.
 - The current release intentionally focuses on a narrow, testable slice rather than a broad unfinished platform.
 
@@ -147,10 +151,18 @@ That inserts a sample turn, extracts observations, and verifies recent retrieval
 
 ## What saves tokens now
 
-- The package compiles a smaller working-memory pack from recent turns and durable decisions.
+- The package compiles a smaller working-memory pack from recent turns, durable decisions, and derived operational state.
 - When that pack is actually smaller than the source context, it is synced into `AGENTS.md` for the working directory.
 - Codex loads `AGENTS.md` before the user prompt, so future sessions can start with compressed continuity instead of forcing you to restate old scope.
 - `mem_context_pack` exposes the same compact pack over MCP for on-demand retrieval.
+- The pack now carries forward pending work and blockers, so a future run can recover “what remains” instead of only “what was decided.”
+
+## What this prevents now
+
+- losing the original objective after a few runs
+- silently narrowing scope when the user asked for more
+- declaring completion while pending work still exists
+- forgetting blockers and re-entering the next run as if the task were finished
 
 ## Repository layout
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 - 2026-04-18
+
+- Added derived operational state for objective, constraints, pending work, completed work, blockers, and completion claims.
+- Added scope guard rules to the generated continuity block so Codex carries forward open work and avoids false completion.
+- Added context sync metrics and persistence for generated pack events.
+- Expanded the inspector and API to surface operational state and context sync metrics.
+- Hardened heuristic extraction so semicolon-separated operational clauses are split instead of contaminating one field with another.
+
 ## 0.4.1 - 2026-04-18
 
 - Fixed the Windows MCP stdio transport by emitting ASCII-safe JSON on the wire and reconfiguring stdio to UTF-8.

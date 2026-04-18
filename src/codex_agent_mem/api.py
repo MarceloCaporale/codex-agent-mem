@@ -144,6 +144,20 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Project not found")
         return result
 
+    @app.get("/projects/{project_key}/operational-state")
+    def project_operational_state(project_key: str):
+        result = store.operational_state(project_key)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
+    @app.get("/projects/{project_key}/context-metrics")
+    def project_context_metrics(project_key: str):
+        result = store.context_metrics_summary(project_key)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
     @app.get("/observations/{observation_id}")
     def get_observation(observation_id: int):
         result = store.get_observation(observation_id)
@@ -212,6 +226,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "project": brief["project"],
             "counts": brief["counts"],
             "context_pack": store.context_pack(project_key, max_chars=2200),
+            "operational_state": brief["operational_state"],
+            "context_metrics": brief["context_metrics"],
             "sessions": sessions,
             "selected_session": selected_session,
             "turns": turns,

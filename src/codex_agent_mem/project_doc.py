@@ -69,7 +69,7 @@ def sync_project_doc(
     if context_pack is None:
         return None
     if context_pack["stats"]["approx_pack_tokens"] >= context_pack["stats"]["approx_source_tokens"]:
-        return {
+        result = {
             "path": None,
             "project_key": project_key,
             "skipped": True,
@@ -77,12 +77,28 @@ def sync_project_doc(
             "stats": context_pack["stats"],
             "text": context_pack["text"],
         }
+        store.record_context_sync(
+            project_key=project_key,
+            target_path=None,
+            skipped=True,
+            reason=result["reason"],
+            stats=context_pack["stats"],
+        )
+        return result
     target_path = choose_project_doc_path(cwd)
     upsert_managed_block(target_path, render_managed_block(context_pack))
-    return {
+    result = {
         "path": str(target_path),
         "project_key": project_key,
         "skipped": False,
         "stats": context_pack["stats"],
         "text": context_pack["text"],
     }
+    store.record_context_sync(
+        project_key=project_key,
+        target_path=str(target_path),
+        skipped=False,
+        reason=None,
+        stats=context_pack["stats"],
+    )
+    return result

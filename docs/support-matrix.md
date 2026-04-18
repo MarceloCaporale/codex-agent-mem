@@ -10,9 +10,12 @@
 | macOS local development | Expected but not verified | No CI coverage yet |
 | Codex notify capture | Supported | Current primary capture path |
 | AGENTS-based continuity reinjection | Supported | Enabled through `--sync-project-doc` when the generated pack is smaller than source context |
+| Operational-state carry-forward | Supported | Objective, pending work, blockers, and guardrails are derived and injected into the working-memory pack |
+| False-completion guardrails | Supported | The generated pack explicitly tells Codex not to declare completion while pending work remains |
 | MCP stdio retrieval | Supported | Current primary retrieval path |
 | `mem_context_pack` compact retrieval | Supported | Returns the compressed continuity pack and approximate token budget |
 | FastAPI inspection API | Supported | Local inspection surface |
+| Context sync metrics | Supported | Pack sync/skip events are stored per project and exposed through API/UI |
 | Optional HTTP notify wrapper | Supported | Secondary path only |
 | Codex hooks adapter | Not yet supported | Deferred |
 | Codex App Server ingestion | Not yet supported | Deferred |
