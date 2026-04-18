@@ -6,15 +6,35 @@ Memoria portable, auditable y local-first para Codex y flujos con agentes de pro
 
 codex-agent-mem conserva memoria duradera fuera del runtime del modelo, comprime continuidad en packs mas chicos, y arrastra estado operativo para que Codex retome con menos repeticion, menos cierres falsos y mas control sobre lo que entra en contexto.
 
-## Features clave
+Release `alpha`. Iteracion rapida, slices chicos y baselines publicas en secuencia.
+
+## Novedades de v0.9.0
+
+- policies de memoria para inclusion y exclusion explicita
+- inheritance selectiva entre proyectos sin mezclar continuidad a ciegas
+- propuestas de repair y repairs derivados desde health
+- visibilidad de gobernanza en la UI local y en la documentacion
+
+Releases visibles: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+
+## Lo que ofrece
+
+### Continuidad
 
 - **Continuidad compacta**: convierte contexto repetido en packs mas chicos para `AGENTS.md` solo cuando realmente conviene
 - **Estado operativo persistente**: mantiene objetivo, restricciones, pendientes, blockers, Definition of Done y guardarrailes de alcance
-- **Control de cierre determinista**: `mem_open_work` y `mem_completion_check` hacen que el trabajo abierto pese mas que un viejo “done”
-- **Seleccion gobernada de memoria**: aplica policies, inheritance y repairs en vez de mezclar memoria sin criterio
-- **Todo local y auditable**: SQLite + FTS5, provenance, health, snapshots y UI local, sin servicio externo de memoria
 - **Integracion nativa con Codex**: pensado para `notify`, MCP stdio y sincronizacion automatica de `AGENTS.md`
 - **Ahorro practico de tokens**: suele reducir entre `20%` y `55%` del contexto repetido cuando gana el pack compacto
+
+### Control de cierre
+
+- **Control de cierre determinista**: `mem_open_work` y `mem_completion_check` hacen que el trabajo abierto pese mas que un viejo “done”
+- **Retencion de alcance**: arrastra recent changes, must-not-drop, blockers y continuidad activa, no solo decisiones
+
+### Gobernanza y auditoria
+
+- **Seleccion gobernada de memoria**: aplica policies, inheritance y repairs en vez de mezclar memoria sin criterio
+- **Todo local y auditable**: SQLite + FTS5, provenance, health, snapshots y UI local, sin servicio externo de memoria
 
 Sirve para auditorias largas, continuidad de proyectos complejos y sesiones donde el problema no es solo recordar decisiones, sino no perder alcance ni dar por terminado algo que sigue abierto.
 

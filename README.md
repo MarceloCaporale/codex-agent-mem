@@ -6,15 +6,35 @@ Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中�
 
 `codex-agent-mem` keeps durable project memory outside the model runtime, compresses continuity into smaller working packs, and carries forward operational state so Codex can resume with less repetition, fewer false “done” claims, and more control over what stays in context.
 
-## Key features
+Alpha release. Fast iteration, narrow slices, and public baselines shipped in sequence.
+
+## What’s new in v0.9.0
+
+- governed memory policies for explicit inclusion and exclusion
+- selective inheritance across projects without blindly mixing continuity
+- governed repair proposals and repair events derived from health
+- governance visibility in the local inspector and public docs
+
+Latest releases: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+
+## What you get
+
+### Continuity
 
 - **Compact continuity, not raw replay**: turns repeated session context into smaller `AGENTS.md` working packs when compression is actually favorable
 - **Operational state that survives sessions**: keeps objective, constraints, pending work, blockers, Definition of Done, and scope guardrails visible and reusable
-- **Deterministic closure control**: exposes `mem_open_work` and `mem_completion_check` so open work beats stale completion claims
-- **Governed memory selection**: applies project policies, inheritance rules, and repair events instead of mixing everything blindly
-- **Fully local and auditable**: SQLite + FTS5, provenance, health diagnostics, snapshots, and a local inspector UI with no external memory service
 - **Codex-native integration**: built around `notify`, MCP stdio, and automatic `AGENTS.md` sync for real Codex workflows
 - **Practical token savings**: often reduces repeated continuity replay by roughly `20%` to `55%` when the compact pack wins
+
+### Closure Control
+
+- **Deterministic closure control**: exposes `mem_open_work` and `mem_completion_check` so open work beats stale completion claims
+- **Scope retention**: carries forward must-not-drop continuity, recent changes, and active blockers instead of only decisions
+
+### Governance and Audit
+
+- **Governed memory selection**: applies project policies, inheritance rules, and repair events instead of mixing everything blindly
+- **Fully local and auditable**: SQLite + FTS5, provenance, health diagnostics, snapshots, and a local inspector UI with no external memory service
 
 Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md) | [Discoverability Metadata](./docs/discoverability.md)
 
