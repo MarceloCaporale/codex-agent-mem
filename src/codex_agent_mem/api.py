@@ -18,6 +18,7 @@ from codex_agent_mem.codex_notify import codex_notify_to_generic, derive_project
 from codex_agent_mem.config import AppConfig
 from codex_agent_mem.db import CodexAgentMemStore
 from codex_agent_mem.ingest import normalize_event
+from codex_agent_mem.project_doc import sync_project_doc
 
 
 class GenericIngestRequest(BaseModel):
@@ -28,6 +29,7 @@ class CodexNotifyRequest(BaseModel):
     payload: dict
     project_key: str | None = None
     project_from_cwd: bool = True
+    sync_project_doc: bool = False
 
 
 def _loads_json(raw: str | None, fallback):
@@ -107,7 +109,14 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         project_key = derive_project_key(req.payload, explicit=req.project_key, project_from_cwd=req.project_from_cwd)
         generic_payload = codex_notify_to_generic(req.payload, project_key)
         event = normalize_event(generic_payload)
-        return store.ingest_event(req.payload, event)
+        result = store.ingest_event(req.payload, event)
+        if req.sync_project_doc and event.cwd:
+            result["project_doc_sync"] = sync_project_doc(
+                store=store,
+                project_key=event.project_key,
+                cwd=Path(event.cwd),
+            )
+        return result
 
     @app.get("/search")
     def search(q: str, project_key: str | None = None, limit: int = 10):
@@ -124,6 +133,13 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/projects/{project_key}/brief")
     def project_brief(project_key: str):
         result = store.project_brief(project_key)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
+    @app.get("/projects/{project_key}/context-pack")
+    def project_context_pack(project_key: str, max_chars: int = 2200):
+        result = store.context_pack(project_key, max_chars=max_chars)
         if result is None:
             raise HTTPException(status_code=404, detail="Project not found")
         return result
@@ -195,6 +211,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "db_path": str(config.db_path),
             "project": brief["project"],
             "counts": brief["counts"],
+            "context_pack": store.context_pack(project_key, max_chars=2200),
             "sessions": sessions,
             "selected_session": selected_session,
             "turns": turns,

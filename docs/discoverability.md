@@ -21,7 +21,7 @@ This document captures the metadata and phrasing that best describes the current
 
 ## Recommended release framing
 
-`0.3.0` is the current public baseline release for `codex-agent-mem`: a narrow, auditable memory layer for Codex built on local SQLite, notify-based capture, MCP retrieval, and a local inspection UI.
+`0.4.0` is the current public baseline release for `codex-agent-mem`: a narrow, auditable memory layer for Codex built on local SQLite, notify-based capture, compact AGENTS reinjection, MCP retrieval, and a local inspection UI.
 
 ## Search phrases this repo should naturally support
 

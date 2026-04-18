@@ -9,12 +9,18 @@ It also exposes a local FastAPI inspector for humans:
 
 3. `/ui` for project, session, turn, and observation browsing
 
+And it can reinject compressed continuity automatically:
+
+4. `AGENTS.md` sync for generated working memory when the pack is smaller than the source context
+
 ## Capture flow
 
 - Codex emits `agent-turn-complete`
 - `codex_agent_mem.codex_notify` normalizes the payload
 - the event is persisted into local SQLite
 - heuristic extraction produces `session_summary` and `decision` observations
+- the store compiles a working-memory pack from recent turns and durable decisions
+- when that pack is smaller than the source context, `AGENTS.md` is updated in the working directory
 
 ## Retrieval flow
 
@@ -24,6 +30,7 @@ It also exposes a local FastAPI inspector for humans:
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_context_pack`
 
 ## Generate the config snippet
 
@@ -35,6 +42,7 @@ The generated config uses:
 
 - `notify`
 - `[mcp_servers."codex-agent-mem"]`
+- `--sync-project-doc`
 - per-tool `approval_mode = "approve"` for the read-only retrieval tools
 - Python module targets under `codex_agent_mem`
 
@@ -72,3 +80,4 @@ That path is useful only if you explicitly want `notify -> HTTP -> local API`.
 - no Codex hooks adapter yet
 - no Codex App Server adapter yet
 - no automatic semantic memory layer
+- AGENTS sync is intentionally skipped when the generated pack is not smaller than the source context

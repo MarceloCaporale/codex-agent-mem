@@ -9,7 +9,9 @@
 | Windows CI | Supported | Covered in GitHub Actions |
 | macOS local development | Expected but not verified | No CI coverage yet |
 | Codex notify capture | Supported | Current primary capture path |
+| AGENTS-based continuity reinjection | Supported | Enabled through `--sync-project-doc` when the generated pack is smaller than source context |
 | MCP stdio retrieval | Supported | Current primary retrieval path |
+| `mem_context_pack` compact retrieval | Supported | Returns the compressed continuity pack and approximate token budget |
 | FastAPI inspection API | Supported | Local inspection surface |
 | Optional HTTP notify wrapper | Supported | Secondary path only |
 | Codex hooks adapter | Not yet supported | Deferred |

@@ -7,6 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
+from codex_agent_mem.context_pack import build_context_pack
 from codex_agent_mem.ingest import classify_event, stable_hash
 from codex_agent_mem.models import GenericEventEnvelope, Observation
 
@@ -421,6 +422,29 @@ class CodexAgentMemStore:
         result["observations"] = [dict(obs) for obs in observations]
         return result
 
+    def recent_turn_context(self, project_key: str, limit: int = 8) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT t.id, t.input_messages_json, t.assistant_message, t.captured_at
+            FROM turns t
+            JOIN sessions s ON s.id = t.session_id
+            JOIN projects p ON p.id = s.project_id
+            WHERE p.project_key = ?
+            ORDER BY t.captured_at DESC, t.id DESC
+            LIMIT ?
+            """,
+            (project_key, limit),
+        ).fetchall()
+        items: list[dict[str, Any]] = []
+        for row in rows:
+            payload = dict(row)
+            try:
+                payload["input_messages"] = json.loads(payload.get("input_messages_json") or "[]")
+            except json.JSONDecodeError:
+                payload["input_messages"] = []
+            items.append(payload)
+        return items
+
     def project_brief(self, project_key: str) -> dict[str, Any] | None:
         project = self.conn.execute(
             "SELECT id, project_key, name, root_path, updated_at FROM projects WHERE project_key = ?",
@@ -450,6 +474,37 @@ class CodexAgentMemStore:
             "recent_observations": recent,
             "recent_decisions": [dict(row) for row in decisions],
         }
+
+    def recent_decisions(self, project_key: str, limit: int = 10) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT d.id, d.title, d.decision_text, d.status, d.updated_at
+            FROM decisions d
+            JOIN projects p ON p.id = d.project_id
+            WHERE p.project_key = ?
+            ORDER BY d.updated_at DESC, d.id DESC
+            LIMIT ?
+            """,
+            (project_key, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def context_pack(self, project_key: str, max_chars: int = 2200) -> dict[str, Any] | None:
+        brief = self.project_brief(project_key)
+        if brief is None:
+            return None
+        summaries = [
+            item
+            for item in self.recent_observations(project_key=project_key, limit=12)
+            if item.get("type") == "session_summary"
+        ]
+        return build_context_pack(
+            project=brief["project"],
+            decisions=self.recent_decisions(project_key=project_key, limit=8),
+            summaries=summaries,
+            source_turns=self.recent_turn_context(project_key=project_key, limit=max(len(summaries), 4)),
+            max_chars=max_chars,
+        )
 
     @staticmethod
     def _now() -> str:

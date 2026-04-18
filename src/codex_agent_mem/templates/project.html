@@ -78,6 +78,14 @@
         {% if selected_turn %}<a class="inline-link" href="/ui/turns/{{ selected_turn.id }}">Open full view</a>{% endif %}
       </div>
 
+      {% if context_pack %}
+        <div class="chat-block">
+          <h3>Generated Working Memory</h3>
+          <p class="muted">Approx {{ context_pack.stats.approx_pack_tokens }} tokens from {{ context_pack.stats.approx_source_tokens }} source tokens.</p>
+          <pre class="message assistant">{{ context_pack.text }}</pre>
+        </div>
+      {% endif %}
+
       {% if selected_turn %}
         <div class="turn-meta">
           <span class="pill">Session</span>

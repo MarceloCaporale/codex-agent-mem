@@ -64,6 +64,18 @@ class CodexAgentMemMCPServer:
                     "required": ["project_key"],
                 },
             },
+            {
+                "name": "mem_context_pack",
+                "description": "Return a compact continuity pack optimized to carry project context forward with fewer tokens.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "max_chars": {"type": "integer", "minimum": 400, "maximum": 6000},
+                    },
+                    "required": ["project_key"],
+                },
+            },
         ]
 
     def _tool_result(self, data: Any, is_error: bool = False) -> dict[str, Any]:
@@ -116,6 +128,13 @@ class CodexAgentMemMCPServer:
                     )
                 elif name == "mem_project_brief":
                     data = self.store.project_brief(arguments["project_key"])
+                    if data is None:
+                        raise ValueError("Project not found")
+                elif name == "mem_context_pack":
+                    data = self.store.context_pack(
+                        arguments["project_key"],
+                        max_chars=int(arguments.get("max_chars", 2200)),
+                    )
                     if data is None:
                         raise ValueError("Project not found")
                 else:

@@ -15,6 +15,7 @@ This repository is intentionally optimized for coding agents, deep-research tool
 - Current retrieval surface: MCP stdio
 - Current capture path: Codex `notify` on `agent-turn-complete`
 - Current inspection surface: local FastAPI UI at `/ui`
+- Current continuity surface: generated `AGENTS.md` working-memory block when compression is favorable
 - Current extraction strategy: heuristic `session_summary` and `decision` extraction
 
 ## What this project is not yet
@@ -64,6 +65,10 @@ python -m build
   Database schema
 - `src/codex_agent_mem/bootstrap_codex.py`
   Codex config snippet generator
+- `src/codex_agent_mem/project_doc.py`
+  Generated AGENTS block sync for compressed continuity
+- `src/codex_agent_mem/context_pack.py`
+  Compact working-memory pack builder and token-budget stats
 - `src/codex_agent_mem/smoke.py`
   End-to-end smoke verification
 

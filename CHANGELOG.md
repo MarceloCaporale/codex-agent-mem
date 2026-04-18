@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 - 2026-04-17
+
+- Added generated working-memory context packs built from durable decisions and recent session summaries.
+- Added automatic AGENTS.md synchronization after Codex notify ingest so future sessions start with compressed continuity context.
+- Added `mem_context_pack` to the MCP surface and `codex-agent-mem-refresh-context` for manual context regeneration.
+- Added project UI support to inspect the generated working-memory pack and its approximate token budget.
+
 ## 0.3.0 - 2026-04-17
 
 - Added a local inspection UI served by FastAPI for projects, sessions, turns, observations, and decisions.

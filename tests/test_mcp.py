@@ -31,6 +31,7 @@ def test_mcp_tools(tmp_path: Path):
     tools = server.handle_request({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
     names = {tool["name"] for tool in tools["result"]["tools"]}
     assert "mem_search" in names
+    assert "mem_context_pack" in names
 
     search = server.handle_request({
         "jsonrpc": "2.0",
@@ -49,3 +50,11 @@ def test_mcp_tools(tmp_path: Path):
         "params": {"name": "mem_get", "arguments": {"observation_id": obs_id}},
     })
     assert get_obs["result"]["structuredContent"]["id"] == obs_id
+
+    pack = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "tools/call",
+        "params": {"name": "mem_context_pack", "arguments": {"project_key": "demo-project"}},
+    })
+    assert "Working Memory" in pack["result"]["structuredContent"]["text"]

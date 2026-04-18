@@ -27,7 +27,7 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 ```
 
 Paste the generated output into `~/.codex/config.toml`.
-The snippet already includes read-only MCP tool approvals needed for non-interactive Codex runs.
+The snippet already includes `--sync-project-doc` plus read-only MCP tool approvals needed for non-interactive Codex runs.
 
 ## 4. Optional local services
 
@@ -49,7 +49,13 @@ Start the MCP server:
 codex-agent-mem-mcp --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-## 5. Run full checks
+## 5. Rebuild the generated continuity block manually
+
+```powershell
+codex-agent-mem-refresh-context --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db --project-key YOUR_PROJECT --cwd C:\Path\To\Project
+```
+
+## 6. Run full checks
 
 ```powershell
 ruff check .

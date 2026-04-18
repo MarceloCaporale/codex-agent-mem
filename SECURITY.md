@@ -4,8 +4,8 @@
 
 | Version line | Status |
 | --- | --- |
-| `0.3.x` | Supported |
-| `< 0.3.0` | Not supported |
+| `0.4.x` | Supported |
+| `< 0.4.0` | Not supported |
 
 ## Scope
 
@@ -14,6 +14,7 @@ Security reports are most relevant for:
 - local SQLite persistence
 - FastAPI inspection API
 - local inspection UI
+- generated AGENTS.md working-memory sync
 - MCP stdio surface
 - Codex notify ingestion
 - packaging and install workflow

@@ -10,6 +10,7 @@ from urllib import request
 from codex_agent_mem.config import AppConfig
 from codex_agent_mem.db import CodexAgentMemStore
 from codex_agent_mem.ingest import now_iso, normalize_event
+from codex_agent_mem.project_doc import sync_project_doc
 
 
 def _flatten_input_messages(value: Any) -> list[str]:
@@ -62,11 +63,18 @@ def codex_notify_to_generic(payload: dict[str, Any], project_key: str) -> dict[s
     }
 
 
-def ingest_via_http(api_base: str, raw_payload: dict[str, Any], project_key: str) -> None:
+def ingest_via_http(
+    api_base: str,
+    raw_payload: dict[str, Any],
+    project_key: str,
+    *,
+    sync_project_doc_after_ingest: bool = False,
+) -> None:
     body = {
         "payload": raw_payload,
         "project_key": project_key,
         "project_from_cwd": False,
+        "sync_project_doc": sync_project_doc_after_ingest,
     }
     data = json.dumps(body, ensure_ascii=False).encode("utf-8")
     req = request.Request(
@@ -79,10 +87,24 @@ def ingest_via_http(api_base: str, raw_payload: dict[str, Any], project_key: str
         _ = resp.read()
 
 
-def ingest_direct(db_path: Path, raw_payload: dict[str, Any], generic_payload: dict[str, Any]) -> None:
+def ingest_direct(
+    db_path: Path,
+    raw_payload: dict[str, Any],
+    generic_payload: dict[str, Any],
+    *,
+    sync_project_doc_after_ingest: bool = False,
+) -> dict[str, Any]:
     store = CodexAgentMemStore(db_path=db_path)
     event = normalize_event(generic_payload)
-    store.ingest_event(raw_payload, event)
+    result = store.ingest_event(raw_payload, event)
+    if sync_project_doc_after_ingest and event.cwd:
+        sync_result = sync_project_doc(
+            store=store,
+            project_key=event.project_key,
+            cwd=Path(event.cwd),
+        )
+        result["project_doc_sync"] = sync_result
+    return result
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -92,6 +114,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--project-from-cwd", action="store_true")
     parser.add_argument("--db-path", type=Path, default=AppConfig().db_path)
     parser.add_argument("--api-base", help="Optional local API base, e.g. http://127.0.0.1:37770")
+    parser.add_argument("--sync-project-doc", action="store_true", help="Sync a compact generated working-memory block into AGENTS.md after ingest")
     return parser
 
 
@@ -107,9 +130,19 @@ def main(argv: list[str] | None = None) -> int:
     project_key = derive_project_key(payload, explicit=args.project_key, project_from_cwd=args.project_from_cwd)
     generic_payload = codex_notify_to_generic(payload, project_key)
     if args.api_base:
-        ingest_via_http(args.api_base, payload, project_key)
+        ingest_via_http(
+            args.api_base,
+            payload,
+            project_key,
+            sync_project_doc_after_ingest=args.sync_project_doc,
+        )
     else:
-        ingest_direct(args.db_path, payload, generic_payload)
+        ingest_direct(
+            args.db_path,
+            payload,
+            generic_payload,
+            sync_project_doc_after_ingest=args.sync_project_doc,
+        )
     return 0
 
 

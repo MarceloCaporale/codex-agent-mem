@@ -7,6 +7,7 @@ notify = [
   '-m',
   'codex_agent_mem.codex_notify',
   '--project-from-cwd',
+  '--sync-project-doc',
   '--db-path',
   'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db'
 ]
@@ -30,4 +31,7 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers."codex-agent-mem".tools.mem_project_brief]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_context_pack]
 approval_mode = "approve"

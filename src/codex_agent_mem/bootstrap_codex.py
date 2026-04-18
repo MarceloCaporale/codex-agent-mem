@@ -12,6 +12,7 @@ READ_ONLY_MCP_TOOLS = (
     "mem_get",
     "mem_recent",
     "mem_project_brief",
+    "mem_context_pack",
 )
 
 
@@ -28,6 +29,7 @@ def build_codex_toml_snippet(
         f"  '{python_exe}',",
         "  '-m',",
         "  'codex_agent_mem.codex_notify',",
+        "  '--sync-project-doc',",
     ]
     if project_from_cwd:
         lines.append("  '--project-from-cwd',")

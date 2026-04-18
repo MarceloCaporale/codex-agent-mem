@@ -38,6 +38,10 @@ def test_api_ingest_and_read(tmp_path: Path):
     assert brief.status_code == 200
     assert brief.json()["counts"]["observations"] >= 1
 
+    context_pack = client.get("/projects/demo-repo/context-pack")
+    assert context_pack.status_code == 200
+    assert "Working Memory" in context_pack.json()["text"]
+
 
 def test_inspector_routes_render(tmp_path: Path):
     app = create_app(AppConfig(db_path=tmp_path / "codex_agent_mem.db"))
@@ -54,6 +58,7 @@ def test_inspector_routes_render(tmp_path: Path):
 
     project = client.get("/ui/projects/demo-repo")
     assert project.status_code == 200
+    assert "Generated Working Memory" in project.text
     assert "Selected Turn" in project.text
     assert "demo repo · 2026-04-17 00:00" in project.text
     assert "Please lock auth storage" in project.text

@@ -2,21 +2,23 @@
 
 Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
-Portable, auditable, local-first memory for Codex with SQLite persistence, notify capture, and MCP retrieval.
+Portable, auditable, local-first memory for Codex with SQLite persistence, compact context reinjection, and MCP retrieval.
 
-codex-agent-mem persists durable findings from agent turns into local SQLite, exposes compact retrieval over MCP, and keeps the memory layer auditable and runtime-owned instead of hiding it inside one vendor runtime.
+codex-agent-mem persists durable findings from agent turns into local SQLite, compiles a smaller working-memory pack from recent context, syncs that pack into `AGENTS.md` when it is actually smaller than the source context, and exposes compact retrieval over MCP.
 
 Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md) | [Discoverability Metadata](./docs/discoverability.md)
 
 ## Status
 
-`0.3.0` is the current public baseline release.
+`0.4.0` is the current public baseline release.
 
 What works today:
 
 - Codex `notify` ingestion on `agent-turn-complete`
 - local SQLite persistence with FTS5
 - heuristic extraction of `session_summary` and `decision`
+- generated working-memory packs with approximate token budget and compression stats
+- automatic `AGENTS.md` sync when the generated pack is smaller than the source context
 - FastAPI inspection API
 - local inspection UI at `/ui`
 - MCP stdio server with:
@@ -24,6 +26,7 @@ What works today:
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_context_pack`
 - automated tests
 
 What is intentionally not in scope yet:
@@ -38,7 +41,8 @@ What is intentionally not in scope yet:
 ## Why this repository exists
 
 - Codex workflows often need durable context that stays outside the runtime.
-- MCP is useful for retrieval, but durable project memory still needs explicit storage and capture.
+- Retrieval alone does not solve the bigger failure mode: losing scope and forcing the user to restate prior context.
+- A compressed continuity block that Codex loads automatically can reduce how much prior context must be replayed manually.
 - SQLite keeps the implementation local-first, auditable, and easy to inspect.
 - The current release intentionally focuses on a narrow, testable slice rather than a broad unfinished platform.
 
@@ -101,7 +105,7 @@ Generate a ready-to-paste snippet:
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-That prints the `notify` block, the `[mcp_servers."codex-agent-mem"]` block, and read-only MCP tool approvals you can paste into `~/.codex/config.toml`.
+That prints the `notify` block, the `[mcp_servers."codex-agent-mem"]` block, the `--sync-project-doc` flag for automatic context reinjection, and read-only MCP tool approvals you can paste into `~/.codex/config.toml`.
 
 Example files also live under [examples/codex](./examples/codex/).
 
@@ -125,6 +129,12 @@ Start the MCP server:
 codex-agent-mem-mcp --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
+Manually rebuild the generated continuity block for one directory:
+
+```powershell
+codex-agent-mem-refresh-context --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db --project-key YOUR_PROJECT --cwd C:\Path\To\Project
+```
+
 ## Quick verification
 
 Run the smoke test:
@@ -134,6 +144,13 @@ codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
 That inserts a sample turn, extracts observations, and verifies recent retrieval and project brief generation.
+
+## What saves tokens now
+
+- The package compiles a smaller working-memory pack from recent turns and durable decisions.
+- When that pack is actually smaller than the source context, it is synced into `AGENTS.md` for the working directory.
+- Codex loads `AGENTS.md` before the user prompt, so future sessions can start with compressed continuity instead of forcing you to restate old scope.
+- `mem_context_pack` exposes the same compact pack over MCP for on-demand retrieval.
 
 ## Repository layout
 

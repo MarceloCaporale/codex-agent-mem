@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-agent-mem"
-version = "0.3.0"
+version = "0.4.0"
 description = "Portable, auditable, local-first memory layer for Codex and other agent workflows"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -55,6 +55,7 @@ codex-agent-mem-api = "codex_agent_mem.api:main"
 codex-agent-mem-bootstrap-codex = "codex_agent_mem.bootstrap_codex:main"
 codex-agent-mem-codex-notify = "codex_agent_mem.codex_notify:main"
 codex-agent-mem-mcp = "codex_agent_mem.mcp_stdio:main"
+codex-agent-mem-refresh-context = "codex_agent_mem.refresh_context:main"
 codex-agent-mem-smoke = "codex_agent_mem.smoke:main"
 
 [tool.pytest.ini_options]
