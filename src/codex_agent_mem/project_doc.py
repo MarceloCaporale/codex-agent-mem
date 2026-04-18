@@ -26,6 +26,8 @@ def render_managed_block(context_pack: dict[str, Any]) -> str:
             "",
             f"> Budget: `{stats.get('budget', 'normal')}`",
             f"> Approx pack size: ~{stats['approx_pack_tokens']} tokens from ~{stats['approx_source_tokens']} source tokens.",
+            f"> Build time: ~{stats.get('build_ms', 0)} ms.",
+            f"> Budget reason: `{stats.get('budget_reason') or 'explicit_or_default'}`",
             "> This block is generated after completed Codex turns to keep continuity compact across sessions.",
             "",
             context_pack["text"],

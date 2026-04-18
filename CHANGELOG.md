@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0 - 2026-04-18
+
+- Added auditable memory provenance persisted per observation and exposed through `mem_provenance`.
+- Added diagnostic health reporting through `mem_health`, plus persisted health reports per project.
+- Added snapshot creation, listing, and restore flows through `mem_snapshot_create`, `mem_snapshot_list`, `mem_snapshot_restore`, and a local snapshot CLI.
+- Added provenance, health, and snapshot visibility to the FastAPI inspector and local UI.
+- Hardened diagnostic-turn filtering so `mem_*` verification runs do not pollute derived operational state or `AGENTS.md`.
+- Persisted richer context-sync observability, including budget reasons and sync build timing.
+
 ## 0.7.0 - 2026-04-18
 
 - Added `mem_recent_changes` to expose open-work deltas since the last meaningful sync baseline.

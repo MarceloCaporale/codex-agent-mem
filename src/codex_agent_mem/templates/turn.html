@@ -46,14 +46,17 @@
         {% if turn.observations %}
           <div class="observation-list">
             {% for item in turn.observations %}
-              <div class="observation-row static">
+              <a class="observation-row static" href="/ui/observations/{{ item.id }}">
                 <div class="observation-row-top">
                   <span class="type">{{ item.type }}</span>
                   <span>#{{ item.id }}</span>
                 </div>
                 <strong>{{ item.title }}</strong>
                 <p>{{ item.summary }}</p>
-              </div>
+                {% if item.provenance and item.provenance.turn_hash %}
+                  <small class="secondary-code">{{ item.provenance.turn_hash[:12] }}… · {{ item.provenance.created_at }}</small>
+                {% endif %}
+              </a>
             {% endfor %}
           </div>
         {% else %}

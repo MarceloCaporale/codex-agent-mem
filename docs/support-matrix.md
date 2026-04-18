@@ -17,14 +17,17 @@
 | `mem_context_pack` auto budget | Supported | Selects the smallest fitting budget profile from `micro`, `normal`, and `full` |
 | `mem_recent_changes` delta retrieval | Supported | Summarizes what changed since the last meaningful continuity baseline |
 | `mem_scope_guard` continuity guard | Supported | Exposes must-not-drop scope, active constraints, and closure conflicts |
+| `mem_provenance` audit retrieval | Supported | Shows where one derived observation came from, including turn/session context and source payload hash |
+| `mem_health` diagnostics | Supported | Reports project health score, sync quality, and structural warnings without mutating memory |
+| Snapshot list/create/restore | Supported | Creates versioned project snapshots and restores them as derived state, not silent history mutation |
 | FastAPI inspection API | Supported | Local inspection surface |
-| Context sync metrics | Supported | Pack sync/skip events are stored per project and exposed through API/UI |
+| Context sync metrics | Supported | Pack sync/skip events are stored per project and exposed through API/UI, including budget reason and build timing |
 | Optional HTTP notify wrapper | Supported | Secondary path only |
 | Codex hooks adapter | Not yet supported | Deferred |
 | Codex App Server ingestion | Not yet supported | Deferred |
 | Ollama adapter | Not yet supported | Deferred |
 | Vector search / embeddings | Not yet supported | Deferred |
-| Local inspection UI | Supported | Served by FastAPI at `/ui`, including recent changes, scope guard, closure, and sync metrics |
+| Local inspection UI | Supported | Served by FastAPI at `/ui`, including recent changes, scope guard, closure, sync metrics, provenance, health, and snapshots |
 
 ## Version support
 

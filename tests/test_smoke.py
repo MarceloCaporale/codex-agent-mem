@@ -8,3 +8,6 @@ def test_smoke_runs_end_to_end(tmp_path: Path):
     assert result["ingest"]["ok"] is True
     assert result["brief"]["counts"]["observations"] >= 1
     assert result["recent"]
+    assert result["provenance"]["memory_kind"] == "observation"
+    assert result["health"]["score"] >= 0
+    assert result["snapshot"]["snapshot_hash"]

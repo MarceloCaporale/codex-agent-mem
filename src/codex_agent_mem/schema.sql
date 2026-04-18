@@ -92,6 +92,8 @@ CREATE TABLE IF NOT EXISTS context_sync_events (
   approx_pack_tokens INTEGER NOT NULL,
   compression_ratio REAL NOT NULL,
   budget TEXT NOT NULL DEFAULT 'normal',
+  budget_reason TEXT,
+  build_ms REAL NOT NULL DEFAULT 0,
   generated_at TEXT NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(id)
 );
@@ -111,6 +113,56 @@ CREATE TABLE IF NOT EXISTS closure_check_events (
   created_at TEXT NOT NULL,
   FOREIGN KEY(project_id) REFERENCES projects(id),
   FOREIGN KEY(turn_id) REFERENCES turns(id)
+);
+
+CREATE TABLE IF NOT EXISTS memory_provenance (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  memory_kind TEXT NOT NULL,
+  memory_id INTEGER NOT NULL,
+  project_id INTEGER NOT NULL,
+  session_id INTEGER,
+  turn_id INTEGER,
+  observation_id INTEGER,
+  turn_hash TEXT,
+  model_name TEXT,
+  cwd TEXT,
+  source_span_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  UNIQUE(memory_kind, memory_id),
+  FOREIGN KEY(project_id) REFERENCES projects(id),
+  FOREIGN KEY(session_id) REFERENCES sessions(id),
+  FOREIGN KEY(turn_id) REFERENCES turns(id),
+  FOREIGN KEY(observation_id) REFERENCES observations(id)
+);
+
+CREATE TABLE IF NOT EXISTS memory_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL,
+  label TEXT NOT NULL,
+  snapshot_hash TEXT NOT NULL,
+  snapshot_path TEXT NOT NULL,
+  created_from_sync_event_id INTEGER,
+  restored_at TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id),
+  FOREIGN KEY(created_from_sync_event_id) REFERENCES context_sync_events(id)
+);
+
+CREATE TABLE IF NOT EXISTS health_reports (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL,
+  score INTEGER NOT NULL,
+  duplicate_count INTEGER NOT NULL DEFAULT 0,
+  contradiction_count INTEGER NOT NULL DEFAULT 0,
+  stale_item_count INTEGER NOT NULL DEFAULT 0,
+  dod_total_count INTEGER NOT NULL DEFAULT 0,
+  dod_missing_count INTEGER NOT NULL DEFAULT 0,
+  dod_coverage_ratio REAL NOT NULL DEFAULT 1.0,
+  open_work_count INTEGER NOT NULL DEFAULT 0,
+  closure_mismatch INTEGER NOT NULL DEFAULT 0,
+  details_json TEXT NOT NULL DEFAULT '{}',
+  generated_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id)
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS observations_fts USING fts5(
@@ -147,3 +199,10 @@ CREATE INDEX IF NOT EXISTS idx_context_sync_events_project_id ON context_sync_ev
 CREATE INDEX IF NOT EXISTS idx_context_sync_events_generated_at ON context_sync_events(generated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_closure_check_events_project_id ON closure_check_events(project_id);
 CREATE INDEX IF NOT EXISTS idx_closure_check_events_created_at ON closure_check_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_provenance_project_id ON memory_provenance(project_id);
+CREATE INDEX IF NOT EXISTS idx_memory_provenance_turn_id ON memory_provenance(turn_id);
+CREATE INDEX IF NOT EXISTS idx_memory_provenance_observation_id ON memory_provenance(observation_id);
+CREATE INDEX IF NOT EXISTS idx_memory_snapshots_project_id ON memory_snapshots(project_id);
+CREATE INDEX IF NOT EXISTS idx_memory_snapshots_created_at ON memory_snapshots(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_health_reports_project_id ON health_reports(project_id);
+CREATE INDEX IF NOT EXISTS idx_health_reports_generated_at ON health_reports(generated_at DESC);

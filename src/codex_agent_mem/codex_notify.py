@@ -59,6 +59,9 @@ def codex_notify_to_generic(payload: dict[str, Any], project_key: str) -> dict[s
         "artifacts": [],
         "metadata": {
             "codex_notification_type": payload.get("type"),
+            "model_name": payload.get("model")
+            or payload.get("model-name")
+            or payload.get("model_name"),
         },
     }
 

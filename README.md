@@ -2,9 +2,9 @@
 
 Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
-**Portable, auditable, local-first MCP memory layer for Codex CLI, Codex Desktop, and long-running agent workflows.**
+**Portable, auditable, local-first MCP continuity layer for Codex CLI, Codex Desktop, and long-running agent workflows.**
 
-Persistent agent memory with automatic context compression, SQLite + FTS5, local inspection UI, and no external memory service.
+Persistent agent memory with automatic context compression, SQLite + FTS5, provenance-aware auditing, health diagnostics, project snapshots, local inspection UI, and no external memory service.
 
 `codex-agent-mem` persists durable findings from agent turns into local SQLite, compiles a smaller working-memory pack from recent context, syncs that pack into `AGENTS.md` when it is actually smaller than the source context, and exposes compact retrieval over MCP.
 
@@ -27,11 +27,13 @@ It is built for long audits, complex project continuity, and any workflow where 
 - **False-completion guardrails**: prevents old "done" claims from overriding still-open work
 - **Token savings**: measurable reduction in repeated context replay when the compact pack wins
 - **Codex-native flow**: built around `notify`, `AGENTS.md`, and MCP retrieval used by Codex workflows
+- **Provenance and health visibility**: inspect where derived memory came from, plus project health and sync quality
+- **Project snapshots**: capture, list, and restore derived memory state without pretending raw history changed
 - **Portable design**: local memory backend can be reused from other MCP-compatible agent workflows
 
 ## Status
 
-`0.7.0` is the current baseline release.
+`0.8.0` is the current baseline release.
 
 What works today:
 
@@ -49,8 +51,11 @@ What works today:
 - false-completion guardrails that keep “done” from overriding open work when pending items, blockers, or DoD gaps still exist
 - context sync and closure metrics persisted per project
 - automatic budget selection for context packs when `budget=auto`
+- memory provenance persisted per observation and queryable through `mem_provenance`
+- diagnostic health reporting through `mem_health`
+- versioned project snapshots through `mem_snapshot_create`, `mem_snapshot_list`, and `mem_snapshot_restore`
 - FastAPI inspection API
-- local inspection UI at `/ui`, including recent changes and scope guard views
+- local inspection UI at `/ui`, including recent changes, scope guard, provenance, health, and snapshots
 - MCP stdio server with:
   - `mem_search`
   - `mem_get`
@@ -61,6 +66,11 @@ What works today:
   - `mem_recent_changes`
   - `mem_scope_guard`
   - `mem_context_pack`
+  - `mem_provenance`
+  - `mem_health`
+  - `mem_snapshot_list`
+  - `mem_snapshot_create`
+  - `mem_snapshot_restore`
 - automated tests
 
 What is intentionally not in scope yet:

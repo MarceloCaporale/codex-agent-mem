@@ -22,4 +22,9 @@ def test_bootstrap_codex_snippet_uses_literal_paths():
     assert '[mcp_servers."codex-agent-mem".tools.mem_recent_changes]' in snippet
     assert '[mcp_servers."codex-agent-mem".tools.mem_scope_guard]' in snippet
     assert '[mcp_servers."codex-agent-mem".tools.mem_context_pack]' in snippet
-    assert snippet.count('approval_mode = "approve"') == 9
+    assert '[mcp_servers."codex-agent-mem".tools.mem_provenance]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_health]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_snapshot_list]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_snapshot_create]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_snapshot_restore]' in snippet
+    assert snippet.count('approval_mode = "approve"') == 14

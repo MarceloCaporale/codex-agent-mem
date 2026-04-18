@@ -8,7 +8,7 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 
 ## 状態
 
-`0.7.0` は現在のベースリリースです。
+`0.8.0` は現在のベースリリースです。
 
 現在動作しているもの:
 
@@ -26,8 +26,11 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 - pending、blocker、DoD ギャップが残っているのに「完了」と言ってしまうのを防ぐ guardrail
 - プロジェクト単位で closure と compression のメトリクスを永続化
 - `budget=auto` のときに最小で適切な budget を自動選択
+- 各 observation に対する provenance を永続化し、`mem_provenance` で取得可能
+- `mem_health` によるプロジェクト健全性診断
+- `mem_snapshot_create`、`mem_snapshot_list`、`mem_snapshot_restore` によるバージョン付きプロジェクトスナップショット
 - FastAPI ベースの検査 API
-- `/ui` で開けるローカル検査 UI。recent changes と scope guard も表示
+- `/ui` で開けるローカル検査 UI。recent changes、scope guard、provenance、health、snapshots も表示
 - 以下を提供する MCP stdio サーバー:
   - `mem_search`
   - `mem_get`
@@ -38,6 +41,11 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
   - `mem_recent_changes`
   - `mem_scope_guard`
   - `mem_context_pack`
+  - `mem_provenance`
+  - `mem_health`
+  - `mem_snapshot_list`
+  - `mem_snapshot_create`
+  - `mem_snapshot_restore`
 - 自動テスト
 
 意図的にまだ対象外としているもの:

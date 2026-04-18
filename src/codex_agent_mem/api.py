@@ -32,6 +32,10 @@ class CodexNotifyRequest(BaseModel):
     sync_project_doc: bool = False
 
 
+class SnapshotCreateRequest(BaseModel):
+    label: str
+
+
 def _loads_json(raw: str | None, fallback):
     if not raw:
         return fallback
@@ -231,6 +235,45 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Project not found")
         return result
 
+    @app.get("/projects/{project_key}/health")
+    def project_health(project_key: str, record: bool = False):
+        result = store.health_report(project_key, record=record)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
+    @app.get("/projects/{project_key}/health/latest")
+    def project_latest_health(project_key: str):
+        result = store.latest_health_report(project_key)
+        if result is None:
+            raise HTTPException(status_code=404, detail="No stored health report for this project")
+        return result
+
+    @app.get("/projects/{project_key}/snapshots")
+    def project_snapshots(project_key: str, limit: int = 20):
+        if store.project_brief(project_key) is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return {"project_key": project_key, "snapshots": store.list_snapshots(project_key, limit=limit)}
+
+    @app.post("/projects/{project_key}/snapshots")
+    def create_project_snapshot(project_key: str, req: SnapshotCreateRequest):
+        result = store.snapshot_create(project_key, label=req.label)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
+    @app.post("/projects/{project_key}/snapshots/{snapshot_id}/restore")
+    def restore_project_snapshot(project_key: str, snapshot_id: int):
+        try:
+            result = store.snapshot_restore(project_key, snapshot_id)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if result is None:
+            raise HTTPException(status_code=404, detail="Snapshot not found")
+        return result
+
     @app.get("/projects/{project_key}/closure-metrics")
     def project_closure_metrics(project_key: str):
         result = store.closure_metrics_summary(project_key)
@@ -243,6 +286,13 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         result = store.get_observation(observation_id)
         if result is None:
             raise HTTPException(status_code=404, detail="Observation not found")
+        return result
+
+    @app.get("/observations/{observation_id}/provenance")
+    def get_observation_provenance(observation_id: int):
+        result = store.get_provenance(memory_id=observation_id, memory_kind="observation")
+        if result is None:
+            raise HTTPException(status_code=404, detail="Provenance not found")
         return result
 
     @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)
@@ -327,6 +377,9 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "scope_guard": brief["scope_guard"],
             "context_metrics": brief["context_metrics"],
             "closure_metrics": brief["closure_metrics"],
+            "health_preview": brief["health_preview"],
+            "latest_health": brief["latest_health"],
+            "snapshots": brief["snapshots"],
             "sessions": sessions,
             "selected_session": selected_session,
             "turns": turns,
@@ -346,12 +399,28 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         turn_detail["input_messages"] = _loads_json(turn_detail.get("input_messages_json"), [])
         turn_detail["tool_events"] = _loads_json(turn_detail.get("tool_events_json"), [])
         turn_detail["raw_payload"] = _loads_json(turn_detail.get("raw_payload_json"), {})
+        for observation in turn_detail["observations"]:
+            observation["provenance"] = store.get_provenance(memory_id=int(observation["id"]), memory_kind="observation")
         context = {
             "request": request,
             "db_path": str(config.db_path),
             "turn": turn_detail,
         }
         return templates.TemplateResponse(request=request, name="turn.html", context=context)
+
+    @app.get("/ui/observations/{observation_id}", response_class=HTMLResponse, include_in_schema=False)
+    def ui_observation(request: Request, observation_id: int):
+        observation = store.get_observation(observation_id)
+        if observation is None:
+            raise HTTPException(status_code=404, detail="Observation not found")
+        provenance = store.get_provenance(memory_id=observation_id, memory_kind="observation")
+        context = {
+            "request": request,
+            "db_path": str(config.db_path),
+            "observation": observation,
+            "provenance": provenance,
+        }
+        return templates.TemplateResponse(request=request, name="observation.html", context=context)
 
     return app
 

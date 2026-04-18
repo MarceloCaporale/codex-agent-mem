@@ -8,7 +8,7 @@ codex-agent-mem speichert dauerhafte Erkenntnisse aus Agent-Turns in lokalem SQL
 
 ## Status
 
-`0.7.0` ist die aktuelle Basis-Release.
+`0.8.0` ist die aktuelle Basis-Release.
 
 Was heute funktioniert:
 
@@ -26,8 +26,11 @@ Was heute funktioniert:
 - Guardrails gegen falsches „fertig“, wenn noch Pending Items, Blocker oder DoD-Lücken offen sind
 - persistierte Closure- und Kompressionsmetriken pro Projekt
 - automatische Budgetwahl für Context-Packs bei `budget=auto`
+- persistierte Memory-Provenance pro Observation, abrufbar über `mem_provenance`
+- Gesundheitsdiagnose pro Projekt über `mem_health`
+- versionierte Projektsnapshots über `mem_snapshot_create`, `mem_snapshot_list` und `mem_snapshot_restore`
 - FastAPI-Inspektions-API
-- lokale Inspektions-UI unter `/ui`, inklusive Recent Changes und Scope Guard
+- lokale Inspektions-UI unter `/ui`, inklusive Recent Changes, Scope Guard, Provenance, Health und Snapshots
 - MCP-stdio-Server mit:
   - `mem_search`
   - `mem_get`
@@ -38,6 +41,11 @@ Was heute funktioniert:
   - `mem_recent_changes`
   - `mem_scope_guard`
   - `mem_context_pack`
+  - `mem_provenance`
+  - `mem_health`
+  - `mem_snapshot_list`
+  - `mem_snapshot_create`
+  - `mem_snapshot_restore`
 - automatisierte Tests
 
 Was bewusst noch nicht im Scope ist:

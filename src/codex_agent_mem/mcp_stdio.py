@@ -121,6 +121,64 @@ class CodexAgentMemMCPServer:
                     "required": ["project_key"],
                 },
             },
+            {
+                "name": "mem_provenance",
+                "description": "Return audit provenance for one stored observation, including the original turn context.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "observation_id": {"type": "integer", "minimum": 1},
+                    },
+                    "required": ["observation_id"],
+                },
+            },
+            {
+                "name": "mem_health",
+                "description": "Return a deterministic health report for one project: duplicates, contradictions, stale items, DoD coverage, and suggestions.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_snapshot_list",
+                "description": "List stored memory snapshots for one project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_snapshot_create",
+                "description": "Create a versioned memory snapshot for one project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "label": {"type": "string"},
+                    },
+                    "required": ["project_key", "label"],
+                },
+            },
+            {
+                "name": "mem_snapshot_restore",
+                "description": "Restore one stored snapshot into the generated AGENTS.md continuity block when the project root path is known.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "snapshot_id": {"type": "integer", "minimum": 1},
+                    },
+                    "required": ["project_key", "snapshot_id"],
+                },
+            },
         ]
 
     def _tool_result(self, data: Any, is_error: bool = False) -> dict[str, Any]:
@@ -199,6 +257,36 @@ class CodexAgentMemMCPServer:
                     )
                     if data is None:
                         raise ValueError("Project not found")
+                elif name == "mem_provenance":
+                    data = self.store.get_provenance(
+                        memory_id=int(arguments["observation_id"]),
+                        memory_kind="observation",
+                    )
+                    if data is None:
+                        raise ValueError("Provenance not found")
+                elif name == "mem_health":
+                    data = self.store.health_report(arguments["project_key"], record=False)
+                    if data is None:
+                        raise ValueError("Project not found")
+                elif name == "mem_snapshot_list":
+                    data = self.store.list_snapshots(
+                        arguments["project_key"],
+                        limit=int(arguments.get("limit", 20)),
+                    )
+                elif name == "mem_snapshot_create":
+                    data = self.store.snapshot_create(
+                        arguments["project_key"],
+                        label=str(arguments["label"]),
+                    )
+                    if data is None:
+                        raise ValueError("Project not found")
+                elif name == "mem_snapshot_restore":
+                    data = self.store.snapshot_restore(
+                        arguments["project_key"],
+                        int(arguments["snapshot_id"]),
+                    )
+                    if data is None:
+                        raise ValueError("Snapshot not found")
                 else:
                     raise ValueError(f"Unknown tool: {name}")
                 return {"jsonrpc": "2.0", "id": msg_id, "result": self._tool_result(data)}

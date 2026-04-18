@@ -51,6 +51,10 @@ STATE_VALUE_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
 NOISY_STATE_VALUES = {"and", "or"}
 DIAGNOSTIC_TURN_PATTERNS = [
     re.compile(r"use the codex-agent-mem mcp tool", re.IGNORECASE),
+    re.compile(
+        r"\b(?:use|call|invoke)\b.{0,160}\bmem_(?:search|get|recent|project_brief|open_work|completion_check|recent_changes|scope_guard|context_pack|provenance|health|snapshot_(?:list|create|restore))\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"respond exactly as\s*:", re.IGNORECASE),
     re.compile(r"without using tools or reading files", re.IGNORECASE),
 ]

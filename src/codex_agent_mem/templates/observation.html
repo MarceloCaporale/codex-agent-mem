@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Observation #{{ observation.id }} | codex-agent-mem{% endblock %}
+
+{% block content %}
+  <section class="hero compact">
+    <div>
+      <a class="backlink" href="/ui/projects/{{ observation.project_key }}{% if observation.session_id %}?session_id={{ observation.session_id }}{% if observation.turn_id %}&turn_id={{ observation.turn_id }}{% endif %}{% endif %}">← Back to project</a>
+      <h1>{{ observation.title }}</h1>
+      <p><code>{{ observation.project_key }}</code></p>
+    </div>
+    <div class="stats large">
+      <span>{{ observation.type }}</span>
+      <span>#{{ observation.id }}</span>
+      <span>{{ observation.updated_at }}</span>
+    </div>
+  </section>
+
+  <section class="layout two-up">
+    <article class="panel">
+      <div class="chat-block">
+        <h2>Observation</h2>
+        <p><strong>Summary:</strong> {{ observation.summary }}</p>
+        {% if observation.detail %}
+          <details class="details-block" open>
+            <summary>Detail</summary>
+            <pre>{{ observation.detail }}</pre>
+          </details>
+        {% endif %}
+        {% if observation.files %}
+          <div class="decision-card">
+            <strong>Files</strong>
+            <ul class="compact-list">
+              {% for item in observation.files %}
+                <li><code>{{ item }}</code></li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </article>
+
+    <article class="panel">
+      <div class="chat-block">
+        <h2>Provenance</h2>
+        {% if provenance %}
+          <p><strong>Memory kind:</strong> {{ provenance.memory_kind }}</p>
+          <p><strong>Turn hash:</strong> <code>{{ provenance.turn_hash or "n/a" }}</code></p>
+          <p><strong>Model:</strong> {{ provenance.model_name or "unknown" }}</p>
+          <p><strong>Created at:</strong> {{ provenance.created_at }}</p>
+          <p><strong>CWD:</strong> <code>{{ provenance.cwd or "n/a" }}</code></p>
+          {% if provenance.source_span %}
+            <details class="details-block" open>
+              <summary>Source span</summary>
+              <pre>{{ provenance.source_span | tojson(indent=2) }}</pre>
+            </details>
+          {% endif %}
+          {% if provenance.source_turn %}
+            <details class="details-block">
+              <summary>Source turn</summary>
+              <pre>{{ provenance.source_turn | tojson(indent=2) }}</pre>
+            </details>
+          {% endif %}
+        {% else %}
+          <div class="empty">No provenance recorded for this observation.</div>
+        {% endif %}
+      </div>
+    </article>
+  </section>
+{% endblock %}

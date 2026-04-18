@@ -8,7 +8,7 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 
 ## 状态
 
-`0.7.0` 是当前的基础版本。
+`0.8.0` 是当前的基础版本。
 
 当前已实现：
 
@@ -26,8 +26,11 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 - 在仍有待办、阻塞项或 DoD 缺口时，提供防止“误判已完成”的 guardrail
 - 每个项目都会持久化闭合检查和压缩指标
 - 当使用 `budget=auto` 时自动选择最合适的上下文预算
+- 为每条 observation 持久化 provenance，并可通过 `mem_provenance` 查询
+- 通过 `mem_health` 提供项目健康诊断
+- 通过 `mem_snapshot_create`、`mem_snapshot_list`、`mem_snapshot_restore` 提供版本化项目快照
 - FastAPI 检查 API
-- 位于 `/ui` 的本地检查界面，包含 recent changes 与 scope guard
+- 位于 `/ui` 的本地检查界面，包含 recent changes、scope guard、provenance、health 与 snapshots
 - 通过 stdio 运行的 MCP 服务器，包含：
   - `mem_search`
   - `mem_get`
@@ -38,6 +41,11 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
   - `mem_recent_changes`
   - `mem_scope_guard`
   - `mem_context_pack`
+  - `mem_provenance`
+  - `mem_health`
+  - `mem_snapshot_list`
+  - `mem_snapshot_create`
+  - `mem_snapshot_restore`
 - 自动化测试
 
 当前有意不包含：

@@ -6,13 +6,13 @@ from codex_agent_mem.ingest import normalize_event
 from codex_agent_mem.mcp_stdio import CodexAgentMemMCPServer
 
 
-def seed(store: CodexAgentMemStore):
+def seed(store: CodexAgentMemStore, cwd: str):
     raw_payload = {
         "runtime": "codex",
         "project_key": "demo-project",
         "session_id": "thread-1",
         "turn_id": "turn-1",
-        "cwd": "/tmp/demo",
+        "cwd": cwd,
         "timestamp": "2026-04-17T00:00:00Z",
         "input_messages": [
             "Objective: stabilize auth continuity.\n"
@@ -29,7 +29,9 @@ def seed(store: CodexAgentMemStore):
 
 def test_mcp_tools(tmp_path: Path):
     store = CodexAgentMemStore(tmp_path / "codex_agent_mem.db")
-    seed(store)
+    workspace = tmp_path / "demo-project"
+    workspace.mkdir()
+    seed(store, str(workspace))
     server = CodexAgentMemMCPServer(store)
 
     init = server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
@@ -43,6 +45,9 @@ def test_mcp_tools(tmp_path: Path):
     assert "mem_recent_changes" in names
     assert "mem_scope_guard" in names
     assert "mem_context_pack" in names
+    assert "mem_provenance" in names
+    assert "mem_health" in names
+    assert "mem_snapshot_list" in names
 
     search = server.handle_request({
         "jsonrpc": "2.0",
@@ -99,4 +104,39 @@ def test_mcp_tools(tmp_path: Path):
         "params": {"name": "mem_scope_guard", "arguments": {"project_key": "demo-project"}},
     })
     assert scope_guard["result"]["structuredContent"]["must_not_drop"]
+    provenance = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "tools/call",
+        "params": {"name": "mem_provenance", "arguments": {"observation_id": obs_id}},
+    })
+    assert provenance["result"]["structuredContent"]["memory_kind"] == "observation"
+    health = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "tools/call",
+        "params": {"name": "mem_health", "arguments": {"project_key": "demo-project"}},
+    })
+    assert "score" in health["result"]["structuredContent"]
+    snapshot_create = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 12,
+        "method": "tools/call",
+        "params": {"name": "mem_snapshot_create", "arguments": {"project_key": "demo-project", "label": "mcp-checkpoint"}},
+    })
+    snapshot_id = snapshot_create["result"]["structuredContent"]["id"]
+    snapshot_list = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 13,
+        "method": "tools/call",
+        "params": {"name": "mem_snapshot_list", "arguments": {"project_key": "demo-project"}},
+    })
+    assert snapshot_list["result"]["structuredContent"]
+    snapshot_restore = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 14,
+        "method": "tools/call",
+        "params": {"name": "mem_snapshot_restore", "arguments": {"project_key": "demo-project", "snapshot_id": snapshot_id}},
+    })
+    assert snapshot_restore["result"]["structuredContent"]["snapshot_id"] == snapshot_id
     assert json.dumps(pack, ensure_ascii=True).isascii()

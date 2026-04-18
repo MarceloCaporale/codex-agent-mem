@@ -8,7 +8,7 @@ codex-agent-mem persiste hallazgos durables de los turnos del agente en SQLite l
 
 ## Estado
 
-`0.7.0` es la release base actual.
+`0.8.0` es la release base actual.
 
 Hoy funciona:
 
@@ -26,8 +26,11 @@ Hoy funciona:
 - guardarrail contra cierre falso cuando todavia quedan pendientes, blockers o gaps de DoD
 - metricas persistidas de cierre y compresion por proyecto
 - seleccion automatica de presupuesto de pack cuando `budget=auto`
+- provenance de memoria persistida por observacion y consultable con `mem_provenance`
+- diagnostico de salud del proyecto con `mem_health`
+- snapshots versionados del proyecto con `mem_snapshot_create`, `mem_snapshot_list` y `mem_snapshot_restore`
 - API de inspeccion con FastAPI
-- UI local de inspeccion en `/ui`, incluyendo cambios recientes y scope guard
+- UI local de inspeccion en `/ui`, incluyendo cambios recientes, scope guard, provenance, health y snapshots
 - servidor MCP por stdio con:
   - `mem_search`
   - `mem_get`
@@ -38,6 +41,11 @@ Hoy funciona:
   - `mem_recent_changes`
   - `mem_scope_guard`
   - `mem_context_pack`
+  - `mem_provenance`
+  - `mem_health`
+  - `mem_snapshot_list`
+  - `mem_snapshot_create`
+  - `mem_snapshot_restore`
 - tests automatizados
 
 Lo que todavia queda fuera de alcance a proposito:

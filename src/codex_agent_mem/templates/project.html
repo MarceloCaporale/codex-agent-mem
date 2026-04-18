@@ -220,14 +220,14 @@
           {% if selected_turn.observations %}
             <div class="observation-list">
               {% for item in selected_turn.observations %}
-                <div class="observation-row static">
+                <a class="observation-row static" href="/ui/observations/{{ item.id }}">
                   <div class="observation-row-top">
                     <span class="type">{{ item.type }}</span>
                     <span>#{{ item.id }}</span>
                   </div>
                   <strong>{{ item.title }}</strong>
                   <p>{{ item.summary }}</p>
-                </div>
+                </a>
               {% endfor %}
             </div>
           {% else %}
@@ -294,18 +294,73 @@
           <div class="decision-card">
             <strong>Sync events</strong>
             <p>{{ context_metrics.synced_events or 0 }} synced · {{ context_metrics.skipped_events or 0 }} skipped</p>
-            <small>Average compression ratio: {{ context_metrics.avg_compression_ratio or "n/a" }}</small>
+            <small>Average compression ratio: {{ context_metrics.avg_compression_ratio or "n/a" }} · avg build {{ context_metrics.avg_build_ms or "n/a" }} ms</small>
           </div>
           {% for event in context_metrics.recent_events %}
             <div class="decision-card">
               <strong>{{ "Synced" if not event.skipped else "Skipped" }}</strong>
               <p>~{{ event.approx_pack_tokens }} from ~{{ event.approx_source_tokens }} tokens</p>
-              <small>{{ event.generated_at }}</small>
+              <small>{{ event.generated_at }} · {{ event.build_ms }} ms{% if event.budget_reason %} · {{ event.budget_reason }}{% endif %}</small>
             </div>
           {% endfor %}
         </div>
       {% else %}
         <div class="empty">No context sync metrics yet.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
+        <h2>Health</h2>
+        <span class="count">{{ health_preview.score if health_preview else "n/a" }}</span>
+      </div>
+      {% if health_preview %}
+        <div class="decision-list">
+          <div class="decision-card">
+            <strong>Current health score</strong>
+            <p>{{ health_preview.score }}/100</p>
+            <small>
+              duplicates {{ health_preview.duplicate_count }} · contradictions {{ health_preview.contradiction_count }} · stale {{ health_preview.stale_item_count }}
+            </small>
+          </div>
+          <div class="decision-card">
+            <strong>DoD coverage</strong>
+            <p>{{ health_preview.dod_missing_count }} gaps out of {{ health_preview.dod_total_count }} items</p>
+            <small>coverage ratio {{ health_preview.dod_coverage_ratio }}</small>
+          </div>
+          {% if health_preview.suggestions %}
+            <div class="decision-card">
+              <strong>Suggested actions</strong>
+              <ul class="compact-list">
+                {% for item in health_preview.suggestions %}
+                  <li>{{ item }}</li>
+                {% endfor %}
+              </ul>
+              <small>{% if latest_health %}last stored {{ latest_health.generated_at }}{% else %}preview only{% endif %}</small>
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty">No health report available yet.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
+        <h2>Snapshots</h2>
+        <span class="count">{{ snapshots|length }}</span>
+      </div>
+      {% if snapshots %}
+        <div class="decision-list">
+          {% for snapshot in snapshots %}
+            <div class="decision-card">
+              <strong>{{ snapshot.label }}</strong>
+              <p><code>#{{ snapshot.id }}</code> · {{ snapshot.snapshot_hash[:12] }}…</p>
+              <small>
+                {{ snapshot.created_at }}
+                {% if snapshot.restored_at %} · restored {{ snapshot.restored_at }}{% endif %}
+              </small>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty">No snapshots stored yet.</div>
       {% endif %}
 
       <div class="panel-head nested">

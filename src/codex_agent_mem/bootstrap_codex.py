@@ -17,6 +17,11 @@ READ_ONLY_MCP_TOOLS = (
     "mem_recent_changes",
     "mem_scope_guard",
     "mem_context_pack",
+    "mem_provenance",
+    "mem_health",
+    "mem_snapshot_list",
+    "mem_snapshot_create",
+    "mem_snapshot_restore",
 )
 
 

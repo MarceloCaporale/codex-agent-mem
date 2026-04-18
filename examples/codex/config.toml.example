@@ -35,3 +35,18 @@ approval_mode = "approve"
 
 [mcp_servers."codex-agent-mem".tools.mem_context_pack]
 approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_provenance]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_health]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_snapshot_list]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_snapshot_create]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_snapshot_restore]
+approval_mode = "approve"

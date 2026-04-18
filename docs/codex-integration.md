@@ -13,6 +13,10 @@ And it can reinject compressed continuity automatically:
 
 4. `AGENTS.md` sync for generated working memory when the pack is smaller than the source context
 
+And it now exposes explicit audit and persistence utilities:
+
+5. provenance, health, and snapshot tools for debugging derived state without mutating raw history
+
 ## Capture flow
 
 - Codex emits `agent-turn-complete`
@@ -23,6 +27,7 @@ And it can reinject compressed continuity automatically:
 - the store compiles a working-memory pack from recent turns, durable decisions, and operational state
 - when that pack is smaller than the source context, `AGENTS.md` is updated in the working directory
 - every generated pack event is recorded as a context sync metric for later inspection
+- observation provenance, health reports, and snapshot events are persisted for later audit
 
 ## Retrieval flow
 
@@ -37,6 +42,11 @@ And it can reinject compressed continuity automatically:
   - `mem_recent_changes`
   - `mem_scope_guard`
   - `mem_context_pack`
+  - `mem_provenance`
+  - `mem_health`
+  - `mem_snapshot_list`
+  - `mem_snapshot_create`
+  - `mem_snapshot_restore`
 
 `mem_context_pack` also supports `budget=auto`, so the runtime can select the smallest fitting reinjection profile instead of always forcing one fixed budget.
 
@@ -57,6 +67,7 @@ The generated config uses:
 - `--sync-project-doc`
 - per-tool `approval_mode = "approve"` for the read-only retrieval tools
 - Python module targets under `codex_agent_mem`
+- snapshot and audit tools approved alongside the read-only continuity tools
 
 ## MCP tool approvals
 
@@ -107,3 +118,4 @@ That path is useful only if you explicitly want `notify -> HTTP -> local API`.
 - no automatic semantic memory layer
 - AGENTS sync is intentionally skipped when the generated pack is not smaller than the source context
 - operational state is still heuristic and derived from turn text, not from a dedicated planner protocol
+- provenance is authoritative only for persisted payload/turn/session context that this capture path can actually see

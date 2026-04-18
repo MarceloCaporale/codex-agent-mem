@@ -42,6 +42,7 @@ def test_api_ingest_and_read(tmp_path: Path):
     assert ingest.status_code == 200
     body = ingest.json()
     assert body["ok"] is True
+    observation_id = body["observation_ids"][0]
 
     recent = client.get("/recent", params={"project_key": "demo-repo"})
     assert recent.status_code == 200
@@ -83,6 +84,36 @@ def test_api_ingest_and_read(tmp_path: Path):
     assert context_metrics.status_code == 200
     assert context_metrics.json()["total_events"] >= 1
     assert "budget_counts" in context_metrics.json()
+    assert "avg_build_ms" in context_metrics.json()
+
+    health = client.get("/projects/demo-repo/health")
+    assert health.status_code == 200
+    assert "score" in health.json()
+    assert "suggestions" in health.json()
+
+    health_recorded = client.get("/projects/demo-repo/health", params={"record": "true"})
+    assert health_recorded.status_code == 200
+
+    latest_health = client.get("/projects/demo-repo/health/latest")
+    assert latest_health.status_code == 200
+    assert latest_health.json()["score"] >= 0
+
+    provenance = client.get(f"/observations/{observation_id}/provenance")
+    assert provenance.status_code == 200
+    assert provenance.json()["memory_kind"] == "observation"
+    assert provenance.json()["source_turn"]["external_turn_id"] == "tu-api"
+
+    snapshot_create = client.post("/projects/demo-repo/snapshots", json={"label": "api-checkpoint"})
+    assert snapshot_create.status_code == 200
+    snapshot_id = snapshot_create.json()["id"]
+
+    snapshots = client.get("/projects/demo-repo/snapshots")
+    assert snapshots.status_code == 200
+    assert snapshots.json()["snapshots"]
+
+    snapshot_restore = client.post(f"/projects/demo-repo/snapshots/{snapshot_id}/restore")
+    assert snapshot_restore.status_code == 200
+    assert "context_pack" in snapshot_restore.json()
 
     closure_metrics = client.get("/projects/demo-repo/closure-metrics")
     assert closure_metrics.status_code == 200
@@ -121,6 +152,8 @@ def test_inspector_routes_render(tmp_path: Path):
     assert "Closure Control" in project.text
     assert "Recent Changes" in project.text
     assert "Scope Guard" in project.text
+    assert "Health" in project.text
+    assert "Snapshots" in project.text
     assert "Selected Turn" in project.text
     assert "demo repo · 2026-04-17 00:00" in project.text
     assert "finish auth continuity" in project.text
@@ -131,3 +164,8 @@ def test_inspector_routes_render(tmp_path: Path):
     assert "Selected turn" in turn.text
     assert "Raw payload" in turn.text
     assert "Decision: keep sqlite for local memory" in turn.text
+
+    observation = client.get("/ui/observations/1")
+    assert observation.status_code == 200
+    assert "Provenance" in observation.text
+    assert "Source turn" in observation.text

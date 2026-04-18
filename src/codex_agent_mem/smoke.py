@@ -29,14 +29,20 @@ def run_smoke(db_path: Path, project_key: str) -> dict:
     result = store.ingest_event(raw, normalize_event(generic_payload))
     brief = store.project_brief(project_key)
     recent = store.recent_observations(project_key=project_key, limit=5)
+    provenance = store.get_provenance(memory_id=int(recent[0]["id"]), memory_kind="observation") if recent else None
+    health = store.health_report(project_key, record=False)
+    snapshot = store.snapshot_create(project_key, label="smoke-baseline")
     if not result["ok"]:
         raise RuntimeError("Smoke ingest failed")
-    if not brief or not recent:
+    if not brief or not recent or provenance is None or health is None or snapshot is None:
         raise RuntimeError("Smoke retrieval failed")
     return {
         "ingest": result,
         "brief": brief,
         "recent": recent,
+        "provenance": provenance,
+        "health": health,
+        "snapshot": snapshot,
     }
 
 
