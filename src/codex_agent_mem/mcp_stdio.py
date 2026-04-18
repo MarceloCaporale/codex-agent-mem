@@ -151,10 +151,26 @@ class CodexAgentMemMCPServer:
         return None
 
 
+def _configure_stdio() -> None:
+    for stream_name in ("stdin", "stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", newline="\n")
+
+
+def _write_response(message: dict[str, Any]) -> None:
+    # Keep the wire ASCII-safe on Windows consoles; JSON consumers still recover
+    # the original Unicode content via escaped sequences.
+    sys.stdout.write(json.dumps(message, ensure_ascii=True) + "\n")
+    sys.stdout.flush()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the codex-agent-mem MCP stdio server")
     parser.add_argument("--db-path", type=Path, default=AppConfig().db_path)
     args = parser.parse_args(argv)
+    _configure_stdio()
     server = CodexAgentMemMCPServer(CodexAgentMemStore(args.db_path))
     for line in sys.stdin:
         line = line.strip()
@@ -164,12 +180,10 @@ def main(argv: list[str] | None = None) -> int:
             message = json.loads(line)
             response = server.handle_request(message)
             if response is not None:
-                sys.stdout.write(json.dumps(response, ensure_ascii=False) + "\n")
-                sys.stdout.flush()
+                _write_response(response)
         except Exception as exc:
             err = {"jsonrpc": "2.0", "error": {"code": -32603, "message": str(exc)}}
-            sys.stdout.write(json.dumps(err, ensure_ascii=False) + "\n")
-            sys.stdout.flush()
+            _write_response(err)
     return 0
 
 

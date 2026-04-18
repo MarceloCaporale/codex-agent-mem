@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 - 2026-04-18
+
+- Fixed the Windows MCP stdio transport by emitting ASCII-safe JSON on the wire and reconfiguring stdio to UTF-8.
+- Stabilized `mem_context_pack` and the other MCP retrieval tools when called from Codex CLI on Windows.
+
 ## 0.4.0 - 2026-04-17
 
 - Added generated working-memory context packs built from durable decisions and recent session summaries.

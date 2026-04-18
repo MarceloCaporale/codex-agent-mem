@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from codex_agent_mem.db import CodexAgentMemStore
@@ -58,3 +59,4 @@ def test_mcp_tools(tmp_path: Path):
         "params": {"name": "mem_context_pack", "arguments": {"project_key": "demo-project"}},
     })
     assert "Working Memory" in pack["result"]["structuredContent"]["text"]
+    assert json.dumps(pack, ensure_ascii=True).isascii()
