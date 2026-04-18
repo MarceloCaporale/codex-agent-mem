@@ -26,7 +26,7 @@
   </form>
 
   {% if ui_summary %}
-    <section class="overview-grid">
+    <section class="overview-grid status-strip">
       <article class="overview-card tone-{{ ui_summary.status_tone }}">
         <span class="eyebrow">Current Status</span>
         <strong>{{ ui_summary.status_label }}</strong>
@@ -41,11 +41,6 @@
         <span class="eyebrow">Blockers</span>
         <strong>{{ ui_summary.blocker_count }}</strong>
         <small>{{ "Need resolution" if ui_summary.blocker_count else "No blockers" }}</small>
-      </article>
-      <article class="overview-card">
-        <span class="eyebrow">DoD Gaps</span>
-        <strong>{{ ui_summary.dod_missing_count }}</strong>
-        <small>{{ "Definition of Done still incomplete" if ui_summary.dod_missing_count else "DoD covered" }}</small>
       </article>
       <article class="overview-card">
         <span class="eyebrow">Current Pack Savings</span>
@@ -69,16 +64,24 @@
       {% if sessions %}
         <div class="session-list">
           {% for session in sessions %}
-            <a class="session-card {% if selected_session and session.id == selected_session.id %}active{% endif %}" href="/ui/projects/{{ project.project_key }}?session_id={{ session.id }}">
-              <strong>{{ session.display_label }}</strong>
-              <p class="muted">{{ session.display_subtitle }}</p>
-              <small class="secondary-code">{{ session.external_session_id }}</small>
+            <article class="session-card {% if selected_session and session.id == selected_session.id %}active{% endif %}">
+              <a class="card-hit" href="/ui/projects/{{ project.project_key }}?session_id={{ session.id }}">
+                <strong>{{ session.display_label }}</strong>
+                <p class="muted clamp-2" title="{{ session.display_subtitle }}">{{ session.display_subtitle }}</p>
+              </a>
               <div class="stats">
                 <span>{{ session.turn_count }} turns</span>
                 <span>{{ session.observation_count }} observations</span>
               </div>
-              <small>{{ session.last_turn_at or session.display_started_at }}</small>
-            </a>
+              <details class="inline-expander" {% if selected_session and session.id == selected_session.id %}open{% endif %}>
+                <summary>Expand</summary>
+                <div class="expander-body">
+                  <p class="muted">{{ session.display_subtitle }}</p>
+                  <small class="secondary-code">{{ session.external_session_id }}</small>
+                  <small>{{ session.last_turn_at or session.display_started_at }}</small>
+                </div>
+              </details>
+            </article>
           {% endfor %}
         </div>
       {% else %}
@@ -92,14 +95,27 @@
       {% if turns %}
         <div class="turn-list">
           {% for turn in turns %}
-            <a class="turn-row {% if selected_turn and turn.id == selected_turn.id %}active{% endif %}" href="/ui/projects/{{ project.project_key }}?session_id={{ turn.session_id }}&turn_id={{ turn.id }}">
-              <strong>{{ turn.external_turn_id }}</strong>
-              <p>{{ turn.assistant_preview or "No assistant message" }}</p>
+            <article class="turn-row {% if selected_turn and turn.id == selected_turn.id %}active{% endif %}">
+              <a class="card-hit" href="/ui/projects/{{ project.project_key }}?session_id={{ turn.session_id }}&turn_id={{ turn.id }}">
+                <div class="row-title">
+                  <strong>{{ turn.external_turn_id }}</strong>
+                  <span class="meta-badge">{{ turn.captured_at }}</span>
+                </div>
+                <p class="clamp-2" title="{{ turn.assistant_preview or 'No assistant message' }}">{{ turn.assistant_preview or "No assistant message" }}</p>
+              </a>
               <div class="stats">
                 <span>{{ turn.observation_count }} observations</span>
-                <span>{{ turn.captured_at }}</span>
+                <span>{% if selected_turn and turn.id == selected_turn.id %}selected{% else %}turn{% endif %}</span>
               </div>
-            </a>
+              <details class="inline-expander" {% if selected_turn and turn.id == selected_turn.id %}open{% endif %}>
+                <summary>Expand</summary>
+                <div class="expander-body">
+                  <p>{{ turn.assistant_preview or "No assistant message" }}</p>
+                  <small class="secondary-code">{{ turn.external_turn_id }}</small>
+                  <small>{{ turn.captured_at }}</small>
+                </div>
+              </details>
+            </article>
           {% endfor %}
         </div>
       {% else %}
@@ -123,6 +139,9 @@
           </div>
           <div class="banner-meta">
             <span class="mini-pill">must not drop {{ ui_summary.must_not_drop_count }}</span>
+            {% if ui_summary.dod_missing_count %}
+              <span class="mini-pill badge-warning">DoD gaps {{ ui_summary.dod_missing_count }}</span>
+            {% endif %}
             {% if ui_summary.selected_budget %}
               <span class="mini-pill">{{ ui_summary.selected_budget }} budget</span>
             {% endif %}
@@ -133,11 +152,18 @@
       {% if context_pack %}
         <div class="chat-block">
           <h3>Generated Working Memory</h3>
+          <div class="summary-strip">
+            <span class="meta-badge badge-accent">budget {{ context_pack.stats.budget }}</span>
+            <span class="meta-badge">pack ~{{ context_pack.stats.approx_pack_tokens }}</span>
+            <span class="meta-badge">source ~{{ context_pack.stats.approx_source_tokens }}</span>
+            {% if ui_summary and ui_summary.saved_percent is not none %}
+              <span class="meta-badge badge-success">saved ~{{ ui_summary.saved_percent }}%</span>
+            {% endif %}
+          </div>
           <p class="muted">
-            Budget {{ context_pack.stats.budget }} · approx {{ context_pack.stats.approx_pack_tokens }} tokens from {{ context_pack.stats.approx_source_tokens }} source tokens.
             {% if context_pack.stats.budget_reason %}Chosen because {{ context_pack.stats.budget_reason }}.{% endif %}
+            This is the compact continuity block that gets synced into <code>AGENTS.md</code> only when compression is actually favorable.
           </p>
-          <p class="muted">This is the compact continuity block that gets synced into <code>AGENTS.md</code> only when compression is actually favorable.</p>
           <pre class="message assistant">{{ context_pack.text }}</pre>
         </div>
       {% endif %}
@@ -176,7 +202,7 @@
             <p><strong>DoD gaps:</strong></p>
             <ul>
               {% for item in operational_state.dod_missing.all_items %}
-                <li>{{ item.summary }}</li>
+                <li><span class="inline-badge badge-warning">DoD gap</span> {{ item.summary }}</li>
               {% endfor %}
             </ul>
           {% endif %}
@@ -259,7 +285,7 @@
                 <span>{{ item.updated_at }}</span>
               </div>
               <strong>{{ item.title }}</strong>
-              <p>{{ item.summary }}</p>
+              <p class="clamp-2" title="{{ item.summary }}">{{ item.summary }}</p>
             </a>
           {% endfor %}
         {% else %}
@@ -275,8 +301,13 @@
         <div class="decision-list">
           {% for decision in recent_decisions %}
             <div class="decision-card">
-              <strong>{{ decision.title }}</strong>
-              <p>{{ decision.decision_text }}</p>
+              <div class="row-title">
+                <strong>{{ decision.title }}</strong>
+                {% if decision.inherited_from_project_key %}
+                  <span class="meta-badge badge-accent">inherited</span>
+                {% endif %}
+              </div>
+              <p class="clamp-2" title="{{ decision.decision_text }}">{{ decision.decision_text }}</p>
               <small>{{ decision.updated_at }}</small>
             </div>
           {% endfor %}
@@ -284,6 +315,8 @@
       {% else %}
         <div class="empty">No decisions extracted yet.</div>
       {% endif %}
+
+      <div class="panel-group-label">Project State</div>
 
       <div class="panel-head nested">
         <h2>Context Sync Metrics</h2>
@@ -364,6 +397,129 @@
       {% endif %}
 
       <div class="panel-head nested">
+        <h2>Policies</h2>
+        <span class="count">{{ policies|length }}</span>
+      </div>
+      {% if policies %}
+        <div class="decision-list">
+          <div class="decision-card decision-summary">
+            <strong>{{ policies|length }} active project polic{{ "y" if policies|length == 1 else "ies" }}</strong>
+            <p>{{ policy_effects.pack_excluded_keys|length }} pack exclusions · {{ effective_policies|length }} effective rules</p>
+            <small>Policy-governed selection is active for this project.</small>
+            <p class="tag-row">
+              {% if policy_effects.pack_excluded_keys %}
+                <span class="mini-pill badge-accent">policy excluded {{ policy_effects.pack_excluded_keys|length }}</span>
+              {% endif %}
+              {% if effective_policies|length %}
+                <span class="mini-pill">{{ effective_policies|length }} effective</span>
+              {% endif %}
+            </p>
+          </div>
+          <details class="details-block section-toggle">
+            <summary>Show policy details</summary>
+            <div class="decision-list nested-list">
+              {% for policy in policies %}
+                <div class="decision-card">
+                  <div class="row-title">
+                    <strong>{{ policy.policy_kind }}</strong>
+                    <span class="meta-badge {% if policy.enabled %}badge-accent{% endif %}">{{ "enabled" if policy.enabled else "disabled" }}</span>
+                  </div>
+                  <p class="clamp-2">{{ policy.rule.selector.text_contains|join(", ") if policy.rule and policy.rule.selector and policy.rule.selector.text_contains else "Selector configured" }}</p>
+                  <small>
+                    {% if policy.rule.note %}{{ policy.rule.note }} · {% endif %}
+                    {{ policy.created_at }}
+                  </small>
+                </div>
+              {% endfor %}
+              {% if policy_effects.matches %}
+                <div class="decision-card">
+                  <strong>Policy impact</strong>
+                  <p>{{ policy_effects.pack_excluded_keys|length }} pack exclusions · {{ policy_effects.retrieval_excluded_keys|length }} retrieval exclusions</p>
+                  <small>{{ policy_effects.keep_priority_keys|length }} priority items · {{ effective_policies|length }} effective policies</small>
+                </div>
+              {% endif %}
+            </div>
+          </details>
+        </div>
+      {% else %}
+        <div class="empty">No project policies defined yet.</div>
+      {% endif %}
+
+      <div class="panel-group-label">Memory Governance</div>
+
+      <div class="panel-head nested">
+        <h2>Inheritance</h2>
+        <span class="count">{{ inheritances|length }}</span>
+      </div>
+      {% if inheritances %}
+        <div class="decision-list">
+          <div class="decision-card decision-summary">
+            <strong>{{ inheritances|length }} inheritance link{{ "s" if inheritances|length != 1 else "" }}</strong>
+            <p>Cross-project continuity is available to this project.</p>
+            <small>Inherited memory stays subject to local pack rules.</small>
+          </div>
+          <details class="details-block section-toggle">
+            <summary>Show inheritance details</summary>
+            <div class="decision-list nested-list">
+              {% for inheritance in inheritances %}
+                <div class="decision-card">
+                  <div class="row-title">
+                    <strong>{{ inheritance.mode }}</strong>
+                    <span class="meta-badge badge-accent">inherited</span>
+                  </div>
+                  <p class="clamp-2">{{ inheritance.source_project_key }}</p>
+                  <small>{{ inheritance.created_at }}</small>
+                </div>
+              {% endfor %}
+            </div>
+          </details>
+        </div>
+      {% else %}
+        <div class="empty">No inheritance links active for this project.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
+        <h2>Repairs</h2>
+        <span class="count">{{ repairs|length }}</span>
+      </div>
+      {% if repairs or repair_proposals %}
+        <div class="decision-list">
+          <div class="decision-card decision-summary">
+            <strong>{{ repairs|length }} applied · {{ repair_proposals|length }} proposed</strong>
+            <p>Health-derived repairs stay tracked as derived events.</p>
+            <small>No raw history is mutated directly.</small>
+          </div>
+          <details class="details-block section-toggle">
+            <summary>Show repair details</summary>
+            <div class="decision-list nested-list">
+              {% for repair in repairs %}
+                <div class="decision-card">
+                  <div class="row-title">
+                    <strong>{{ repair.repair_kind }}</strong>
+                    <span class="meta-badge {% if repair.approved %}badge-success{% endif %}">{{ "approved" if repair.approved else "pending" }}</span>
+                  </div>
+                  <p>{{ "Derived repair event recorded" if repair.approved else "Awaiting approval" }}</p>
+                  <small>{{ repair.created_at }}</small>
+                </div>
+              {% endfor %}
+              {% for proposal in repair_proposals %}
+                <div class="decision-card">
+                  <div class="row-title">
+                    <strong>Proposal: {{ proposal.repair_kind }}</strong>
+                    <span class="meta-badge">proposal</span>
+                  </div>
+                  <p>{{ proposal.reason }}</p>
+                  <small>{{ "auto-applicable" if proposal.supported_apply else "manual review required" }}</small>
+                </div>
+              {% endfor %}
+            </div>
+          </details>
+        </div>
+      {% else %}
+        <div class="empty">No repair events or proposals yet.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
         <h2>Closure Control</h2>
         <span class="count">{{ closure_metrics.total_events if closure_metrics else 0 }}</span>
       </div>
@@ -435,9 +591,9 @@
           {% if recent_changes.new_pending_items %}
             <div class="decision-card">
               <strong>New pending</strong>
-              <ul class="compact-list">
+              <ul class="compact-list delta-list">
                 {% for item in recent_changes.new_pending_items %}
-                  <li>{{ item.summary }}</li>
+                  <li class="delta-add">{{ item.summary }}</li>
                 {% endfor %}
               </ul>
             </div>
@@ -445,9 +601,9 @@
           {% if recent_changes.resolved_pending_items %}
             <div class="decision-card">
               <strong>Resolved pending</strong>
-              <ul class="compact-list">
+              <ul class="compact-list delta-list">
                 {% for item in recent_changes.resolved_pending_items %}
-                  <li>{{ item.summary }}</li>
+                  <li class="delta-resolve">{{ item.summary }}</li>
                 {% endfor %}
               </ul>
             </div>
@@ -455,9 +611,9 @@
           {% if recent_changes.new_decisions %}
             <div class="decision-card">
               <strong>New decisions</strong>
-              <ul class="compact-list">
+              <ul class="compact-list delta-list">
                 {% for item in recent_changes.new_decisions %}
-                  <li>{{ item.title or item.decision_text }}</li>
+                  <li class="delta-note">{{ item.title or item.decision_text }}</li>
                 {% endfor %}
               </ul>
             </div>
@@ -489,7 +645,7 @@
               <strong>Conflict flags</strong>
               <p class="tag-row">
                 {% for item in scope_guard.conflict_flags %}
-                  <span class="mini-pill">{{ item }}</span>
+                  <span class="mini-pill badge-warning">{{ item }}</span>
                 {% endfor %}
               </p>
               <small>{{ "Closure cannot be trusted yet" if scope_guard.completion_check and scope_guard.completion_check.closure_mismatch else "No closure conflicts detected" }}</small>

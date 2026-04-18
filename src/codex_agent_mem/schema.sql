@@ -165,6 +165,41 @@ CREATE TABLE IF NOT EXISTS health_reports (
   FOREIGN KEY(project_id) REFERENCES projects(id)
 );
 
+CREATE TABLE IF NOT EXISTS memory_policies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL,
+  policy_kind TEXT NOT NULL,
+  rule_json TEXT NOT NULL DEFAULT '{}',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS project_inheritances (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  target_project_id INTEGER NOT NULL,
+  source_project_id INTEGER NOT NULL,
+  mode TEXT NOT NULL,
+  selector_json TEXT NOT NULL DEFAULT '{}',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(target_project_id) REFERENCES projects(id),
+  FOREIGN KEY(source_project_id) REFERENCES projects(id)
+);
+
+CREATE TABLE IF NOT EXISTS repair_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL,
+  health_report_id INTEGER,
+  repair_kind TEXT NOT NULL,
+  before_ref_json TEXT NOT NULL DEFAULT '{}',
+  after_ref_json TEXT NOT NULL DEFAULT '{}',
+  approved INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id),
+  FOREIGN KEY(health_report_id) REFERENCES health_reports(id)
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS observations_fts USING fts5(
   title,
   summary,
@@ -206,3 +241,8 @@ CREATE INDEX IF NOT EXISTS idx_memory_snapshots_project_id ON memory_snapshots(p
 CREATE INDEX IF NOT EXISTS idx_memory_snapshots_created_at ON memory_snapshots(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_health_reports_project_id ON health_reports(project_id);
 CREATE INDEX IF NOT EXISTS idx_health_reports_generated_at ON health_reports(generated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_memory_policies_project_id ON memory_policies(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_inheritances_target_project_id ON project_inheritances(target_project_id);
+CREATE INDEX IF NOT EXISTS idx_project_inheritances_source_project_id ON project_inheritances(source_project_id);
+CREATE INDEX IF NOT EXISTS idx_repair_events_project_id ON repair_events(project_id);
+CREATE INDEX IF NOT EXISTS idx_repair_events_created_at ON repair_events(created_at DESC);

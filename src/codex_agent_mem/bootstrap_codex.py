@@ -22,6 +22,10 @@ READ_ONLY_MCP_TOOLS = (
     "mem_snapshot_list",
     "mem_snapshot_create",
     "mem_snapshot_restore",
+    "mem_policy_list",
+    "mem_policy_validate",
+    "mem_inheritance_list",
+    "mem_repair_propose",
 )
 
 

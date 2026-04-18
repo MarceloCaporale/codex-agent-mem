@@ -15,6 +15,36 @@
     </form>
   </section>
 
+  {% if ui_summary %}
+    <section class="overview-grid home-strip">
+      <article class="overview-card">
+        <span class="eyebrow">Projects</span>
+        <strong>{{ ui_summary.project_count }}</strong>
+        <small>Captured workspaces</small>
+      </article>
+      <article class="overview-card">
+        <span class="eyebrow">Sessions</span>
+        <strong>{{ ui_summary.session_count }}</strong>
+        <small>Recent threads persisted locally</small>
+      </article>
+      <article class="overview-card">
+        <span class="eyebrow">Turns</span>
+        <strong>{{ ui_summary.turn_count }}</strong>
+        <small>Captured runs and responses</small>
+      </article>
+      <article class="overview-card">
+        <span class="eyebrow">Observations</span>
+        <strong>{{ ui_summary.observation_count }}</strong>
+        <small>Derived memory items</small>
+      </article>
+      <article class="overview-card">
+        <span class="eyebrow">Decisions</span>
+        <strong>{{ ui_summary.decision_count }}</strong>
+        <small>Active decisions still tracked</small>
+      </article>
+    </section>
+  {% endif %}
+
   <section class="layout one-up">
     <details class="accordion-panel" id="projects" open>
       <summary class="accordion-summary">
@@ -31,9 +61,9 @@
               <a class="project-card" href="/ui/projects/{{ project.project_key }}">
                 <div class="project-card-top">
                   <strong>{{ project.name }}</strong>
-                  <code>{{ project.project_key }}</code>
+                  <code class="secondary-code-inline">{{ project.project_key }}</code>
                 </div>
-                <p class="muted">{{ project.root_path or "No root path captured yet" }}</p>
+                <p class="muted clamp-2" title="{{ project.root_path or 'No root path captured yet' }}">{{ project.root_path or "No root path captured yet" }}</p>
                 <div class="stats">
                   <span>{{ project.sessions }} sessions</span>
                   <span>{{ project.turns }} turns</span>
@@ -61,20 +91,28 @@
         {% if recent_sessions %}
           <div class="session-list">
             {% for session in recent_sessions %}
-              <a class="session-card" href="/ui/projects/{{ session.project_key }}?session_id={{ session.id }}">
-                <div class="project-card-top">
-                  <strong>{{ session.display_label }}</strong>
-                  <code>{{ session.project_key }}</code>
-                </div>
-                <p class="muted">{{ session.display_subtitle }}</p>
-                <small class="secondary-code">{{ session.external_session_id }}</small>
+              <article class="session-card">
+                <a class="card-hit" href="/ui/projects/{{ session.project_key }}?session_id={{ session.id }}">
+                  <div class="project-card-top">
+                    <strong>{{ session.display_label }}</strong>
+                    <code class="secondary-code-inline">{{ session.project_key }}</code>
+                  </div>
+                  <p class="muted clamp-2" title="{{ session.display_subtitle }}">{{ session.display_subtitle }}</p>
+                </a>
                 <div class="stats">
                   <span>{{ session.turn_count }} turns</span>
                   <span>{{ session.observation_count }} observations</span>
                   <span>{{ session.project_name }}</span>
                 </div>
-                <small>{{ session.last_turn_at or session.display_started_at }}</small>
-              </a>
+                <details class="inline-expander">
+                  <summary>Expand</summary>
+                  <div class="expander-body">
+                    <p class="muted">{{ session.display_subtitle }}</p>
+                    <small class="secondary-code">{{ session.external_session_id }}</small>
+                    <small>{{ session.last_turn_at or session.display_started_at }}</small>
+                  </div>
+                </details>
+              </article>
             {% endfor %}
           </div>
         {% else %}
@@ -99,10 +137,10 @@
                 <a class="observation-row" href="/ui/projects/{{ item.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
                   <div class="observation-row-top">
                     <span class="type">{{ item.type }}</span>
-                    <code>{{ item.project_key }}</code>
+                    <code class="secondary-code-inline">{{ item.project_key }}</code>
                   </div>
                   <strong>{{ item.title }}</strong>
-                  <p>{{ item.summary }}</p>
+                  <p class="clamp-2" title="{{ item.summary }}">{{ item.summary }}</p>
                 </a>
               {% endfor %}
             </div>
@@ -116,10 +154,10 @@
                 <a class="observation-row" href="/ui/projects/{{ item.project_key }}{% if item.session_id %}?session_id={{ item.session_id }}{% if item.turn_id %}&turn_id={{ item.turn_id }}{% endif %}{% endif %}">
                   <div class="observation-row-top">
                     <span class="type">{{ item.type }}</span>
-                    <code>{{ item.project_key }}</code>
+                    <code class="secondary-code-inline">{{ item.project_key }}</code>
                   </div>
                   <strong>{{ item.title }}</strong>
-                  <p>{{ item.summary }}</p>
+                  <p class="clamp-2" title="{{ item.summary }}">{{ item.summary }}</p>
                 </a>
               {% endfor %}
             </div>

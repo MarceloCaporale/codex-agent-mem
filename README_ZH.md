@@ -2,13 +2,25 @@
 
 其他语言版本：[English](./README.md) | [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [日本語](./README_JA.md)
 
-面向 Codex 和编程代理工作流的可移植、本地优先记忆层。
+面向 Codex 和编程代理工作流的可移植、可审计、本地优先连续性记忆层。
 
-codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQLite，通过 MCP 提供紧凑检索，并让记忆层保持可审计、由运行时自己掌控，而不是被隐藏在某个单一厂商运行时内部。
+codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续性压缩成更小的工作 pack，并跨会话保留操作状态，让 Codex 以更少重复、更少误判完成、更多上下文控制继续工作。
+
+## 核心能力
+
+- **压缩连续性，而不是反复重放原始上下文**：只有当生成 pack 确实更小时才同步到 `AGENTS.md`
+- **跨会话保留操作状态**：持续保存 objective、constraints、pending work、blockers、Definition of Done 与 scope guardrails
+- **确定性的闭合控制**：`mem_open_work` 与 `mem_completion_check` 让未完成工作优先于陈旧的完成声明
+- **受治理的记忆选择**：通过 policies、inheritance 与 repairs 控制进入 pack 的内容，而不是盲目混入
+- **完全本地且可审计**：SQLite + FTS5、provenance、health、snapshots 和本地 UI，无需外部记忆服务
+- **原生适配 Codex**：围绕 `notify`、MCP stdio 和自动 `AGENTS.md` 同步设计
+- **实际可见的 token 节省**：当紧凑 pack 胜出时，重复上下文通常可减少约 `20%` 到 `55%`
+
+适合长时间审计、复杂项目连续工作，以及那些不仅要记住决策，还要避免丢失范围和过早宣告完成的场景。
 
 ## 状态
 
-`0.8.0` 是当前的基础版本。
+`0.9.0` 是当前的基础版本。
 
 当前已实现：
 
@@ -29,8 +41,12 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 - 为每条 observation 持久化 provenance，并可通过 `mem_provenance` 查询
 - 通过 `mem_health` 提供项目健康诊断
 - 通过 `mem_snapshot_create`、`mem_snapshot_list`、`mem_snapshot_restore` 提供版本化项目快照
+- 通过 `mem_policy_validate`、`mem_policy_add`、`mem_policy_list`、`mem_policy_remove` 提供受治理的记忆策略
+- 通过 `mem_inheritance_add`、`mem_inheritance_list`、`mem_inheritance_remove` 提供选择性继承链接
+- 通过 `mem_repair_propose` 与 `mem_repair_apply` 提供受治理的修复建议和修复事件
 - FastAPI 检查 API
-- 位于 `/ui` 的本地检查界面，包含 recent changes、scope guard、provenance、health 与 snapshots
+- 位于 `/ui` 的本地检查界面，包含 recent changes、scope guard、provenance、health、snapshots 与 governance 状态
+- 本地 policy CLI：`codex-agent-mem-policy`
 - 通过 stdio 运行的 MCP 服务器，包含：
   - `mem_search`
   - `mem_get`
@@ -46,6 +62,15 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
+  - `mem_policy_list`
+  - `mem_policy_validate`
+  - `mem_policy_add`
+  - `mem_policy_remove`
+  - `mem_inheritance_list`
+  - `mem_inheritance_add`
+  - `mem_inheritance_remove`
+  - `mem_repair_propose`
+  - `mem_repair_apply`
 - 自动化测试
 
 当前有意不包含：

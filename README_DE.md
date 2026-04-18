@@ -2,13 +2,25 @@
 
 Weitere Sprachen: [English](./README.md) | [Español](./README_ES.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
-Portable, local-first Memory-Schicht für Codex und Workflows mit Coding-Agenten.
+Portable, auditierbare und local-first Memory-Schicht für Codex und Coding-Agent-Workflows.
 
-codex-agent-mem speichert dauerhafte Erkenntnisse aus Agent-Turns in lokalem SQLite, stellt kompakte Abfrage über MCP bereit und hält die Memory-Schicht auditierbar und unter Kontrolle des eigenen Runtimes, statt sie in einem einzelnen Vendor-Runtime zu verstecken.
+codex-agent-mem hält dauerhafte Projektkontinuität außerhalb des Modell-Runtimes, komprimiert sie in kleinere Working Packs und trägt Operational State über Sessions hinweg weiter, damit Codex mit weniger Wiederholung, weniger falschem „fertig“ und mehr Kontrolle über den Kontext weiterarbeiten kann.
+
+## Kernfunktionen
+
+- **Kompakte Kontinuität statt rohem Replay**: schreibt kleinere `AGENTS.md`-Packs nur dann, wenn Kompression wirklich günstiger ist
+- **Persistenter Operational State**: behält Ziel, Constraints, offene Arbeit, Blocker, Definition of Done und Scope-Guardrails
+- **Deterministische Closure-Control**: `mem_open_work` und `mem_completion_check` stellen offene Arbeit über alte Abschlussbehauptungen
+- **Gesteuerte Memory-Auswahl**: wendet Policies, Inheritance und Repairs an, statt alles blind zu mischen
+- **Voll lokal und auditierbar**: SQLite + FTS5, Provenance, Health, Snapshots und lokale UI ohne externen Memory-Service
+- **Codex-native Integration**: gebaut für `notify`, MCP stdio und automatische `AGENTS.md`-Synchronisierung
+- **Praktische Token-Ersparnis**: reduziert wiederholten Kontext oft um etwa `20%` bis `55%`, wenn das kompakte Pack gewinnt
+
+Geeignet für lange Audits, komplexe Projektkontinuität und Sessions, in denen nicht nur Entscheidungen erinnert werden müssen, sondern Scope-Verlust und falsche Abschlüsse verhindert werden sollen.
 
 ## Status
 
-`0.8.0` ist die aktuelle Basis-Release.
+`0.9.0` ist die aktuelle Basis-Release.
 
 Was heute funktioniert:
 
@@ -29,8 +41,12 @@ Was heute funktioniert:
 - persistierte Memory-Provenance pro Observation, abrufbar über `mem_provenance`
 - Gesundheitsdiagnose pro Projekt über `mem_health`
 - versionierte Projektsnapshots über `mem_snapshot_create`, `mem_snapshot_list` und `mem_snapshot_restore`
+- gesteuerte Memory-Policies über `mem_policy_validate`, `mem_policy_add`, `mem_policy_list` und `mem_policy_remove`
+- selektive Inheritance-Links über `mem_inheritance_add`, `mem_inheritance_list` und `mem_inheritance_remove`
+- gesteuerte Repair-Vorschläge und abgeleitete Repair-Events über `mem_repair_propose` und `mem_repair_apply`
 - FastAPI-Inspektions-API
-- lokale Inspektions-UI unter `/ui`, inklusive Recent Changes, Scope Guard, Provenance, Health und Snapshots
+- lokale Inspektions-UI unter `/ui`, inklusive Recent Changes, Scope Guard, Provenance, Health, Snapshots und Governance-Status
+- lokale Policy-CLI mit `codex-agent-mem-policy`
 - MCP-stdio-Server mit:
   - `mem_search`
   - `mem_get`
@@ -46,6 +62,15 @@ Was heute funktioniert:
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
+  - `mem_policy_list`
+  - `mem_policy_validate`
+  - `mem_policy_add`
+  - `mem_policy_remove`
+  - `mem_inheritance_list`
+  - `mem_inheritance_add`
+  - `mem_inheritance_remove`
+  - `mem_repair_propose`
+  - `mem_repair_apply`
 - automatisierte Tests
 
 Was bewusst noch nicht im Scope ist:

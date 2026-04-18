@@ -4,36 +4,25 @@ Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中�
 
 **Portable, auditable, local-first MCP continuity layer for Codex CLI, Codex Desktop, and long-running agent workflows.**
 
-Persistent agent memory with automatic context compression, SQLite + FTS5, provenance-aware auditing, health diagnostics, project snapshots, local inspection UI, and no external memory service.
-
-`codex-agent-mem` persists durable findings from agent turns into local SQLite, compiles a smaller working-memory pack from recent context, syncs that pack into `AGENTS.md` when it is actually smaller than the source context, and exposes compact retrieval over MCP.
-
-Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md) | [Discoverability Metadata](./docs/discoverability.md)
-
-## Why codex-agent-mem?
-
-Tired of repeating the same context every session and wasting tokens on old scope?
-
-`codex-agent-mem` gives Codex a real local memory layer that survives between sessions, compresses context when compression is actually favorable, and carries forward operational state such as objectives, blockers, pending work, and scope guardrails.
-
-It is built for long audits, complex project continuity, and any workflow where the bigger problem is not only "remembering decisions", but also "not forgetting what is still open".
+`codex-agent-mem` keeps durable project memory outside the model runtime, compresses continuity into smaller working packs, and carries forward operational state so Codex can resume with less repetition, fewer false “done” claims, and more control over what stays in context.
 
 ## Key features
 
-- **Automatic context compression**: only syncs a generated memory pack when it is actually smaller than the source context
-- **SQLite + FTS5**: fully local, auditable, easy to inspect, and no external memory service required
-- **MCP memory server**: standard Model Context Protocol retrieval with `mem_search`, `mem_get`, `mem_recent`, `mem_project_brief`, and `mem_context_pack`
-- **Operational state carry-forward**: remembers objective, constraints, pending work, blockers, and recent completions
-- **False-completion guardrails**: prevents old "done" claims from overriding still-open work
-- **Token savings**: measurable reduction in repeated context replay when the compact pack wins
-- **Codex-native flow**: built around `notify`, `AGENTS.md`, and MCP retrieval used by Codex workflows
-- **Provenance and health visibility**: inspect where derived memory came from, plus project health and sync quality
-- **Project snapshots**: capture, list, and restore derived memory state without pretending raw history changed
-- **Portable design**: local memory backend can be reused from other MCP-compatible agent workflows
+- **Compact continuity, not raw replay**: turns repeated session context into smaller `AGENTS.md` working packs when compression is actually favorable
+- **Operational state that survives sessions**: keeps objective, constraints, pending work, blockers, Definition of Done, and scope guardrails visible and reusable
+- **Deterministic closure control**: exposes `mem_open_work` and `mem_completion_check` so open work beats stale completion claims
+- **Governed memory selection**: applies project policies, inheritance rules, and repair events instead of mixing everything blindly
+- **Fully local and auditable**: SQLite + FTS5, provenance, health diagnostics, snapshots, and a local inspector UI with no external memory service
+- **Codex-native integration**: built around `notify`, MCP stdio, and automatic `AGENTS.md` sync for real Codex workflows
+- **Practical token savings**: often reduces repeated continuity replay by roughly `20%` to `55%` when the compact pack wins
+
+Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md) | [Discoverability Metadata](./docs/discoverability.md)
+
+Built for long audits, multi-step project continuity, and workflows where the real failure mode is not only forgetting decisions, but also dropping scope, losing blockers, and declaring completion too early.
 
 ## Status
 
-`0.8.0` is the current baseline release.
+`0.9.0` is the current baseline release.
 
 What works today:
 
@@ -54,8 +43,12 @@ What works today:
 - memory provenance persisted per observation and queryable through `mem_provenance`
 - diagnostic health reporting through `mem_health`
 - versioned project snapshots through `mem_snapshot_create`, `mem_snapshot_list`, and `mem_snapshot_restore`
+- governed memory policies through `mem_policy_validate`, `mem_policy_add`, `mem_policy_list`, and `mem_policy_remove`
+- selective inheritance links through `mem_inheritance_add`, `mem_inheritance_list`, and `mem_inheritance_remove`
+- governed repair proposals and derived repair events through `mem_repair_propose` and `mem_repair_apply`
 - FastAPI inspection API
-- local inspection UI at `/ui`, including recent changes, scope guard, provenance, health, and snapshots
+- local inspection UI at `/ui`, including recent changes, scope guard, provenance, health, snapshots, and governance state
+- local policy CLI with `codex-agent-mem-policy`
 - MCP stdio server with:
   - `mem_search`
   - `mem_get`
@@ -71,6 +64,15 @@ What works today:
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
+  - `mem_policy_list`
+  - `mem_policy_validate`
+  - `mem_policy_add`
+  - `mem_policy_remove`
+  - `mem_inheritance_list`
+  - `mem_inheritance_add`
+  - `mem_inheritance_remove`
+  - `mem_repair_propose`
+  - `mem_repair_apply`
 - automated tests
 
 What is intentionally not in scope yet:

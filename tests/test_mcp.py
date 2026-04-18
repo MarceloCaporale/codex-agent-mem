@@ -48,6 +48,10 @@ def test_mcp_tools(tmp_path: Path):
     assert "mem_provenance" in names
     assert "mem_health" in names
     assert "mem_snapshot_list" in names
+    assert "mem_policy_list" in names
+    assert "mem_policy_validate" in names
+    assert "mem_inheritance_list" in names
+    assert "mem_repair_propose" in names
 
     search = server.handle_request({
         "jsonrpc": "2.0",
@@ -139,4 +143,110 @@ def test_mcp_tools(tmp_path: Path):
         "params": {"name": "mem_snapshot_restore", "arguments": {"project_key": "demo-project", "snapshot_id": snapshot_id}},
     })
     assert snapshot_restore["result"]["structuredContent"]["snapshot_id"] == snapshot_id
+
+    policy_validate = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 15,
+        "method": "tools/call",
+        "params": {
+            "name": "mem_policy_validate",
+            "arguments": {"policy_kind": "exclude_from_pack", "rule": {"selector": {"types": ["pending_item"]}}},
+        },
+    })
+    assert policy_validate["result"]["structuredContent"]["valid"] is True
+
+    policy_add = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 16,
+        "method": "tools/call",
+        "params": {
+            "name": "mem_policy_add",
+            "arguments": {
+                "project_key": "demo-project",
+                "policy_kind": "exclude_from_pack",
+                "rule": {"selector": {"types": ["pending_item"], "text_contains": ["expose mem_open_work"]}},
+            },
+        },
+    })
+    policy_id = policy_add["result"]["structuredContent"]["id"]
+
+    policy_list = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 17,
+        "method": "tools/call",
+        "params": {"name": "mem_policy_list", "arguments": {"project_key": "demo-project"}},
+    })
+    assert policy_list["result"]["structuredContent"]
+
+    base_payload = {
+        "runtime": "codex",
+        "project_key": "base-project",
+        "session_id": "base-thread",
+        "turn_id": "base-turn",
+        "cwd": str(workspace / "base"),
+        "timestamp": "2026-04-17T00:02:00Z",
+        "input_messages": ["Objective: share auth continuity.\nConstraint: keep sqlite local-first."],
+        "assistant_message": "Decision: keep shared auth stable.",
+    }
+    store.ingest_event(base_payload, normalize_event(base_payload))
+    server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 18,
+        "method": "tools/call",
+        "params": {
+            "name": "mem_policy_add",
+            "arguments": {
+                "project_key": "base-project",
+                "policy_kind": "tag_as",
+                "rule": {"selector": {"types": ["constraint"]}, "tag": "inheritable"},
+            },
+        },
+    })
+    inheritance_add = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 19,
+        "method": "tools/call",
+        "params": {
+            "name": "mem_inheritance_add",
+            "arguments": {
+                "project_key": "demo-project",
+                "source_project_key": "base-project",
+                "mode": "combined",
+                "selector": {"limit": 4},
+            },
+        },
+    })
+    inheritance_id = inheritance_add["result"]["structuredContent"]["id"]
+
+    inheritance_list = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 20,
+        "method": "tools/call",
+        "params": {"name": "mem_inheritance_list", "arguments": {"project_key": "demo-project"}},
+    })
+    assert inheritance_list["result"]["structuredContent"]
+
+    repair_propose = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 21,
+        "method": "tools/call",
+        "params": {"name": "mem_repair_propose", "arguments": {"project_key": "demo-project"}},
+    })
+    assert isinstance(repair_propose["result"]["structuredContent"], list)
+
+    policy_remove = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 22,
+        "method": "tools/call",
+        "params": {"name": "mem_policy_remove", "arguments": {"project_key": "demo-project", "policy_id": policy_id}},
+    })
+    assert policy_remove["result"]["structuredContent"]["removed"] is True
+
+    inheritance_remove = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 23,
+        "method": "tools/call",
+        "params": {"name": "mem_inheritance_remove", "arguments": {"project_key": "demo-project", "inheritance_id": inheritance_id}},
+    })
+    assert inheritance_remove["result"]["structuredContent"]["removed"] is True
     assert json.dumps(pack, ensure_ascii=True).isascii()

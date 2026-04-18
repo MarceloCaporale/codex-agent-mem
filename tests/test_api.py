@@ -115,6 +115,79 @@ def test_api_ingest_and_read(tmp_path: Path):
     assert snapshot_restore.status_code == 200
     assert "context_pack" in snapshot_restore.json()
 
+    policy_validate = client.post(
+        "/projects/demo-repo/policies/validate",
+        json={
+            "policy_kind": "exclude_from_pack",
+            "rule": {"selector": {"types": ["pending_item"]}},
+        },
+    )
+    assert policy_validate.status_code == 200
+    assert policy_validate.json()["valid"] is True
+
+    policy_create = client.post(
+        "/projects/demo-repo/policies",
+        json={
+            "policy_kind": "exclude_from_pack",
+            "rule": {"selector": {"types": ["pending_item"], "text_contains": ["finish auth continuity"]}},
+        },
+    )
+    assert policy_create.status_code == 200
+    policy_id = policy_create.json()["id"]
+
+    policy_list = client.get("/projects/demo-repo/policies")
+    assert policy_list.status_code == 200
+    assert policy_list.json()["policies"]
+
+    source_payload = {
+        "runtime": "codex",
+        "project_key": "base-source",
+        "session_id": "base-thread",
+        "turn_id": "base-turn",
+        "cwd": str(tmp_path / "base-source"),
+        "timestamp": "2026-04-17T00:02:00Z",
+        "input_messages": [
+            "Objective: share auth continuity.\nConstraint: keep sqlite local-first."
+        ],
+        "assistant_message": "Decision: keep shared auth stable.",
+    }
+    source_ingest = client.post("/ingest/generic", json={"payload": source_payload})
+    assert source_ingest.status_code == 200
+    source_tag_policy = client.post(
+        "/projects/base-source/policies",
+        json={
+            "policy_kind": "tag_as",
+            "rule": {"selector": {"types": ["constraint"]}, "tag": "inheritable"},
+        },
+    )
+    assert source_tag_policy.status_code == 200
+    inheritance_create = client.post(
+        "/projects/demo-repo/inheritances",
+        json={
+            "source_project_key": "base-source",
+            "mode": "combined",
+            "selector": {"limit": 4},
+        },
+    )
+    assert inheritance_create.status_code == 200
+    inheritance_id = inheritance_create.json()["id"]
+
+    inheritance_list = client.get("/projects/demo-repo/inheritances")
+    assert inheritance_list.status_code == 200
+    assert inheritance_list.json()["inheritances"]
+
+    repairs = client.get("/projects/demo-repo/repairs")
+    assert repairs.status_code == 200
+    assert "proposals" in repairs.json()
+
+    delete_policy = client.delete(f"/projects/demo-repo/policies/{policy_id}")
+    assert delete_policy.status_code == 200
+    assert delete_policy.json()["removed"] is True
+
+    delete_inheritance = client.delete(f"/projects/demo-repo/inheritances/{inheritance_id}")
+    assert delete_inheritance.status_code == 200
+    assert delete_inheritance.json()["removed"] is True
+
     closure_metrics = client.get("/projects/demo-repo/closure-metrics")
     assert closure_metrics.status_code == 200
     assert closure_metrics.json()["total_events"] >= 1

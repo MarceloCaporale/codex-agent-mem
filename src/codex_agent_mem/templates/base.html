@@ -21,8 +21,12 @@
 
     <nav class="topnav" aria-label="Primary">
       <div class="topnav-inner">
-        <a class="topnav-link {% if request.url.path == '/ui' %}active{% endif %}" href="/ui">Inspector</a>
+        <a class="topnav-link {% if request.url.path == '/ui' %}active{% endif %}" href="/ui">Home</a>
+        {% if request.url.path != '/ui' %}
+          <a class="topnav-link topnav-back" href="{{ request.headers.get('referer') or '/ui' }}">Back</a>
+        {% endif %}
         {% if request.url.path == '/ui' %}
+          <a class="topnav-link" href="/ui">Inspector</a>
           <a class="topnav-link" href="/ui#projects">Projects</a>
           <a class="topnav-link" href="/ui#threads">Sessions</a>
           <a class="topnav-link" href="/ui#recent">Recent</a>

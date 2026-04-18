@@ -179,6 +179,117 @@ class CodexAgentMemMCPServer:
                     "required": ["project_key", "snapshot_id"],
                 },
             },
+            {
+                "name": "mem_policy_list",
+                "description": "List active and inactive memory policies for one project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_policy_validate",
+                "description": "Validate one memory policy definition before adding it.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "policy_kind": {"type": "string"},
+                        "rule": {"type": "object"},
+                    },
+                    "required": ["policy_kind", "rule"],
+                },
+            },
+            {
+                "name": "mem_policy_add",
+                "description": "Add one memory policy to a project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "policy_kind": {"type": "string"},
+                        "rule": {"type": "object"},
+                        "enabled": {"type": "boolean"},
+                    },
+                    "required": ["project_key", "policy_kind", "rule"],
+                },
+            },
+            {
+                "name": "mem_policy_remove",
+                "description": "Remove one memory policy from a project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "policy_id": {"type": "integer", "minimum": 1},
+                    },
+                    "required": ["project_key", "policy_id"],
+                },
+            },
+            {
+                "name": "mem_inheritance_list",
+                "description": "List inheritance links for one project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_inheritance_add",
+                "description": "Add one inheritance link to a project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "source_project_key": {"type": "string"},
+                        "mode": {"type": "string"},
+                        "selector": {"type": "object"},
+                        "enabled": {"type": "boolean"},
+                    },
+                    "required": ["project_key", "source_project_key", "mode"],
+                },
+            },
+            {
+                "name": "mem_inheritance_remove",
+                "description": "Remove one inheritance link from a project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "inheritance_id": {"type": "integer", "minimum": 1},
+                    },
+                    "required": ["project_key", "inheritance_id"],
+                },
+            },
+            {
+                "name": "mem_repair_propose",
+                "description": "Return governed repair proposals based on the latest health report for a project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_repair_apply",
+                "description": "Apply one supported repair proposal as a derived repair event.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "repair_kind": {"type": "string"},
+                        "health_report_id": {"type": "integer", "minimum": 1},
+                    },
+                    "required": ["project_key", "repair_kind"],
+                },
+            },
         ]
 
     def _tool_result(self, data: Any, is_error: bool = False) -> dict[str, Any]:
@@ -287,6 +398,48 @@ class CodexAgentMemMCPServer:
                     )
                     if data is None:
                         raise ValueError("Snapshot not found")
+                elif name == "mem_policy_list":
+                    data = self.store.list_policies(arguments["project_key"])
+                elif name == "mem_policy_validate":
+                    data = self.store.validate_policy(
+                        str(arguments["policy_kind"]),
+                        arguments.get("rule") or {},
+                    )
+                elif name == "mem_policy_add":
+                    data = self.store.add_policy(
+                        arguments["project_key"],
+                        str(arguments["policy_kind"]),
+                        arguments.get("rule") or {},
+                        enabled=bool(arguments.get("enabled", True)),
+                    )
+                elif name == "mem_policy_remove":
+                    data = self.store.remove_policy(
+                        arguments["project_key"],
+                        int(arguments["policy_id"]),
+                    )
+                elif name == "mem_inheritance_list":
+                    data = self.store.list_inheritances(arguments["project_key"])
+                elif name == "mem_inheritance_add":
+                    data = self.store.add_inheritance(
+                        arguments["project_key"],
+                        str(arguments["source_project_key"]),
+                        str(arguments["mode"]),
+                        arguments.get("selector") or {},
+                        enabled=bool(arguments.get("enabled", True)),
+                    )
+                elif name == "mem_inheritance_remove":
+                    data = self.store.remove_inheritance(
+                        arguments["project_key"],
+                        int(arguments["inheritance_id"]),
+                    )
+                elif name == "mem_repair_propose":
+                    data = self.store._repair_proposals_from_health(arguments["project_key"])
+                elif name == "mem_repair_apply":
+                    data = self.store.apply_repair(
+                        arguments["project_key"],
+                        str(arguments["repair_kind"]),
+                        int(arguments["health_report_id"]) if arguments.get("health_report_id") is not None else None,
+                    )
                 else:
                     raise ValueError(f"Unknown tool: {name}")
                 return {"jsonrpc": "2.0", "id": msg_id, "result": self._tool_result(data)}

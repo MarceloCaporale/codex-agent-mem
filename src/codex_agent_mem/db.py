@@ -14,6 +14,14 @@ from codex_agent_mem.health import build_health_report
 from codex_agent_mem.ingest import classify_event, stable_hash
 from codex_agent_mem.models import GenericEventEnvelope, Observation
 from codex_agent_mem.operational_state import STATEFUL_OBSERVATION_TYPES, derive_operational_state
+from codex_agent_mem.policy_engine import (
+    evaluate_policy_effects,
+    filter_items_by_policy,
+    selector_matches,
+    sort_items_for_priority,
+    validate_inheritance_definition,
+    validate_policy_definition,
+)
 from codex_agent_mem.scope_control import build_recent_changes, build_scope_guard
 
 RETRIEVAL_TYPE_PRIORITY = {
@@ -411,7 +419,14 @@ class CodexAgentMemStore:
             params.append(project_key)
         params.append(limit)
         rows = self.conn.execute(sql.format(where=where), params).fetchall()
-        return [dict(row) for row in rows]
+        items = [dict(row) for row in rows]
+        if not project_key:
+            return items
+        excluded = self._effective_governance(project_key)["retrieval_excluded_keys"]
+        return filter_items_by_policy(
+            [dict(item, memory_kind="observation") for item in items],
+            excluded_keys=excluded,
+        )[:limit]
 
     def search_observations(self, query: str, project_key: str | None = None, limit: int = 10) -> list[dict[str, Any]]:
         if not query.strip():
@@ -456,7 +471,14 @@ class CodexAgentMemStore:
                 """,
                 params,
             ).fetchall()
-        return [dict(row) for row in rows]
+        items = [dict(row) for row in rows]
+        if not project_key:
+            return items
+        excluded = self._effective_governance(project_key)["retrieval_excluded_keys"]
+        return filter_items_by_policy(
+            [dict(item, memory_kind="observation") for item in items],
+            excluded_keys=excluded,
+        )[:limit]
 
     def get_observation(self, observation_id: int) -> dict[str, Any] | None:
         row = self.conn.execute(
@@ -723,11 +745,495 @@ class CodexAgentMemStore:
             (project_key,),
         ).fetchone()
 
+    def validate_policy(self, policy_kind: str, rule: dict[str, Any] | None) -> dict[str, Any]:
+        result = validate_policy_definition(policy_kind, rule)
+        return {
+            "policy_kind": policy_kind,
+            "valid": result["valid"],
+            "errors": result["errors"],
+            "warnings": result["warnings"],
+            "normalized_rule": result["normalized_rule"],
+        }
+
+    def list_policies(self, project_key: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT mp.*, p.project_key
+            FROM memory_policies mp
+            JOIN projects p ON p.id = mp.project_id
+            WHERE p.project_key = ?
+            ORDER BY mp.created_at DESC, mp.id DESC
+            """,
+            (project_key,),
+        ).fetchall()
+        items: list[dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            item["enabled"] = bool(item.get("enabled"))
+            item["rule"] = self._load_json(item.pop("rule_json", None), {})
+            items.append(item)
+        return items
+
+    def add_policy(
+        self,
+        project_key: str,
+        policy_kind: str,
+        rule: dict[str, Any] | None,
+        *,
+        enabled: bool = True,
+    ) -> dict[str, Any]:
+        project = self._project_row(project_key)
+        if project is None:
+            raise ValueError("Project not found")
+        validation = self.validate_policy(policy_kind, rule)
+        if not validation["valid"]:
+            raise ValueError("; ".join(validation["errors"]))
+        with self.conn:
+            cur = self.conn.execute(
+                """
+                INSERT INTO memory_policies(project_id, policy_kind, rule_json, enabled, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    int(project["id"]),
+                    policy_kind,
+                    self._json(validation["normalized_rule"]),
+                    1 if enabled else 0,
+                    self._now(),
+                ),
+            )
+            policy_id = int(cur.lastrowid)
+        rows = [item for item in self.list_policies(project_key) if int(item["id"]) == policy_id]
+        assert rows
+        return rows[0]
+
+    def remove_policy(self, project_key: str, policy_id: int) -> dict[str, Any]:
+        project = self._project_row(project_key)
+        if project is None:
+            raise ValueError("Project not found")
+        with self.conn:
+            cur = self.conn.execute(
+                "DELETE FROM memory_policies WHERE id = ? AND project_id = ?",
+                (policy_id, int(project["id"])),
+            )
+        return {"project_key": project_key, "policy_id": policy_id, "removed": cur.rowcount > 0}
+
+    def validate_inheritance(self, mode: str, selector: dict[str, Any] | None) -> dict[str, Any]:
+        result = validate_inheritance_definition(mode, selector)
+        return {
+            "mode": mode,
+            "valid": result["valid"],
+            "errors": result["errors"],
+            "warnings": result["warnings"],
+            "normalized_selector": result["normalized_selector"],
+        }
+
+    def list_inheritances(self, project_key: str) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT
+              i.*,
+              tp.project_key AS target_project_key,
+              sp.project_key AS source_project_key
+            FROM project_inheritances i
+            JOIN projects tp ON tp.id = i.target_project_id
+            JOIN projects sp ON sp.id = i.source_project_id
+            WHERE tp.project_key = ?
+            ORDER BY i.created_at DESC, i.id DESC
+            """,
+            (project_key,),
+        ).fetchall()
+        items: list[dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            item["enabled"] = bool(item.get("enabled"))
+            item["selector"] = self._load_json(item.pop("selector_json", None), {})
+            items.append(item)
+        return items
+
+    def add_inheritance(
+        self,
+        target_project_key: str,
+        source_project_key: str,
+        mode: str,
+        selector: dict[str, Any] | None = None,
+        *,
+        enabled: bool = True,
+    ) -> dict[str, Any]:
+        target = self._project_row(target_project_key)
+        source = self._project_row(source_project_key)
+        if target is None or source is None:
+            raise ValueError("Source or target project not found")
+        validation = self.validate_inheritance(mode, selector)
+        if not validation["valid"]:
+            raise ValueError("; ".join(validation["errors"]))
+        with self.conn:
+            cur = self.conn.execute(
+                """
+                INSERT INTO project_inheritances(
+                  target_project_id, source_project_id, mode, selector_json, enabled, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(target["id"]),
+                    int(source["id"]),
+                    mode,
+                    self._json(validation["normalized_selector"]),
+                    1 if enabled else 0,
+                    self._now(),
+                ),
+            )
+            inheritance_id = int(cur.lastrowid)
+        rows = [item for item in self.list_inheritances(target_project_key) if int(item["id"]) == inheritance_id]
+        assert rows
+        return rows[0]
+
+    def remove_inheritance(self, project_key: str, inheritance_id: int) -> dict[str, Any]:
+        target = self._project_row(project_key)
+        if target is None:
+            raise ValueError("Project not found")
+        with self.conn:
+            cur = self.conn.execute(
+                "DELETE FROM project_inheritances WHERE id = ? AND target_project_id = ?",
+                (inheritance_id, int(target["id"])),
+            )
+        return {"project_key": project_key, "inheritance_id": inheritance_id, "removed": cur.rowcount > 0}
+
+    def list_repairs(self, project_key: str, limit: int = 20) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT r.*
+            FROM repair_events r
+            JOIN projects p ON p.id = r.project_id
+            WHERE p.project_key = ?
+            ORDER BY r.created_at DESC, r.id DESC
+            LIMIT ?
+            """,
+            (project_key, limit),
+        ).fetchall()
+        items: list[dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            item["approved"] = bool(item.get("approved"))
+            item["before_ref"] = self._load_json(item.pop("before_ref_json", None), {})
+            item["after_ref"] = self._load_json(item.pop("after_ref_json", None), {})
+            items.append(item)
+        return items
+
+    @staticmethod
+    def _policy_item_from_observation(item: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": item.get("id"),
+            "type": item.get("type"),
+            "title": item.get("title"),
+            "summary": item.get("summary") or item.get("title"),
+            # Policy matching intentionally avoids raw turn detail here.
+            # Observation detail often contains the full captured turn, which
+            # makes text-based policies overmatch unrelated sibling items.
+            "detail": item.get("summary") or item.get("title"),
+            "status": item.get("status"),
+            "updated_at": item.get("updated_at"),
+            "effective_tags": item.get("effective_tags") or [],
+            "memory_kind": "observation",
+        }
+
+    @staticmethod
+    def _policy_item_from_decision(item: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": item.get("id"),
+            "type": "decision",
+            "title": item.get("title"),
+            "summary": item.get("decision_text") or item.get("title"),
+            "detail": item.get("decision_text"),
+            "decision_text": item.get("decision_text"),
+            "status": item.get("status"),
+            "updated_at": item.get("updated_at"),
+            "memory_kind": "decision",
+        }
+
+    def _enabled_policy_rows(self, project_key: str) -> list[dict[str, Any]]:
+        return [item for item in self.list_policies(project_key) if item.get("enabled")]
+
+    def _enabled_inheritance_rows(self, project_key: str) -> list[dict[str, Any]]:
+        return [item for item in self.list_inheritances(project_key) if item.get("enabled")]
+
+    def _approved_repairs(self, project_key: str) -> list[dict[str, Any]]:
+        return [item for item in self.list_repairs(project_key, limit=50) if item.get("approved")]
+
+    def _inherited_rule_rows(self, project_key: str) -> list[dict[str, Any]]:
+        inherited: list[dict[str, Any]] = []
+        for item in self._enabled_inheritance_rows(project_key):
+            if item.get("mode") not in {"rules_only", "combined"}:
+                continue
+            source_key = str(item.get("source_project_key"))
+            for policy in self._enabled_policy_rows(source_key):
+                inherited.append(
+                    {
+                        **policy,
+                        "inherited_from_project_key": source_key,
+                        "origin": "inherited_rule",
+                    }
+                )
+        return inherited
+
+    def _inherited_decisions(self, project_key: str) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        for inheritance in self._enabled_inheritance_rows(project_key):
+            if inheritance.get("mode") not in {"stable_decisions", "combined"}:
+                continue
+            source_key = str(inheritance.get("source_project_key"))
+            selector = inheritance.get("selector") or {}
+            limit = int(selector.get("limit") or 8)
+            for decision in self.recent_decisions(source_key, limit=limit):
+                policy_item = self._policy_item_from_decision(decision)
+                if not selector_matches(policy_item, selector):
+                    continue
+                inherited = dict(decision)
+                inherited["id"] = f"inh-decision:{source_key}:{decision['id']}"
+                inherited["title"] = f"{decision['title']} (inherited from {source_key})"
+                inherited["decision_text"] = f"{decision['decision_text']} (inherited from {source_key})"
+                inherited["inherited_from_project_key"] = source_key
+                inherited["memory_kind"] = "decision"
+                items.append(inherited)
+        return items
+
+    def _inherited_observations(self, project_key: str) -> list[dict[str, Any]]:
+        inherited_items: list[dict[str, Any]] = []
+        for inheritance in self._enabled_inheritance_rows(project_key):
+            if inheritance.get("mode") not in {"marked_inheritable", "combined"}:
+                continue
+            source_key = str(inheritance.get("source_project_key"))
+            selector = inheritance.get("selector") or {}
+            source_policies = self._enabled_policy_rows(source_key)
+            source_observations = self._operational_observations(source_key, limit=240)
+            source_policy_items = [self._policy_item_from_observation(item) for item in source_observations]
+            source_effects = evaluate_policy_effects(
+                source_policy_items,
+                source_policies,
+                self._approved_repairs(source_key),
+            )
+            source_tags = source_effects["tag_map"]
+            excluded = set(source_effects["retrieval_excluded_keys"])
+            added = 0
+            for item in source_observations:
+                policy_item = self._policy_item_from_observation(item)
+                key = f"observation:{item['id']}"
+                if key in excluded:
+                    continue
+                tags = set(source_tags.get(key) or [])
+                if not selector_matches(policy_item, selector, tags=tags):
+                    continue
+                inherited = dict(item)
+                inherited["id"] = f"inh-observation:{source_key}:{item['id']}"
+                inherited["title"] = f"{item['title']} (inherited from {source_key})"
+                inherited["summary"] = f"{item['summary']} (inherited from {source_key})"
+                inherited["detail"] = f"{item.get('detail') or item.get('summary') or item.get('title')} (inherited from {source_key})"
+                inherited["effective_tags"] = sorted(tags)
+                inherited["inherited_from_project_key"] = source_key
+                inherited["memory_kind"] = "observation"
+                inherited_items.append(inherited)
+                added += 1
+                if added >= int(selector.get("limit") or 8):
+                    break
+        return inherited_items
+
+    def _repair_proposals_from_health(self, project_key: str) -> list[dict[str, Any]]:
+        report = self.latest_health_report(project_key)
+        if report is None:
+            self.health_report(project_key, record=True)
+            report = self.latest_health_report(project_key)
+        if report is None:
+            return []
+        operational_observations = self._operational_observations(project_key, limit=240)
+        policies = self._enabled_policy_rows(project_key)
+        effects = evaluate_policy_effects(
+            [self._policy_item_from_observation(item) for item in operational_observations],
+            policies,
+            self._approved_repairs(project_key),
+        )
+        protected = set(effects["never_archive_keys"])
+        proposals: list[dict[str, Any]] = []
+        for duplicate in report.get("duplicates") or []:
+            ids = [int(item_id) for item_id in duplicate.get("observation_ids") or []]
+            if len(ids) <= 1:
+                continue
+            candidate_ids = [item_id for item_id in ids[1:] if f"observation:{item_id}" not in protected]
+            if candidate_ids:
+                proposals.append(
+                    {
+                        "repair_kind": "archive_duplicate_observations",
+                        "supported_apply": True,
+                        "observation_ids": candidate_ids,
+                        "reason": duplicate.get("latest_summary") or duplicate.get("normalized_text"),
+                        "health_report_id": report.get("id"),
+                    }
+                )
+        stale_ids: list[int] = []
+        stale_summaries = {str(item.get("summary") or "") for item in report.get("stale_items") or []}
+        for item in operational_observations:
+            if str(item.get("summary") or "") in stale_summaries and f"observation:{item['id']}" not in protected:
+                stale_ids.append(int(item["id"]))
+        if stale_ids:
+            proposals.append(
+                {
+                    "repair_kind": "archive_stale_open_items",
+                    "supported_apply": True,
+                    "observation_ids": sorted(set(stale_ids)),
+                    "reason": "stale_open_items",
+                    "health_report_id": report.get("id"),
+                }
+            )
+        if report.get("contradictions"):
+            proposals.append(
+                {
+                    "repair_kind": "review_contradictions",
+                    "supported_apply": False,
+                    "observation_ids": [],
+                    "reason": "manual_review_required",
+                    "health_report_id": report.get("id"),
+                }
+            )
+        if report.get("dod_missing_count"):
+            proposals.append(
+                {
+                    "repair_kind": "review_dod_gaps",
+                    "supported_apply": False,
+                    "observation_ids": [],
+                    "reason": "manual_review_required",
+                    "health_report_id": report.get("id"),
+                }
+            )
+        return proposals
+
+    def apply_repair(self, project_key: str, repair_kind: str, health_report_id: int | None = None) -> dict[str, Any]:
+        project = self._project_row(project_key)
+        if project is None:
+            raise ValueError("Project not found")
+        proposals = self._repair_proposals_from_health(project_key)
+        proposal = next(
+            (
+                item
+                for item in proposals
+                if item["repair_kind"] == repair_kind
+                and (health_report_id is None or int(item.get("health_report_id") or 0) == health_report_id)
+            ),
+            None,
+        )
+        if proposal is None:
+            raise ValueError("Repair proposal not found")
+        if not proposal.get("supported_apply"):
+            raise ValueError("This repair proposal requires manual review and cannot be auto-applied")
+        with self.conn:
+            cur = self.conn.execute(
+                """
+                INSERT INTO repair_events(
+                  project_id, health_report_id, repair_kind, before_ref_json, after_ref_json, approved, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(project["id"]),
+                    int(proposal.get("health_report_id") or 0) or None,
+                    repair_kind,
+                    self._json(
+                        {
+                            "proposal_reason": proposal.get("reason"),
+                            "health_report_id": proposal.get("health_report_id"),
+                        }
+                    ),
+                    self._json({"exclude_observation_ids": proposal.get("observation_ids") or []}),
+                    1,
+                    self._now(),
+                ),
+            )
+            repair_id = int(cur.lastrowid)
+        latest_turn = self._latest_turn_source(int(project["id"]))
+        self.record_provenance(
+            memory_kind="repair_event",
+            memory_id=repair_id,
+            project_id=int(project["id"]),
+            session_id=int(latest_turn["session_id"]) if latest_turn else None,
+            turn_id=int(latest_turn["turn_id"]) if latest_turn else None,
+            observation_id=None,
+            turn_hash=str(latest_turn["content_hash"]) if latest_turn and latest_turn.get("content_hash") else None,
+            model_name=str(latest_turn["model_name"]) if latest_turn and latest_turn.get("model_name") else None,
+            cwd=str(latest_turn["cwd"]) if latest_turn and latest_turn.get("cwd") else None,
+            source_span={
+                "repair_kind": repair_kind,
+                "exclude_observation_ids": proposal.get("observation_ids") or [],
+            },
+        )
+        rows = [item for item in self.list_repairs(project_key) if int(item["id"]) == repair_id]
+        assert rows
+        return rows[0]
+
+    def _effective_governance(self, project_key: str) -> dict[str, Any]:
+        local_policies = self._enabled_policy_rows(project_key)
+        inherited_policies = self._inherited_rule_rows(project_key)
+        effective_policies = local_policies + inherited_policies
+        local_observations = self._operational_observations(project_key, limit=240)
+        local_decisions = self.recent_decisions(project_key, limit=20)
+        inherited_observations = self._inherited_observations(project_key)
+        inherited_decisions = self._inherited_decisions(project_key)
+        effects = evaluate_policy_effects(
+            [self._policy_item_from_observation(item) for item in local_observations]
+            + [self._policy_item_from_observation(item) for item in inherited_observations]
+            + [self._policy_item_from_decision(item) for item in local_decisions]
+            + [self._policy_item_from_decision(item) for item in inherited_decisions],
+            effective_policies,
+            self._approved_repairs(project_key),
+        )
+        retrieval_excluded = set(effects["retrieval_excluded_keys"])
+        pack_excluded = set(effects["pack_excluded_keys"])
+        keep_priority = set(effects["keep_priority_keys"])
+        effective_local_observations = []
+        for item in local_observations:
+            key = f"observation:{item['id']}"
+            if key in retrieval_excluded:
+                continue
+            enriched = dict(item)
+            enriched["effective_tags"] = effects["tag_map"].get(key) or []
+            effective_local_observations.append(enriched)
+        effective_local_observations = sort_items_for_priority(
+            effective_local_observations,
+            priority_keys=keep_priority,
+        )
+        effective_inherited_observations = filter_items_by_policy(
+            [dict(item, memory_kind="observation") for item in inherited_observations],
+            excluded_keys=retrieval_excluded,
+        )
+        effective_inherited_observations = sort_items_for_priority(
+            effective_inherited_observations,
+            priority_keys=keep_priority,
+        )
+        effective_decisions = sort_items_for_priority(
+            filter_items_by_policy(
+                [dict(item, memory_kind="decision") for item in local_decisions] + inherited_decisions,
+                excluded_keys=retrieval_excluded,
+            ),
+            priority_keys=keep_priority,
+        )
+        return {
+            "local_policies": local_policies,
+            "effective_policies": effective_policies,
+            "inheritances": self._enabled_inheritance_rows(project_key),
+            "repairs": self.list_repairs(project_key, limit=10),
+            "policy_effects": effects,
+            "effective_local_observations": effective_local_observations,
+            "inherited_observations": effective_inherited_observations,
+            "effective_observations": effective_local_observations + effective_inherited_observations,
+            "effective_decisions": effective_decisions,
+            "pack_excluded_keys": pack_excluded,
+            "retrieval_excluded_keys": retrieval_excluded,
+            "keep_priority_keys": keep_priority,
+            "repair_proposals": [],
+        }
+
     def project_brief(self, project_key: str) -> dict[str, Any] | None:
         project = self._project_row(project_key)
         if project is None:
             return None
         project_id = int(project["id"])
+        governance = self._effective_governance(project_key)
         counts = self.conn.execute(
             """
             SELECT
@@ -739,10 +1245,7 @@ class CodexAgentMemStore:
             (project_id, project_id, project_id, project_id),
         ).fetchone()
         recent = self.recent_observations(project_key=project_key, limit=5)
-        decisions = self.conn.execute(
-            "SELECT id, title, decision_text, status, updated_at FROM decisions WHERE project_id = ? ORDER BY updated_at DESC LIMIT 5",
-            (project_id,),
-        ).fetchall()
+        decisions = governance["effective_decisions"][:5]
         return {
             "project": dict(project),
             "counts": dict(counts),
@@ -758,6 +1261,12 @@ class CodexAgentMemStore:
             "health_preview": self.health_report(project_key, record=False),
             "latest_health": self.latest_health_report(project_key),
             "snapshots": self.list_snapshots(project_key, limit=5),
+            "policies": governance["local_policies"],
+            "effective_policies": governance["effective_policies"],
+            "inheritances": governance["inheritances"],
+            "repairs": governance["repairs"],
+            "policy_effects": governance["policy_effects"],
+            "repair_proposals": self._repair_proposals_from_health(project_key),
         }
 
     def recent_decisions(self, project_key: str, limit: int = 10) -> list[dict[str, Any]]:
@@ -811,7 +1320,8 @@ class CodexAgentMemStore:
     def operational_state(self, project_key: str) -> dict[str, Any] | None:
         if self._project_row(project_key) is None:
             return None
-        return derive_operational_state(self._operational_observations(project_key, limit=120))
+        governance = self._effective_governance(project_key)
+        return derive_operational_state(governance["effective_observations"][:160])
 
     def open_work_report(self, project_key: str) -> dict[str, Any] | None:
         state = self.operational_state(project_key)
@@ -1103,13 +1613,14 @@ class CodexAgentMemStore:
         }
 
     def health_report(self, project_key: str, *, record: bool = False) -> dict[str, Any] | None:
+        governance = self._effective_governance(project_key)
         state = self.operational_state(project_key)
         if state is None:
             return None
         completion_check = self.completion_check(project_key, record=False)
         if completion_check is None:
             return None
-        observations = self.operational_observations(project_key, limit=240)
+        observations = governance["effective_observations"][:240]
         report = build_health_report(
             project_key=project_key,
             operational_state=state,
@@ -1401,11 +1912,21 @@ class CodexAgentMemStore:
         brief = self.project_brief(project_key)
         if brief is None:
             return None
+        governance = self._effective_governance(project_key)
         summaries = [
             item
             for item in self.recent_observations(project_key=project_key, limit=12)
             if item.get("type") == "session_summary"
         ]
+        summary_effects = evaluate_policy_effects(
+            [self._policy_item_from_observation(item) for item in summaries],
+            governance["effective_policies"],
+            self._approved_repairs(project_key),
+        )
+        summaries = filter_items_by_policy(
+            [dict(item, memory_kind="observation") for item in summaries],
+            excluded_keys=set(summary_effects["pack_excluded_keys"]),
+        )
         selected_budget = budget
         budget_reason = None
         if budget == "auto":
@@ -1416,14 +1937,38 @@ class CodexAgentMemStore:
         started = perf_counter()
         result = build_context_pack(
             project=brief["project"],
-            decisions=self.recent_decisions(project_key=project_key, limit=8),
+            decisions=filter_items_by_policy(
+                governance["effective_decisions"],
+                excluded_keys=governance["pack_excluded_keys"],
+            )[:8],
             summaries=summaries,
-            operational_state=brief["operational_state"],
+            operational_state=derive_operational_state(
+                filter_items_by_policy(
+                    governance["effective_observations"],
+                    excluded_keys=governance["pack_excluded_keys"],
+                )[:160]
+            ),
             source_turns=self.recent_turn_context(project_key=project_key, limit=max(len(summaries), 4)),
             budget=selected_budget,
             max_chars=max_chars,
             budget_reason=budget_reason,
         )
+        excluded_count = len(governance["pack_excluded_keys"])
+        inherited_count = len(governance["inheritances"])
+        if excluded_count or inherited_count:
+            notes: list[str] = []
+            if excluded_count:
+                notes.append(f"- Policy-governed selection excluded {excluded_count} item(s) from this pack.")
+            if inherited_count:
+                notes.append(f"- Active inheritance links contributing to continuity: {inherited_count}.")
+            if notes:
+                result["text"] = result["text"].rstrip() + "\n\n### Selection rules\n" + "\n".join(notes)
+                result["stats"]["pack_char_count"] = len(result["text"])
+                result["stats"]["approx_pack_tokens"] = max(1, (len(result["text"]) + 3) // 4)
+                result["stats"]["compression_ratio"] = round(
+                    len(result["text"]) / max(result["stats"]["source_char_count"], 1),
+                    3,
+                )
         result["stats"]["build_ms"] = round((perf_counter() - started) * 1000, 2)
         return result
 

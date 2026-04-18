@@ -2,13 +2,25 @@
 
 他言語版: [English](./README.md) | [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md)
 
-Codex とコーディングエージェントのワークフロー向けの、ポータブルでローカルファーストなメモリレイヤー。
+Codex とコーディングエージェントのワークフロー向けの、ポータブルで監査可能なローカルファースト継続性メモリレイヤー。
 
-codex-agent-mem は、エージェントの各ターンから得られた永続的な知見をローカル SQLite に保存し、MCP 経由でコンパクトな取得機能を提供します。また、メモリレイヤーを単一ベンダーのランタイム内部に隠すのではなく、監査可能でランタイム自身が管理できる状態に保ちます。
+codex-agent-mem は、永続的なプロジェクト記憶をモデルランタイムの外に保持し、継続性をより小さな working pack に圧縮し、operational state をセッション間で持ち越します。これにより Codex は、繰り返しの少ない状態で、誤った「完了」を減らしつつ、より強いコンテキスト制御の下で作業を再開できます。
+
+## 主な機能
+
+- **生コンテキストの再送ではなく継続性の圧縮**: 生成した pack が本当に小さいときだけ `AGENTS.md` に同期
+- **セッションをまたぐ operational state**: objective、constraints、pending work、blockers、Definition of Done、scope guardrails を保持
+- **決定的な closure control**: `mem_open_work` と `mem_completion_check` により、古い完了主張より未完了作業を優先
+- **ガバナンス付きメモリ選択**: policies、inheritance、repairs によって pack に入る内容を制御
+- **完全ローカルかつ監査可能**: SQLite + FTS5、provenance、health、snapshots、ローカル UI を備え、外部メモリサービス不要
+- **Codex ネイティブ統合**: `notify`、MCP stdio、自動 `AGENTS.md` 同期を前提に設計
+- **実用的なトークン節約**: コンパクト pack が勝つケースでは、繰り返しコンテキストをおおむね `20%` から `55%` 削減
+
+長時間の監査、複雑なプロジェクト継続作業、そして「決定を覚える」だけでなくスコープ喪失や早すぎる完了宣言を防ぎたいワークフロー向けです。
 
 ## 状態
 
-`0.8.0` は現在のベースリリースです。
+`0.9.0` は現在のベースリリースです。
 
 現在動作しているもの:
 
@@ -29,8 +41,12 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 - 各 observation に対する provenance を永続化し、`mem_provenance` で取得可能
 - `mem_health` によるプロジェクト健全性診断
 - `mem_snapshot_create`、`mem_snapshot_list`、`mem_snapshot_restore` によるバージョン付きプロジェクトスナップショット
+- `mem_policy_validate`、`mem_policy_add`、`mem_policy_list`、`mem_policy_remove` によるガバナンス付きメモリポリシー
+- `mem_inheritance_add`、`mem_inheritance_list`、`mem_inheritance_remove` による選択的 inheritance リンク
+- `mem_repair_propose` と `mem_repair_apply` によるガバナンス付き repair 提案と repair イベント
 - FastAPI ベースの検査 API
-- `/ui` で開けるローカル検査 UI。recent changes、scope guard、provenance、health、snapshots も表示
+- `/ui` で開けるローカル検査 UI。recent changes、scope guard、provenance、health、snapshots、governance 状態も表示
+- ローカル policy CLI: `codex-agent-mem-policy`
 - 以下を提供する MCP stdio サーバー:
   - `mem_search`
   - `mem_get`
@@ -46,6 +62,15 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
+  - `mem_policy_list`
+  - `mem_policy_validate`
+  - `mem_policy_add`
+  - `mem_policy_remove`
+  - `mem_inheritance_list`
+  - `mem_inheritance_add`
+  - `mem_inheritance_remove`
+  - `mem_repair_propose`
+  - `mem_repair_apply`
 - 自動テスト
 
 意図的にまだ対象外としているもの:

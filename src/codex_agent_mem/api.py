@@ -36,6 +36,29 @@ class SnapshotCreateRequest(BaseModel):
     label: str
 
 
+class PolicyRequest(BaseModel):
+    policy_kind: str
+    rule: dict
+    enabled: bool = True
+
+
+class PolicyValidateRequest(BaseModel):
+    policy_kind: str
+    rule: dict
+
+
+class InheritanceRequest(BaseModel):
+    source_project_key: str
+    mode: str
+    selector: dict = {}
+    enabled: bool = True
+
+
+class RepairApplyRequest(BaseModel):
+    repair_kind: str
+    health_report_id: int | None = None
+
+
 def _loads_json(raw: str | None, fallback):
     if not raw:
         return fallback
@@ -128,6 +151,16 @@ def _project_ui_summary(
         "selected_budget": pack_stats.get("budget"),
         "budget_reason": pack_stats.get("budget_reason"),
         "has_open_work": bool(open_work.get("has_open_work")),
+    }
+
+
+def _home_ui_summary(projects: list[dict]) -> dict[str, int]:
+    return {
+        "project_count": len(projects),
+        "session_count": sum(int(item.get("sessions") or 0) for item in projects),
+        "turn_count": sum(int(item.get("turns") or 0) for item in projects),
+        "observation_count": sum(int(item.get("observations") or 0) for item in projects),
+        "decision_count": sum(int(item.get("active_decisions") or 0) for item in projects),
     }
 
 
@@ -281,6 +314,75 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Project not found")
         return result
 
+    @app.get("/projects/{project_key}/policies")
+    def project_policies(project_key: str):
+        if store.project_brief(project_key) is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return {"project_key": project_key, "policies": store.list_policies(project_key)}
+
+    @app.post("/projects/{project_key}/policies")
+    def create_policy(project_key: str, req: PolicyRequest):
+        try:
+            return store.add_policy(project_key, req.policy_kind, req.rule, enabled=req.enabled)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.delete("/projects/{project_key}/policies/{policy_id}")
+    def delete_policy(project_key: str, policy_id: int):
+        try:
+            return store.remove_policy(project_key, policy_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/projects/{project_key}/policies/validate")
+    def validate_policy(project_key: str, req: PolicyValidateRequest):
+        if store.project_brief(project_key) is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return store.validate_policy(req.policy_kind, req.rule)
+
+    @app.get("/projects/{project_key}/inheritances")
+    def project_inheritances(project_key: str):
+        if store.project_brief(project_key) is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return {"project_key": project_key, "inheritances": store.list_inheritances(project_key)}
+
+    @app.post("/projects/{project_key}/inheritances")
+    def create_inheritance(project_key: str, req: InheritanceRequest):
+        try:
+            return store.add_inheritance(
+                project_key,
+                req.source_project_key,
+                req.mode,
+                req.selector,
+                enabled=req.enabled,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.delete("/projects/{project_key}/inheritances/{inheritance_id}")
+    def delete_inheritance(project_key: str, inheritance_id: int):
+        try:
+            return store.remove_inheritance(project_key, inheritance_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/projects/{project_key}/repairs")
+    def project_repairs(project_key: str):
+        if store.project_brief(project_key) is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return {
+            "project_key": project_key,
+            "repairs": store.list_repairs(project_key),
+            "proposals": store._repair_proposals_from_health(project_key),
+        }
+
+    @app.post("/projects/{project_key}/repairs/apply")
+    def apply_repair(project_key: str, req: RepairApplyRequest):
+        try:
+            return store.apply_repair(project_key, req.repair_kind, req.health_report_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     @app.get("/observations/{observation_id}")
     def get_observation(observation_id: int):
         result = store.get_observation(observation_id)
@@ -298,6 +400,7 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
     @app.get("/ui", response_class=HTMLResponse, include_in_schema=False)
     def ui_home(request: Request, q: str | None = None, project_key: str | None = None):
         query = (q or "").strip()
+        projects = store.list_projects()
         recent_sessions = store.list_recent_sessions(limit=18)
         for session in recent_sessions:
             session.update(
@@ -312,7 +415,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         context = {
             "request": request,
             "db_path": str(config.db_path),
-            "projects": store.list_projects(),
+            "projects": projects,
+            "ui_summary": _home_ui_summary(projects),
             "recent_sessions": recent_sessions,
             "recent_observations": store.recent_observations(limit=12),
             "query": query,
@@ -380,6 +484,12 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "health_preview": brief["health_preview"],
             "latest_health": brief["latest_health"],
             "snapshots": brief["snapshots"],
+            "policies": brief["policies"],
+            "effective_policies": brief["effective_policies"],
+            "inheritances": brief["inheritances"],
+            "repairs": brief["repairs"],
+            "policy_effects": brief["policy_effects"],
+            "repair_proposals": brief["repair_proposals"],
             "sessions": sessions,
             "selected_session": selected_session,
             "turns": turns,

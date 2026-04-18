@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 - 2026-04-18
+
+- Added governed memory policies for inclusion and exclusion control through `mem_policy_validate`, `mem_policy_add`, `mem_policy_list`, and `mem_policy_remove`.
+- Added selective inheritance links so one project can carry forward approved continuity from another project without blindly importing everything.
+- Added governed repair proposals and derived repair events through `mem_repair_propose` and `mem_repair_apply`.
+- Extended the context-pack builder so target policies also apply to inherited memory, preventing excluded items from leaking into generated packs.
+- Added a local policy CLI and inspector/UI support for governance state, including policies, inheritance links, repairs, and their compact summaries.
+
 ## 0.8.0 - 2026-04-18
 
 - Added auditable memory provenance persisted per observation and exposed through `mem_provenance`.

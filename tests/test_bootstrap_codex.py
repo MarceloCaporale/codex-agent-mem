@@ -27,4 +27,8 @@ def test_bootstrap_codex_snippet_uses_literal_paths():
     assert '[mcp_servers."codex-agent-mem".tools.mem_snapshot_list]' in snippet
     assert '[mcp_servers."codex-agent-mem".tools.mem_snapshot_create]' in snippet
     assert '[mcp_servers."codex-agent-mem".tools.mem_snapshot_restore]' in snippet
-    assert snippet.count('approval_mode = "approve"') == 14
+    assert '[mcp_servers."codex-agent-mem".tools.mem_policy_list]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_policy_validate]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_inheritance_list]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_repair_propose]' in snippet
+    assert snippet.count('approval_mode = "approve"') == 18

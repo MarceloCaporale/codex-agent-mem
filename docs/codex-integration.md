@@ -17,6 +17,10 @@ And it now exposes explicit audit and persistence utilities:
 
 5. provenance, health, and snapshot tools for debugging derived state without mutating raw history
 
+And on top of that, it now supports governed memory selection:
+
+6. policies, inheritance links, and repair flows to keep continuity explicit instead of silently mixing memory
+
 ## Capture flow
 
 - Codex emits `agent-turn-complete`
@@ -28,6 +32,7 @@ And it now exposes explicit audit and persistence utilities:
 - when that pack is smaller than the source context, `AGENTS.md` is updated in the working directory
 - every generated pack event is recorded as a context sync metric for later inspection
 - observation provenance, health reports, and snapshot events are persisted for later audit
+- project policies, inheritance links, and repair events are also persisted so continuity selection stays explainable
 
 ## Retrieval flow
 
@@ -47,6 +52,15 @@ And it now exposes explicit audit and persistence utilities:
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
+  - `mem_policy_list`
+  - `mem_policy_validate`
+  - `mem_policy_add`
+  - `mem_policy_remove`
+  - `mem_inheritance_list`
+  - `mem_inheritance_add`
+  - `mem_inheritance_remove`
+  - `mem_repair_propose`
+  - `mem_repair_apply`
 
 `mem_context_pack` also supports `budget=auto`, so the runtime can select the smallest fitting reinjection profile instead of always forcing one fixed budget.
 
@@ -67,7 +81,7 @@ The generated config uses:
 - `--sync-project-doc`
 - per-tool `approval_mode = "approve"` for the read-only retrieval tools
 - Python module targets under `codex_agent_mem`
-- snapshot and audit tools approved alongside the read-only continuity tools
+- snapshot, audit, and read-only governance tools approved alongside the continuity tools
 
 ## MCP tool approvals
 
