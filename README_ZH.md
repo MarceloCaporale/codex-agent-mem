@@ -6,15 +6,35 @@
 
 codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续性压缩成更小的工作 pack，并跨会话保留操作状态，让 Codex 以更少重复、更少误判完成、更多上下文控制继续工作。
 
-## 核心能力
+Alpha 版本。快速迭代、小而明确的切片、按顺序公开发布基线版本。
+
+## v0.9.0 新增内容
+
+- 通过治理策略实现显式的记忆包含与排除
+- 在项目之间进行选择性 inheritance，而不是盲目混合连续性
+- 基于 health 的 repair 提案与衍生 repair 事件
+- 在本地 UI 与文档中可见的 governance 信息
+
+可见版本: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+
+## 你得到的能力
+
+### 连续性
 
 - **压缩连续性，而不是反复重放原始上下文**：只有当生成 pack 确实更小时才同步到 `AGENTS.md`
 - **跨会话保留操作状态**：持续保存 objective、constraints、pending work、blockers、Definition of Done 与 scope guardrails
-- **确定性的闭合控制**：`mem_open_work` 与 `mem_completion_check` 让未完成工作优先于陈旧的完成声明
-- **受治理的记忆选择**：通过 policies、inheritance 与 repairs 控制进入 pack 的内容，而不是盲目混入
-- **完全本地且可审计**：SQLite + FTS5、provenance、health、snapshots 和本地 UI，无需外部记忆服务
 - **原生适配 Codex**：围绕 `notify`、MCP stdio 和自动 `AGENTS.md` 同步设计
 - **实际可见的 token 节省**：当紧凑 pack 胜出时，重复上下文通常可减少约 `20%` 到 `55%`
+
+### 闭合控制
+
+- **确定性的闭合控制**：`mem_open_work` 与 `mem_completion_check` 让未完成工作优先于陈旧的完成声明
+- **范围保持**：不仅保留决策，也延续 recent changes、must-not-drop、blockers 与活动连续性
+
+### 治理与审计
+
+- **受治理的记忆选择**：通过 policies、inheritance 与 repairs 控制进入 pack 的内容，而不是盲目混入
+- **完全本地且可审计**：SQLite + FTS5、provenance、health、snapshots 和本地 UI，无需外部记忆服务
 
 适合长时间审计、复杂项目连续工作，以及那些不仅要记住决策，还要避免丢失范围和过早宣告完成的场景。
 

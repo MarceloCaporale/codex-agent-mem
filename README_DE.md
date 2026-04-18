@@ -6,15 +6,35 @@ Portable, auditierbare und local-first Memory-Schicht für Codex und Coding-Agen
 
 codex-agent-mem hält dauerhafte Projektkontinuität außerhalb des Modell-Runtimes, komprimiert sie in kleinere Working Packs und trägt Operational State über Sessions hinweg weiter, damit Codex mit weniger Wiederholung, weniger falschem „fertig“ und mehr Kontrolle über den Kontext weiterarbeiten kann.
 
-## Kernfunktionen
+Alpha-Release. Schnelle Iteration, kleine Slices und öffentliche Baselines in Folge.
+
+## Neu in v0.9.0
+
+- gesteuerte Memory-Policies für explizite Inklusion und Exklusion
+- selektive Inheritance zwischen Projekten ohne blindes Vermischen von Kontinuität
+- Repair-Vorschläge und abgeleitete Repairs auf Basis von Health
+- Governance-Sichtbarkeit in lokaler UI und Dokumentation
+
+Sichtbare Releases: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+
+## Was es liefert
+
+### Kontinuität
 
 - **Kompakte Kontinuität statt rohem Replay**: schreibt kleinere `AGENTS.md`-Packs nur dann, wenn Kompression wirklich günstiger ist
 - **Persistenter Operational State**: behält Ziel, Constraints, offene Arbeit, Blocker, Definition of Done und Scope-Guardrails
-- **Deterministische Closure-Control**: `mem_open_work` und `mem_completion_check` stellen offene Arbeit über alte Abschlussbehauptungen
-- **Gesteuerte Memory-Auswahl**: wendet Policies, Inheritance und Repairs an, statt alles blind zu mischen
-- **Voll lokal und auditierbar**: SQLite + FTS5, Provenance, Health, Snapshots und lokale UI ohne externen Memory-Service
 - **Codex-native Integration**: gebaut für `notify`, MCP stdio und automatische `AGENTS.md`-Synchronisierung
 - **Praktische Token-Ersparnis**: reduziert wiederholten Kontext oft um etwa `20%` bis `55%`, wenn das kompakte Pack gewinnt
+
+### Closure Control
+
+- **Deterministische Closure-Control**: `mem_open_work` und `mem_completion_check` stellen offene Arbeit über alte Abschlussbehauptungen
+- **Scope-Erhalt**: trägt Recent Changes, Must-not-drop-Elemente, Blocker und aktive Kontinuität weiter statt nur Entscheidungen
+
+### Governance und Audit
+
+- **Gesteuerte Memory-Auswahl**: wendet Policies, Inheritance und Repairs an, statt alles blind zu mischen
+- **Voll lokal und auditierbar**: SQLite + FTS5, Provenance, Health, Snapshots und lokale UI ohne externen Memory-Service
 
 Geeignet für lange Audits, komplexe Projektkontinuität und Sessions, in denen nicht nur Entscheidungen erinnert werden müssen, sondern Scope-Verlust und falsche Abschlüsse verhindert werden sollen.
 
