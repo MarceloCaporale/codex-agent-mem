@@ -8,13 +8,17 @@ codex-agent-mem speichert dauerhafte Erkenntnisse aus Agent-Turns in lokalem SQL
 
 ## Status
 
-`0.3.0` ist die aktuelle öffentliche Basis-Release.
+`0.5.0` ist die aktuelle öffentliche Basis-Release.
 
 Was heute funktioniert:
 
 - Codex-`notify`-Ingestion bei `agent-turn-complete`
 - lokale SQLite-Persistenz mit FTS5
-- heuristische Extraktion von `session_summary` und `decision`
+- heuristische Extraktion von `session_summary`, `decision`, `objective`, `constraint`, `pending_item`, `completed_item`, `blocker` und `completion_claim`
+- generierte kompakte Continuity-Packs mit ungefährer Token-Schätzung
+- automatische `AGENTS.md`-Synchronisierung, wenn das Pack wirklich kleiner als der Quellkontext ist
+- Weitergabe von Operational State, damit die nächste Session Ziel, offene Punkte, Blocker und Scope-Guardrails wiederherstellen kann
+- Guardrails gegen falsches „fertig“, wenn noch Pending Items oder Blocker offen sind
 - FastAPI-Inspektions-API
 - lokale Inspektions-UI unter `/ui`
 - MCP-stdio-Server mit:
@@ -22,6 +26,7 @@ Was heute funktioniert:
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_context_pack`
 - automatisierte Tests
 
 Was bewusst noch nicht im Scope ist:
@@ -109,6 +114,25 @@ codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
 Dadurch wird ein Beispiel-Turn eingefügt, Beobachtungen werden extrahiert und die letzte Retrieval-Sicht sowie die `project_brief`-Erzeugung verifiziert.
+
+## Ungefähre Token-Einsparung
+
+Einfach gesagt: Das Ziel ist, die Menge des wiederholten Kontexts zu verringern, die man Codex erneut geben muss. Es beseitigt diese Wiederholung nicht vollständig, kann sie aber spürbar verkleinern.
+
+Was wir aus lokaler Validierung ehrlich sagen können:
+
+- in günstigen Fällen reduzierte das kompakte Pack den erneut gesendeten Kontext um etwa `20%` bis `55%`
+- viele reale Läufe lagen ungefähr bei `ein Drittel bis zur Hälfte weniger` wiederholtem Kontext
+- wenn ein Ablauf sonst ungefähr `1000` Tokens an früherem Kontext erneut senden müsste, liegt eine vernünftige Erwartung oft eher bei `450` bis `800` Tokens
+
+Beispiele aus lokaler Validierung:
+
+- `401 -> 218` ungefähre Tokens
+- `312 -> 144` ungefähre Tokens
+- `290 -> 227` ungefähre Tokens
+- `337 -> 240` ungefähre Tokens
+
+Wichtig: Das ist keine feste Garantie pro Prompt. Wenn das erzeugte Pack nicht wirklich kleiner als der Quellkontext ist, injiziert `codex-agent-mem` es nicht erneut und behauptet keine Einsparung, die nicht existiert.
 
 ## Repository-Struktur
 

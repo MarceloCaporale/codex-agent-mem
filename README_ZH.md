@@ -8,13 +8,17 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 
 ## 状态
 
-`0.3.0` 是当前的公开基础版本。
+`0.5.0` 是当前的公开基础版本。
 
 当前已实现：
 
 - Codex 在 `agent-turn-complete` 上的 `notify` 写入
 - 基于 FTS5 的本地 SQLite 持久化
-- 对 `session_summary` 和 `decision` 的启发式提取
+- 对 `session_summary`、`decision`、`objective`、`constraint`、`pending_item`、`completed_item`、`blocker` 和 `completion_claim` 的启发式提取
+- 生成带有近似 token 预算的紧凑连续性 pack
+- 当 pack 确实小于源上下文时自动同步到 `AGENTS.md`
+- 延续操作状态，让下一次会话能恢复目标、待办、阻塞项和范围保护规则
+- 在仍有待办或阻塞项时，提供防止“误判已完成”的 guardrail
 - FastAPI 检查 API
 - 位于 `/ui` 的本地检查界面
 - 通过 stdio 运行的 MCP 服务器，包含：
@@ -22,6 +26,7 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_context_pack`
 - 自动化测试
 
 当前有意不包含：
@@ -109,6 +114,25 @@ codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
 它会插入一个示例 turn，提取观察结果，并验证最近检索结果以及 `project_brief` 的生成。
+
+## 大致的 token 节省
+
+用最容易理解的话说：它的作用是减少你必须再次塞给 Codex 的重复上下文，而不是把这部分上下文完全消灭。
+
+根据本地验证，目前可以诚实地这样描述：
+
+- 在较理想的场景下，紧凑 pack 对重复上下文的压缩大约在 `20%` 到 `55%`
+- 很多真实运行的结果，大约落在 `减少三分之一到一半` 的重复上下文
+- 如果某个流程原本需要重新发送大约 `1000` token 的旧上下文，一个合理的预期通常会更接近 `450` 到 `800` token
+
+本地验证示例：
+
+- `401 -> 218` 近似 token
+- `312 -> 144` 近似 token
+- `290 -> 227` 近似 token
+- `337 -> 240` 近似 token
+
+重要说明：这不是对每个 prompt 的固定保证。如果生成的 pack 实际上并不比源上下文更小，`codex-agent-mem` 会跳过 reinjection，而不会假装自己节省了并不存在的 token。
 
 ## 仓库结构
 
