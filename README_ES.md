@@ -8,13 +8,17 @@ codex-agent-mem persiste hallazgos durables de los turnos del agente en SQLite l
 
 ## Estado
 
-`0.3.0` es la release pública base actual.
+`0.5.0` es la release pública base actual.
 
 Hoy funciona:
 
 - ingesta de `notify` de Codex sobre `agent-turn-complete`
 - persistencia local en SQLite con FTS5
-- extraccion heuristica de `session_summary` y `decision`
+- extraccion heuristica de `session_summary`, `decision`, `objective`, `constraint`, `pending_item`, `completed_item`, `blocker` y `completion_claim`
+- generacion de packs compactos de continuidad con estimacion aproximada de tokens
+- sincronizacion automatica de `AGENTS.md` cuando el pack es realmente mas chico que el contexto fuente
+- arrastre de estado operativo para recuperar objetivo, pendientes, blockers y guardarrailes de alcance en la siguiente sesion
+- guardarrail contra cierre falso cuando todavia quedan pendientes o blockers abiertos
 - API de inspeccion con FastAPI
 - UI local de inspeccion en `/ui`
 - servidor MCP por stdio con:
@@ -22,6 +26,7 @@ Hoy funciona:
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_context_pack`
 - tests automatizados
 
 Lo que todavia queda fuera de alcance a proposito:
@@ -109,6 +114,25 @@ codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
 Eso inserta un turno de ejemplo, extrae observaciones y verifica recuperacion reciente y generacion de `project_brief`.
+
+## Ahorro aproximado de tokens
+
+En lenguaje simple: esto busca reducir la cantidad de contexto repetido que hay que volver a pasarle a Codex. No lo elimina por completo, pero si puede recortarlo de forma util.
+
+Lo que hoy podemos decir honestamente a partir de validaciones locales:
+
+- en casos favorables, el pack compacto redujo el contexto repetido entre `20%` y `55%`
+- en muchas corridas reales, el ahorro quedo entre `un tercio` y `la mitad` menos de contexto repetido
+- si un flujo iba a necesitar volver a pasar aproximadamente `1000` tokens de contexto previo, una expectativa razonable suele ser algo mas parecido a `450` a `800` tokens
+
+Ejemplos de validacion local:
+
+- `401 -> 218` tokens aproximados
+- `312 -> 144` tokens aproximados
+- `290 -> 227` tokens aproximados
+- `337 -> 240` tokens aproximados
+
+Importante: no es una garantia fija por prompt. Si el pack generado no es realmente mas chico que el contexto fuente, `codex-agent-mem` no lo reinyecta y evita fingir un ahorro que no existe.
 
 ## Estructura del repositorio
 

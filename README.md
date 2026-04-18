@@ -157,6 +157,25 @@ That inserts a sample turn, extracts observations, and verifies recent retrieval
 - `mem_context_pack` exposes the same compact pack over MCP for on-demand retrieval.
 - The pack now carries forward pending work and blockers, so a future run can recover “what remains” instead of only “what was decided.”
 
+## Approximate token savings
+
+In plain language: this usually aims to cut down the amount of repeated context you have to replay, not to eliminate it completely.
+
+What we can say honestly from local validation:
+
+- in favorable cases, the compact pack reduced replayed context by about `20%` to `55%`
+- many real runs landed around `one-third to one-half less` repeated context
+- if a workflow would otherwise need to replay about `1000` tokens of prior context, a reasonable expectation is often something more like `450` to `800` tokens instead
+
+Examples from local validation:
+
+- `401 -> 218` approximate tokens
+- `312 -> 144` approximate tokens
+- `290 -> 227` approximate tokens
+- `337 -> 240` approximate tokens
+
+Important: this is not a fixed guarantee per prompt. If the compact pack is not actually smaller than the source context, `codex-agent-mem` skips reinjection instead of pretending it saved tokens.
+
 ## What this prevents now
 
 - losing the original objective after a few runs
