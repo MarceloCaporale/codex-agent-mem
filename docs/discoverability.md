@@ -4,7 +4,7 @@ This document captures the metadata and phrasing that best describes the current
 
 ## Recommended GitHub description
 
-`Portable, auditable, local-first memory layer for Codex and other agent workflows.`
+`Portable, auditable, local-first MCP memory layer for Codex CLI, Codex Desktop, and agent workflows.`
 
 ## Recommended GitHub topics
 
@@ -21,17 +21,22 @@ This document captures the metadata and phrasing that best describes the current
 
 ## Recommended release framing
 
-`0.4.0` is the current public baseline release for `codex-agent-mem`: a narrow, auditable memory layer for Codex built on local SQLite, notify-based capture, compact AGENTS reinjection, MCP retrieval, and a local inspection UI.
+`0.5.0` is the current public baseline release for `codex-agent-mem`: a local-first MCP memory layer for Codex built on SQLite, notify-based capture, compact AGENTS reinjection, operational-state carry-forward, false-completion guardrails, MCP retrieval, and a local inspection UI.
 
 ## Search phrases this repo should naturally support
 
 - Codex memory
+- Codex CLI memory
+- Codex Desktop memory
 - MCP memory
+- MCP memory layer
 - local-first agent memory
 - SQLite memory for Codex
 - Codex notify capture
 - Codex MCP retrieval
 - auditable agent memory
+- context compression for agents
+- token savings for Codex
 
 ## Rules for future docs
 

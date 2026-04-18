@@ -2,11 +2,32 @@
 
 Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
-Portable, auditable, local-first memory for Codex with SQLite persistence, compact context reinjection, and MCP retrieval.
+**Portable, auditable, local-first MCP memory layer for Codex CLI, Codex Desktop, and long-running agent workflows.**
 
-codex-agent-mem persists durable findings from agent turns into local SQLite, compiles a smaller working-memory pack from recent context, syncs that pack into `AGENTS.md` when it is actually smaller than the source context, and exposes compact retrieval over MCP.
+Persistent agent memory with automatic context compression, SQLite + FTS5, local inspection UI, and no external memory service.
+
+`codex-agent-mem` persists durable findings from agent turns into local SQLite, compiles a smaller working-memory pack from recent context, syncs that pack into `AGENTS.md` when it is actually smaller than the source context, and exposes compact retrieval over MCP.
 
 Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md) | [Discoverability Metadata](./docs/discoverability.md)
+
+## Why codex-agent-mem?
+
+Tired of repeating the same context every session and wasting tokens on old scope?
+
+`codex-agent-mem` gives Codex a real local memory layer that survives between sessions, compresses context when compression is actually favorable, and carries forward operational state such as objectives, blockers, pending work, and scope guardrails.
+
+It is built for long audits, complex project continuity, and any workflow where the bigger problem is not only "remembering decisions", but also "not forgetting what is still open".
+
+## Key features
+
+- **Automatic context compression**: only syncs a generated memory pack when it is actually smaller than the source context
+- **SQLite + FTS5**: fully local, auditable, easy to inspect, and no external memory service required
+- **MCP memory server**: standard Model Context Protocol retrieval with `mem_search`, `mem_get`, `mem_recent`, `mem_project_brief`, and `mem_context_pack`
+- **Operational state carry-forward**: remembers objective, constraints, pending work, blockers, and recent completions
+- **False-completion guardrails**: prevents old "done" claims from overriding still-open work
+- **Token savings**: measurable reduction in repeated context replay when the compact pack wins
+- **Codex-native flow**: built around `notify`, `AGENTS.md`, and MCP retrieval used by Codex workflows
+- **Portable design**: local memory backend can be reused from other MCP-compatible agent workflows
 
 ## Status
 
@@ -65,6 +86,8 @@ This repository is prepared so that workflow is clean and repeatable.
 
 If you want the shortest path from clone to a working local setup:
 
+### PowerShell / Windows
+
 ```powershell
 git clone https://github.com/MarceloCaporale/codex-agent-mem.git
 cd codex-agent-mem
@@ -75,6 +98,18 @@ codex-agent-mem-smoke
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
+### bash / macOS / Linux
+
+```bash
+git clone https://github.com/MarceloCaporale/codex-agent-mem.git
+cd codex-agent-mem
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+codex-agent-mem-smoke
+codex-agent-mem-bootstrap-codex --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
 Then paste the generated snippet into `~/.codex/config.toml`.
 
 ## Install
@@ -83,6 +118,12 @@ Then paste the generated snippet into `~/.codex/config.toml`.
 
 Install directly from the repository URL:
 
+```bash
+pipx install "git+https://github.com/MarceloCaporale/codex-agent-mem.git"
+codex-agent-mem-smoke
+codex-agent-mem-bootstrap-codex --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
 ```powershell
 pipx install "git+https://github.com/MarceloCaporale/codex-agent-mem.git"
 codex-agent-mem-smoke
@@ -90,6 +131,16 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 ```
 
 ### Option B: local development install
+
+```bash
+git clone https://github.com/MarceloCaporale/codex-agent-mem.git
+cd codex-agent-mem
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+pytest -q
+codex-agent-mem-smoke
+```
 
 ```powershell
 git clone https://github.com/MarceloCaporale/codex-agent-mem.git
@@ -105,6 +156,10 @@ codex-agent-mem-smoke
 
 Generate a ready-to-paste snippet:
 
+```bash
+codex-agent-mem-bootstrap-codex --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
 ```powershell
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
@@ -116,6 +171,10 @@ Example files also live under [examples/codex](./examples/codex/).
 ## Run locally
 
 Start the inspection API:
+
+```bash
+codex-agent-mem-api --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
 
 ```powershell
 codex-agent-mem-api --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
@@ -129,11 +188,19 @@ http://127.0.0.1:37770/ui
 
 Start the MCP server:
 
+```bash
+codex-agent-mem-mcp --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
 ```powershell
 codex-agent-mem-mcp --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
 Manually rebuild the generated continuity block for one directory:
+
+```bash
+codex-agent-mem-refresh-context --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db" --project-key YOUR_PROJECT --cwd /path/to/project
+```
 
 ```powershell
 codex-agent-mem-refresh-context --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db --project-key YOUR_PROJECT --cwd C:\Path\To\Project
@@ -142,6 +209,10 @@ codex-agent-mem-refresh-context --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 ## Quick verification
 
 Run the smoke test:
+
+```bash
+codex-agent-mem-smoke --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
 
 ```powershell
 codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db

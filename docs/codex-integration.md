@@ -36,6 +36,10 @@ And it can reinject compressed continuity automatically:
 
 ## Generate the config snippet
 
+```bash
+codex-agent-mem-bootstrap-codex --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
 ```powershell
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
@@ -65,6 +69,19 @@ Use single-quoted TOML strings so backslashes stay literal.
 See:
 
 - [examples/codex/config.toml.example](../examples/codex/config.toml.example)
+
+## POSIX note
+
+On macOS and Linux, prefer:
+
+- `$HOME/.codex_agent_mem/codex_agent_mem.db` for the local database path
+- normal bash/zsh quoting, for example:
+
+```bash
+codex-agent-mem-bootstrap-codex --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
+When editing `~/.codex/config.toml` manually, use the installed command paths from your environment instead of Windows-style `Scripts\\` paths.
 
 ## Optional HTTP ingest
 
