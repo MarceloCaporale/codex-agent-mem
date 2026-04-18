@@ -65,12 +65,35 @@ class CodexAgentMemMCPServer:
                 },
             },
             {
+                "name": "mem_open_work",
+                "description": "Return deterministic open work for one project: pending items, blockers, Definition of Done gaps, and closure guardrails.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_completion_check",
+                "description": "Return a deterministic closure check for one project.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
                 "name": "mem_context_pack",
                 "description": "Return a compact continuity pack optimized to carry project context forward with fewer tokens.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "project_key": {"type": "string"},
+                        "budget": {"type": "string", "enum": ["micro", "normal", "full"]},
                         "max_chars": {"type": "integer", "minimum": 400, "maximum": 6000},
                     },
                     "required": ["project_key"],
@@ -130,9 +153,18 @@ class CodexAgentMemMCPServer:
                     data = self.store.project_brief(arguments["project_key"])
                     if data is None:
                         raise ValueError("Project not found")
+                elif name == "mem_open_work":
+                    data = self.store.open_work_report(arguments["project_key"])
+                    if data is None:
+                        raise ValueError("Project not found")
+                elif name == "mem_completion_check":
+                    data = self.store.completion_check(arguments["project_key"], record=True)
+                    if data is None:
+                        raise ValueError("Project not found")
                 elif name == "mem_context_pack":
                     data = self.store.context_pack(
                         arguments["project_key"],
+                        budget=str(arguments.get("budget", "normal")),
                         max_chars=int(arguments.get("max_chars", 2200)),
                     )
                     if data is None:

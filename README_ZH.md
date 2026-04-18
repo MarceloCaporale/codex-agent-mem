@@ -8,17 +8,21 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
 
 ## 状态
 
-`0.5.0` 是当前的公开基础版本。
+`0.6.0` 是当前的公开基础版本。
 
 当前已实现：
 
 - Codex 在 `agent-turn-complete` 上的 `notify` 写入
 - 基于 FTS5 的本地 SQLite 持久化
 - 对 `session_summary`、`decision`、`objective`、`constraint`、`pending_item`、`completed_item`、`blocker` 和 `completion_claim` 的启发式提取
+- 分层的 Definition of Done：`project_dod`、`mission_dod`、`session_dod`
 - 生成带有近似 token 预算的紧凑连续性 pack
+- `micro`、`normal`、`full` 三档 pack 预算
 - 当 pack 确实小于源上下文时自动同步到 `AGENTS.md`
 - 延续操作状态，让下一次会话能恢复目标、待办、阻塞项和范围保护规则
-- 在仍有待办或阻塞项时，提供防止“误判已完成”的 guardrail
+- 通过 `mem_open_work` 和 `mem_completion_check` 提供确定性的闭合检查
+- 在仍有待办、阻塞项或 DoD 缺口时，提供防止“误判已完成”的 guardrail
+- 每个项目都会持久化闭合检查和压缩指标
 - FastAPI 检查 API
 - 位于 `/ui` 的本地检查界面
 - 通过 stdio 运行的 MCP 服务器，包含：
@@ -26,6 +30,8 @@ codex-agent-mem 会把代理每个 turn 中的持久化结论保存到本地 SQL
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_open_work`
+  - `mem_completion_check`
   - `mem_context_pack`
 - 自动化测试
 

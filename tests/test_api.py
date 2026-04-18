@@ -15,6 +15,9 @@ def _payload(tmp_path: Path) -> dict:
             "cwd": str(tmp_path / "demo-repo"),
             "input-messages": [
                 "Objective: finish auth continuity.\n"
+                "Project DoD: keep the closure check deterministic.\n"
+                "Mission DoD: expose mem_open_work.\n"
+                "Session DoD: wire the scope guard.\n"
                 "Pending: wire the scope guard.\n"
                 "Constraint: keep ETAPA 10 closed."
             ],
@@ -48,18 +51,33 @@ def test_api_ingest_and_read(tmp_path: Path):
     assert brief.status_code == 200
     assert brief.json()["counts"]["observations"] >= 1
 
-    context_pack = client.get("/projects/demo-repo/context-pack")
+    context_pack = client.get("/projects/demo-repo/context-pack", params={"budget": "micro"})
     assert context_pack.status_code == 200
     assert "Working Memory" in context_pack.json()["text"]
     assert "Pending work" in context_pack.json()["text"]
+    assert context_pack.json()["stats"]["budget"] == "micro"
 
     operational_state = client.get("/projects/demo-repo/operational-state")
     assert operational_state.status_code == 200
     assert operational_state.json()["pending_items"]
+    assert operational_state.json()["dod"]["all_items"]
+
+    open_work = client.get("/projects/demo-repo/open-work")
+    assert open_work.status_code == 200
+    assert open_work.json()["has_open_work"] is True
+
+    completion_check = client.get("/projects/demo-repo/completion-check", params={"record": "true"})
+    assert completion_check.status_code == 200
+    assert completion_check.json()["done"] is False
+    assert completion_check.json()["dod_missing_count"] >= 1
 
     context_metrics = client.get("/projects/demo-repo/context-metrics")
     assert context_metrics.status_code == 200
     assert context_metrics.json()["total_events"] >= 1
+
+    closure_metrics = client.get("/projects/demo-repo/closure-metrics")
+    assert closure_metrics.status_code == 200
+    assert closure_metrics.json()["total_events"] >= 1
 
 
 def test_inspector_routes_render(tmp_path: Path):
@@ -81,6 +99,7 @@ def test_inspector_routes_render(tmp_path: Path):
     assert "Generated Working Memory" in project.text
     assert "Operational State" in project.text
     assert "Context Sync Metrics" in project.text
+    assert "Closure Control" in project.text
     assert "Selected Turn" in project.text
     assert "demo repo · 2026-04-17 00:00" in project.text
     assert "finish auth continuity" in project.text

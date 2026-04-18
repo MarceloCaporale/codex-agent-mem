@@ -8,17 +8,21 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
 
 ## 状態
 
-`0.5.0` は現在の公開ベースリリースです。
+`0.6.0` は現在の公開ベースリリースです。
 
 現在動作しているもの:
 
 - `agent-turn-complete` に対する Codex `notify` 取り込み
 - FTS5 を使ったローカル SQLite 永続化
 - `session_summary`、`decision`、`objective`、`constraint`、`pending_item`、`completed_item`、`blocker`、`completion_claim` のヒューリスティック抽出
+- `project_dod`、`mission_dod`、`session_dod` にまたがる階層的な Definition of Done
 - おおよそのトークン規模を持つコンパクトな continuity pack の生成
+- `micro`、`normal`、`full` の予算付き pack
 - pack が元のコンテキストより実際に小さい場合の `AGENTS.md` 自動同期
 - 次のセッションで目的、未完了項目、blocker、スコープガードを復元するための operational state 持ち越し
-- pending や blocker が残っているのに「完了」と言ってしまうのを防ぐ guardrail
+- `mem_open_work` と `mem_completion_check` による決定的な closure control
+- pending、blocker、DoD ギャップが残っているのに「完了」と言ってしまうのを防ぐ guardrail
+- プロジェクト単位で closure と compression のメトリクスを永続化
 - FastAPI ベースの検査 API
 - `/ui` で開けるローカル検査 UI
 - 以下を提供する MCP stdio サーバー:
@@ -26,6 +30,8 @@ codex-agent-mem は、エージェントの各ターンから得られた永続�
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_open_work`
+  - `mem_completion_check`
   - `mem_context_pack`
 - 自動テスト
 

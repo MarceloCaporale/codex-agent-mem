@@ -16,6 +16,16 @@ OBJECTIVE_PATTERNS = [
 CONSTRAINT_PATTERNS = [
     re.compile(r"^\s*(?:constraint|restriction|rule)\s*[:\-]\s*(.+)$", re.IGNORECASE),
 ]
+PROJECT_DOD_PATTERNS = [
+    re.compile(r"^\s*(?:project\s+(?:dod|definition of done))\s*[:\-]\s*(.+)$", re.IGNORECASE),
+]
+MISSION_DOD_PATTERNS = [
+    re.compile(r"^\s*(?:mission\s+(?:dod|definition of done))\s*[:\-]\s*(.+)$", re.IGNORECASE),
+]
+SESSION_DOD_PATTERNS = [
+    re.compile(r"^\s*(?:session\s+(?:dod|definition of done))\s*[:\-]\s*(.+)$", re.IGNORECASE),
+    re.compile(r"^\s*(?:dod|definition of done)\s*[:\-]\s*(.+)$", re.IGNORECASE),
+]
 PENDING_PATTERNS = [
     re.compile(r"^\s*(?:pending|todo|to do|remaining|open item)\s*[:\-]\s*(.+)$", re.IGNORECASE),
 ]
@@ -29,6 +39,16 @@ COMPLETION_CLAIM_PATTERNS = [
     re.compile(r"^\s*(?:status)\s*[:\-]\s*(?:done|complete|completed|finished)\s*$", re.IGNORECASE),
     re.compile(r"^\s*(?:we are|we're|it is)\s+(?:done|finished|complete(?:d)?)\s*$", re.IGNORECASE),
 ]
+INLINE_LABEL_SPLIT_RE = re.compile(
+    r"\s+(?=(?:decision|decisión|objective|goal|target|mission|constraint|restriction|rule|"
+    r"project\s+(?:dod|definition of done)|mission\s+(?:dod|definition of done)|"
+    r"session\s+(?:dod|definition of done)|(?<!project )(?<!mission )(?<!session )"
+    r"(?:dod|definition of done)|pending|todo|to do|remaining|"
+    r"open item|done|completed|finished|blocker|blocked|risk|status)\s*[:\-])",
+    re.IGNORECASE,
+)
+STATE_VALUE_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z])")
+NOISY_STATE_VALUES = {"and", "or"}
 
 
 class HeuristicSummarizer:
@@ -46,8 +66,10 @@ class HeuristicSummarizer:
             stripped = line.strip()
             if not stripped:
                 continue
-            parts = [part.strip() for part in re.split(r"\s*;\s*", stripped) if part.strip()]
-            segments.extend(parts or [stripped])
+            raw_parts = [part.strip() for part in re.split(r"\s*;\s*", stripped) if part.strip()]
+            for raw_part in raw_parts or [stripped]:
+                inline_parts = [part.strip() for part in INLINE_LABEL_SPLIT_RE.split(raw_part) if part.strip()]
+                segments.extend(inline_parts or [raw_part])
         return segments
 
     def _operation_observation(self, *, kind: str, text: str, detail: str, importance: int, confidence: float) -> Observation:
@@ -55,6 +77,9 @@ class HeuristicSummarizer:
             "objective": "Objective",
             "user_request": "User request",
             "constraint": "Constraint",
+            "project_dod": "Project DoD",
+            "mission_dod": "Mission DoD",
+            "session_dod": "Session DoD",
             "pending_item": "Pending",
             "completed_item": "Completed",
             "blocker": "Blocker",
@@ -71,6 +96,12 @@ class HeuristicSummarizer:
             status="active",
         )
 
+    @staticmethod
+    def _clean_state_value(value: str) -> str:
+        compact = " ".join((value or "").split()).strip(" -")
+        parts = [part.strip() for part in STATE_VALUE_SENTENCE_SPLIT_RE.split(compact, maxsplit=1) if part.strip()]
+        return parts[0] if parts else compact
+
     def _extract_from_lines(
         self,
         text: str,
@@ -83,6 +114,9 @@ class HeuristicSummarizer:
         pattern_specs = [
             ("objective", OBJECTIVE_PATTERNS, 4, 0.72),
             ("constraint", CONSTRAINT_PATTERNS, 4, 0.7),
+            ("project_dod", PROJECT_DOD_PATTERNS, 5, 0.76),
+            ("mission_dod", MISSION_DOD_PATTERNS, 5, 0.76),
+            ("session_dod", SESSION_DOD_PATTERNS, 5, 0.74),
             ("pending_item", PENDING_PATTERNS, 5, 0.74),
             ("completed_item", COMPLETED_PATTERNS, 3, 0.7),
             ("blocker", BLOCKER_PATTERNS, 5, 0.78),
@@ -96,8 +130,11 @@ class HeuristicSummarizer:
                     match = pattern.match(candidate)
                     if not match:
                         continue
-                    value = match.group(1).strip()
+                    value = self._clean_state_value(match.group(1).strip())
                     norm = normalize_state_text(value)
+                    if not norm or norm in NOISY_STATE_VALUES:
+                        matched = True
+                        break
                     dedupe_key = (kind, norm)
                     if value and dedupe_key not in seen:
                         observations.append(

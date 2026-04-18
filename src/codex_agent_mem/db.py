@@ -7,6 +7,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
+from codex_agent_mem.closure_control import build_completion_check, build_open_work_report
 from codex_agent_mem.context_pack import build_context_pack
 from codex_agent_mem.ingest import classify_event, stable_hash
 from codex_agent_mem.models import GenericEventEnvelope, Observation
@@ -199,6 +200,15 @@ class CodexAgentMemStore:
                 "UPDATE projects SET updated_at = ? WHERE id = ?",
                 (self._now(), project_id),
             )
+        if inserted:
+            completion_check = self.completion_check(event.project_key)
+            if completion_check and completion_check["closure_mismatch"]:
+                self.record_closure_event(
+                    project_key=event.project_key,
+                    turn_id=turn_id,
+                    event_kind="mismatch",
+                    completion_check=completion_check,
+                )
         return {
             "ok": True,
             "inserted_turn": inserted,
@@ -478,7 +488,10 @@ class CodexAgentMemStore:
             "recent_observations": recent,
             "recent_decisions": [dict(row) for row in decisions],
             "operational_state": self.operational_state(project_key),
+            "open_work": self.open_work_report(project_key),
+            "completion_check": self.completion_check(project_key),
             "context_metrics": self.context_metrics_summary(project_key),
+            "closure_metrics": self.closure_metrics_summary(project_key),
         }
 
     def recent_decisions(self, project_key: str, limit: int = 10) -> list[dict[str, Any]]:
@@ -514,6 +527,33 @@ class CodexAgentMemStore:
         if self._project_row(project_key) is None:
             return None
         return derive_operational_state(self.operational_observations(project_key, limit=120))
+
+    def open_work_report(self, project_key: str) -> dict[str, Any] | None:
+        state = self.operational_state(project_key)
+        if state is None:
+            return None
+        return build_open_work_report(state)
+
+    def completion_check(
+        self,
+        project_key: str,
+        *,
+        record: bool = False,
+        event_kind: str = "check",
+        turn_id: int | None = None,
+    ) -> dict[str, Any] | None:
+        state = self.operational_state(project_key)
+        if state is None:
+            return None
+        result = build_completion_check(state)
+        if record:
+            self.record_closure_event(
+                project_key=project_key,
+                turn_id=turn_id,
+                event_kind=event_kind,
+                completion_check=result,
+            )
+        return result
 
     def record_context_sync(
         self,
@@ -586,7 +626,102 @@ class CodexAgentMemStore:
         result["recent_events"] = self.recent_context_sync_events(project_key, limit=5)
         return result
 
-    def context_pack(self, project_key: str, max_chars: int = 2200) -> dict[str, Any] | None:
+    def record_closure_event(
+        self,
+        *,
+        project_key: str,
+        turn_id: int | None,
+        event_kind: str,
+        completion_check: dict[str, Any],
+    ) -> None:
+        project = self._project_row(project_key)
+        if project is None:
+            return
+        with self.conn:
+            self.conn.execute(
+                """
+                INSERT INTO closure_check_events(
+                  project_id, turn_id, event_kind, passed, reasons_json, pending_count, blocker_count,
+                  dod_missing_count, evidence_count, completion_claim_count, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    int(project["id"]),
+                    turn_id,
+                    event_kind,
+                    1 if completion_check.get("done") else 0,
+                    self._json(completion_check.get("reasons") or []),
+                    int(completion_check.get("pending_count") or 0),
+                    int(completion_check.get("blocker_count") or 0),
+                    int(completion_check.get("dod_missing_count") or 0),
+                    int(completion_check.get("evidence_count") or 0),
+                    int(completion_check.get("completion_claim_count") or 0),
+                    self._now(),
+                ),
+            )
+
+    def recent_closure_events(self, project_key: str, limit: int = 10) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT c.id, c.turn_id, c.event_kind, c.passed, c.reasons_json, c.pending_count, c.blocker_count,
+                   c.dod_missing_count, c.evidence_count, c.completion_claim_count, c.created_at
+            FROM closure_check_events c
+            JOIN projects p ON p.id = c.project_id
+            WHERE p.project_key = ?
+            ORDER BY c.created_at DESC, c.id DESC
+            LIMIT ?
+            """,
+            (project_key, limit),
+        ).fetchall()
+        items: list[dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            item["reasons"] = json.loads(item.pop("reasons_json") or "[]")
+            items.append(item)
+        return items
+
+    def closure_metrics_summary(self, project_key: str) -> dict[str, Any] | None:
+        project = self._project_row(project_key)
+        if project is None:
+            return None
+        rows = self.conn.execute(
+            """
+            SELECT event_kind, passed, reasons_json, pending_count, blocker_count,
+                   dod_missing_count, evidence_count, completion_claim_count, created_at
+            FROM closure_check_events
+            WHERE project_id = ?
+            ORDER BY created_at DESC, id DESC
+            """,
+            (int(project["id"]),),
+        ).fetchall()
+        items = []
+        reason_counts: dict[str, int] = {}
+        mismatch_events = 0
+        passed_checks = 0
+        failed_checks = 0
+        for row in rows:
+            item = dict(row)
+            reasons = json.loads(item["reasons_json"] or "[]")
+            item["reasons"] = reasons
+            items.append(item)
+            if item["event_kind"] == "mismatch":
+                mismatch_events += 1
+            if item["passed"]:
+                passed_checks += 1
+            else:
+                failed_checks += 1
+            for reason in reasons:
+                reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        return {
+            "total_events": len(items),
+            "mismatch_events": mismatch_events,
+            "passed_checks": passed_checks,
+            "failed_checks": failed_checks,
+            "reason_counts": reason_counts,
+            "recent_events": self.recent_closure_events(project_key, limit=5),
+        }
+
+    def context_pack(self, project_key: str, max_chars: int = 2200, budget: str = "normal") -> dict[str, Any] | None:
         brief = self.project_brief(project_key)
         if brief is None:
             return None
@@ -601,6 +736,7 @@ class CodexAgentMemStore:
             summaries=summaries,
             operational_state=brief["operational_state"],
             source_turns=self.recent_turn_context(project_key=project_key, limit=max(len(summaries), 4)),
+            budget=budget,
             max_chars=max_chars,
         )
 

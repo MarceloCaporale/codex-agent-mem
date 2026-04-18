@@ -138,8 +138,8 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
         return result
 
     @app.get("/projects/{project_key}/context-pack")
-    def project_context_pack(project_key: str, max_chars: int = 2200):
-        result = store.context_pack(project_key, max_chars=max_chars)
+    def project_context_pack(project_key: str, budget: str = "normal", max_chars: int = 2200):
+        result = store.context_pack(project_key, max_chars=max_chars, budget=budget)
         if result is None:
             raise HTTPException(status_code=404, detail="Project not found")
         return result
@@ -151,9 +151,30 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Project not found")
         return result
 
+    @app.get("/projects/{project_key}/open-work")
+    def project_open_work(project_key: str):
+        result = store.open_work_report(project_key)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
+    @app.get("/projects/{project_key}/completion-check")
+    def project_completion_check(project_key: str, record: bool = False):
+        result = store.completion_check(project_key, record=record)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
     @app.get("/projects/{project_key}/context-metrics")
     def project_context_metrics(project_key: str):
         result = store.context_metrics_summary(project_key)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return result
+
+    @app.get("/projects/{project_key}/closure-metrics")
+    def project_closure_metrics(project_key: str):
+        result = store.closure_metrics_summary(project_key)
         if result is None:
             raise HTTPException(status_code=404, detail="Project not found")
         return result
@@ -227,7 +248,10 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
             "counts": brief["counts"],
             "context_pack": store.context_pack(project_key, max_chars=2200),
             "operational_state": brief["operational_state"],
+            "open_work": brief["open_work"],
+            "completion_check": brief["completion_check"],
             "context_metrics": brief["context_metrics"],
+            "closure_metrics": brief["closure_metrics"],
             "sessions": sessions,
             "selected_session": selected_session,
             "turns": turns,

@@ -32,6 +32,8 @@ def test_mcp_tools(tmp_path: Path):
     tools = server.handle_request({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}})
     names = {tool["name"] for tool in tools["result"]["tools"]}
     assert "mem_search" in names
+    assert "mem_open_work" in names
+    assert "mem_completion_check" in names
     assert "mem_context_pack" in names
 
     search = server.handle_request({
@@ -56,8 +58,23 @@ def test_mcp_tools(tmp_path: Path):
         "jsonrpc": "2.0",
         "id": 5,
         "method": "tools/call",
-        "params": {"name": "mem_context_pack", "arguments": {"project_key": "demo-project"}},
+        "params": {"name": "mem_context_pack", "arguments": {"project_key": "demo-project", "budget": "micro"}},
     })
     assert "Working Memory" in pack["result"]["structuredContent"]["text"]
     assert "Pending work" in pack["result"]["structuredContent"]["text"]
+    assert pack["result"]["structuredContent"]["stats"]["budget"] == "micro"
+    open_work = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "tools/call",
+        "params": {"name": "mem_open_work", "arguments": {"project_key": "demo-project"}},
+    })
+    assert open_work["result"]["structuredContent"]["has_open_work"] is True
+    completion = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "tools/call",
+        "params": {"name": "mem_completion_check", "arguments": {"project_key": "demo-project"}},
+    })
+    assert completion["result"]["structuredContent"]["done"] is False
     assert json.dumps(pack, ensure_ascii=True).isascii()

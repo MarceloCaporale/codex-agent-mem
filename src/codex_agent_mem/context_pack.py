@@ -3,6 +3,45 @@ from __future__ import annotations
 from math import ceil
 from typing import Any
 
+PACK_BUDGETS: dict[str, dict[str, int]] = {
+    "micro": {
+        "max_chars": 1000,
+        "decision_limit": 1,
+        "request_limit": 1,
+        "constraint_limit": 2,
+        "dod_missing_limit": 2,
+        "pending_limit": 3,
+        "blocker_limit": 2,
+        "completed_limit": 1,
+        "summary_limit": 0,
+        "guardrail_limit": 2,
+    },
+    "normal": {
+        "max_chars": 2200,
+        "decision_limit": 2,
+        "request_limit": 1,
+        "constraint_limit": 3,
+        "dod_missing_limit": 3,
+        "pending_limit": 4,
+        "blocker_limit": 3,
+        "completed_limit": 2,
+        "summary_limit": 1,
+        "guardrail_limit": 2,
+    },
+    "full": {
+        "max_chars": 3600,
+        "decision_limit": 4,
+        "request_limit": 2,
+        "constraint_limit": 4,
+        "dod_missing_limit": 5,
+        "pending_limit": 6,
+        "blocker_limit": 4,
+        "completed_limit": 3,
+        "summary_limit": 2,
+        "guardrail_limit": 3,
+    },
+}
+
 
 def _compact_line(value: str, limit: int = 90) -> str:
     compact = " ".join((value or "").split())
@@ -15,6 +54,14 @@ def _approx_tokens(char_count: int) -> int:
     return max(1, ceil(char_count / 4))
 
 
+def resolve_pack_budget(budget: str = "normal", max_chars: int | None = None) -> dict[str, Any]:
+    selected = dict(PACK_BUDGETS.get(budget, PACK_BUDGETS["normal"]))
+    selected["budget"] = budget if budget in PACK_BUDGETS else "normal"
+    if max_chars is not None:
+        selected["max_chars"] = max_chars
+    return selected
+
+
 def build_context_pack(
     *,
     project: dict[str, Any],
@@ -22,13 +69,17 @@ def build_context_pack(
     summaries: list[dict[str, Any]],
     operational_state: dict[str, Any] | None = None,
     source_turns: list[dict[str, Any]] | None = None,
+    budget: str = "normal",
     max_chars: int = 2200,
 ) -> dict[str, Any]:
     operational_state = operational_state or {}
+    profile = resolve_pack_budget(budget=budget, max_chars=max_chars)
+    max_chars = int(profile["max_chars"])
     header = [
         "## Working Memory",
         "",
         f"Scope: `{project['project_key']}`",
+        f"Budget: `{profile['budget']}`",
         "",
     ]
     lines = list(header)
@@ -79,7 +130,7 @@ def build_context_pack(
             continue
         seen_decisions.add(dedupe_key)
         unique_decisions.append(f"- {decision_text}")
-        if len(unique_decisions) >= 2:
+        if len(unique_decisions) >= int(profile["decision_limit"]):
             break
 
     unique_summaries: list[str] = []
@@ -93,27 +144,31 @@ def build_context_pack(
             continue
         seen_summaries.add(dedupe_key)
         unique_summaries.append(f"- {summary_text}")
-        if len(unique_summaries) >= 2:
+        if len(unique_summaries) >= int(profile["summary_limit"]):
             break
 
     _add_section("Objective", objective_lines)
     if not objective_lines:
         _add_section(
             "Active User Scope",
-            _bullets_from_items(operational_state.get("user_requests") or [], "summary")[:1],
+            _bullets_from_items(operational_state.get("user_requests") or [], "summary")[: int(profile["request_limit"])],
         )
     _add_section("Stable decisions", unique_decisions, fallback="- No durable decisions extracted yet.")
-    _add_section("Constraints", _bullets_from_items(operational_state.get("constraints") or [], "summary")[:3])
-    _add_section("Pending work", _bullets_from_items(operational_state.get("pending_items") or [], "summary")[:4])
-    _add_section("Blockers", _bullets_from_items(operational_state.get("blockers") or [], "summary")[:3])
-    _add_section("Done recently", _bullets_from_items(operational_state.get("completed_items") or [], "summary")[:2])
-    if len("\n".join(lines).strip()) < (max_chars * 0.55):
+    _add_section("Constraints", _bullets_from_items(operational_state.get("constraints") or [], "summary")[: int(profile["constraint_limit"])])
+    _add_section(
+        "Definition of Done gaps",
+        _bullets_from_items(((operational_state.get("dod_missing") or {}).get("all_items") or []), "summary")[: int(profile["dod_missing_limit"])],
+    )
+    _add_section("Pending work", _bullets_from_items(operational_state.get("pending_items") or [], "summary")[: int(profile["pending_limit"])])
+    _add_section("Blockers", _bullets_from_items(operational_state.get("blockers") or [], "summary")[: int(profile["blocker_limit"])])
+    _add_section("Done recently", _bullets_from_items(operational_state.get("completed_items") or [], "summary")[: int(profile["completed_limit"])])
+    if int(profile["summary_limit"]) > 0 and len("\n".join(lines).strip()) < (max_chars * 0.55):
         _add_section("Recent continuity", unique_summaries[:1], fallback="- No recent continuity summary extracted yet.")
-    elif not unique_summaries:
+    elif int(profile["summary_limit"]) > 0 and not unique_summaries:
         _add_section("Recent continuity", unique_summaries, fallback="- No recent continuity summary extracted yet.")
     _add_section(
         "Scope guard",
-        [f"- {_compact_line(item, limit=96)}" for item in (operational_state.get("guardrails") or [])][:2],
+        [f"- {_compact_line(item, limit=96)}" for item in (operational_state.get("guardrails") or [])][: int(profile["guardrail_limit"])],
     )
     _add_section(
         "Resume",
@@ -143,6 +198,7 @@ def build_context_pack(
             "compression_ratio": round(pack_chars / max(source_chars or pack_chars, 1), 3),
             "decision_count": len(unique_decisions),
             "summary_count": len(unique_summaries),
+            "budget": profile["budget"],
             "max_chars": max_chars,
             "section_counts": section_counts,
             "has_open_work": bool(operational_state.get("has_open_work")),

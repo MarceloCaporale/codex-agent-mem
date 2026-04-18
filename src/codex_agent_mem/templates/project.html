@@ -81,7 +81,7 @@
       {% if context_pack %}
         <div class="chat-block">
           <h3>Generated Working Memory</h3>
-          <p class="muted">Approx {{ context_pack.stats.approx_pack_tokens }} tokens from {{ context_pack.stats.approx_source_tokens }} source tokens.</p>
+          <p class="muted">Budget {{ context_pack.stats.budget }} · approx {{ context_pack.stats.approx_pack_tokens }} tokens from {{ context_pack.stats.approx_source_tokens }} source tokens.</p>
           <pre class="message assistant">{{ context_pack.text }}</pre>
         </div>
       {% endif %}
@@ -104,6 +104,22 @@
             <p><strong>Blockers:</strong></p>
             <ul>
               {% for item in operational_state.blockers %}
+                <li>{{ item.summary }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if operational_state.dod and operational_state.dod.all_items %}
+            <p><strong>Definition of Done:</strong></p>
+            <ul>
+              {% for item in operational_state.dod.all_items %}
+                <li>{{ item.summary }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if operational_state.dod_missing and operational_state.dod_missing.all_items %}
+            <p><strong>DoD gaps:</strong></p>
+            <ul>
+              {% for item in operational_state.dod_missing.all_items %}
                 <li>{{ item.summary }}</li>
               {% endfor %}
             </ul>
@@ -234,6 +250,44 @@
         </div>
       {% else %}
         <div class="empty">No context sync metrics yet.</div>
+      {% endif %}
+
+      <div class="panel-head nested">
+        <h2>Closure Control</h2>
+        <span class="count">{{ closure_metrics.total_events if closure_metrics else 0 }}</span>
+      </div>
+      {% if completion_check %}
+        <div class="decision-list">
+          <div class="decision-card">
+            <strong>{{ "Ready to close" if completion_check.done else "Not ready to close" }}</strong>
+            <p>Pending {{ completion_check.pending_count }} · blockers {{ completion_check.blocker_count }} · DoD gaps {{ completion_check.dod_missing_count }} · evidence {{ completion_check.evidence_count }}</p>
+            <small>{{ completion_check.primary_reason }}</small>
+          </div>
+          {% if open_work and open_work.dod_missing %}
+            <div class="decision-card">
+              <strong>Open work summary</strong>
+              <p>{{ open_work.pending_items|length }} pending · {{ open_work.blockers|length }} blockers · {{ open_work.dod_missing|length }} DoD gaps</p>
+              <small>{{ "Open work remains" if open_work.has_open_work else "No open work detected" }}</small>
+            </div>
+          {% endif %}
+          {% if closure_metrics %}
+            <div class="decision-card">
+              <strong>Closure metrics</strong>
+              <p>{{ closure_metrics.failed_checks or 0 }} failed checks · {{ closure_metrics.passed_checks or 0 }} passed checks · {{ closure_metrics.mismatch_events or 0 }} mismatches</p>
+              <small>
+                {% if closure_metrics.reason_counts %}
+                  {% for reason, count in closure_metrics.reason_counts.items() %}
+                    {{ reason }}={{ count }}{% if not loop.last %} · {% endif %}
+                  {% endfor %}
+                {% else %}
+                  no reason counts yet
+                {% endif %}
+              </small>
+            </div>
+          {% endif %}
+        </div>
+      {% else %}
+        <div class="empty">No closure metrics yet.</div>
       {% endif %}
     </article>
   </section>

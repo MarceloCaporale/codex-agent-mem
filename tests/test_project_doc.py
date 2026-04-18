@@ -16,6 +16,8 @@ def seed(store: CodexAgentMemStore, cwd: Path, project_key: str = "demo-project"
             "timestamp": "2026-04-17T00:00:00Z",
             "input_messages": [
                 "Objective: finish the billing continuity patch.\n"
+                "Project DoD: keep the closure check deterministic.\n"
+                "Mission DoD: expose mem_open_work and mem_completion_check.\n"
                 "Constraint: do not reopen ETAPA 10 scope in this repo.\n"
                 "Pending: write the billing audit note.\n"
                 "This workspace needs a compact continuity layer that keeps the billing migration scoped, "
@@ -39,6 +41,7 @@ def seed(store: CodexAgentMemStore, cwd: Path, project_key: str = "demo-project"
             "timestamp": "2026-04-17T00:10:00Z",
             "input_messages": [
                 "Pending: verify the context pack before closing.\n"
+                "Session DoD: verify the context pack before closing.\n"
                 "Blocker: no human validation yet.\n"
                 "We still need to prove that the next run can resume from a compact state description instead of "
                 "rehashing the entire billing migration history."
@@ -93,6 +96,7 @@ def test_sync_project_doc_creates_agents_file(tmp_path: Path):
     assert agents_path.exists()
     content = agents_path.read_text(encoding="utf-8")
     assert "Approx pack size" in content
+    assert "Definition of Done gaps" in content
     assert "Pending work" in content
     assert "Scope guard" in content
     assert "do not reopen ETAPA 10 scope" in content
@@ -102,6 +106,8 @@ def test_sync_project_doc_creates_agents_file(tmp_path: Path):
     assert state["objective"]["summary"] == "finish the billing continuity patch."
     assert state["pending_items"]
     assert state["blockers"]
+    assert state["dod"]["all_items"]
+    assert state["dod_missing"]["all_items"]
     metrics = store.context_metrics_summary("demo-project")
     assert metrics is not None
     assert metrics["total_events"] >= 1

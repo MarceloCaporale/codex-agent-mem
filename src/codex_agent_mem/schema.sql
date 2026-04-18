@@ -95,6 +95,23 @@ CREATE TABLE IF NOT EXISTS context_sync_events (
   FOREIGN KEY(project_id) REFERENCES projects(id)
 );
 
+CREATE TABLE IF NOT EXISTS closure_check_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL,
+  turn_id INTEGER,
+  event_kind TEXT NOT NULL,
+  passed INTEGER NOT NULL DEFAULT 0,
+  reasons_json TEXT NOT NULL DEFAULT '[]',
+  pending_count INTEGER NOT NULL DEFAULT 0,
+  blocker_count INTEGER NOT NULL DEFAULT 0,
+  dod_missing_count INTEGER NOT NULL DEFAULT 0,
+  evidence_count INTEGER NOT NULL DEFAULT 0,
+  completion_claim_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY(project_id) REFERENCES projects(id),
+  FOREIGN KEY(turn_id) REFERENCES turns(id)
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS observations_fts USING fts5(
   title,
   summary,
@@ -127,3 +144,5 @@ CREATE INDEX IF NOT EXISTS idx_observations_updated_at ON observations(updated_a
 CREATE INDEX IF NOT EXISTS idx_decisions_project_id ON decisions(project_id);
 CREATE INDEX IF NOT EXISTS idx_context_sync_events_project_id ON context_sync_events(project_id);
 CREATE INDEX IF NOT EXISTS idx_context_sync_events_generated_at ON context_sync_events(generated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_closure_check_events_project_id ON closure_check_events(project_id);
+CREATE INDEX IF NOT EXISTS idx_closure_check_events_created_at ON closure_check_events(created_at DESC);

@@ -8,17 +8,21 @@ codex-agent-mem speichert dauerhafte Erkenntnisse aus Agent-Turns in lokalem SQL
 
 ## Status
 
-`0.5.0` ist die aktuelle öffentliche Basis-Release.
+`0.6.0` ist die aktuelle öffentliche Basis-Release.
 
 Was heute funktioniert:
 
 - Codex-`notify`-Ingestion bei `agent-turn-complete`
 - lokale SQLite-Persistenz mit FTS5
 - heuristische Extraktion von `session_summary`, `decision`, `objective`, `constraint`, `pending_item`, `completed_item`, `blocker` und `completion_claim`
+- hierarchische Definition of Done über `project_dod`, `mission_dod` und `session_dod`
 - generierte kompakte Continuity-Packs mit ungefährer Token-Schätzung
+- Budget-Profile für Packs: `micro`, `normal` und `full`
 - automatische `AGENTS.md`-Synchronisierung, wenn das Pack wirklich kleiner als der Quellkontext ist
 - Weitergabe von Operational State, damit die nächste Session Ziel, offene Punkte, Blocker und Scope-Guardrails wiederherstellen kann
-- Guardrails gegen falsches „fertig“, wenn noch Pending Items oder Blocker offen sind
+- deterministische Closure-Control mit `mem_open_work` und `mem_completion_check`
+- Guardrails gegen falsches „fertig“, wenn noch Pending Items, Blocker oder DoD-Lücken offen sind
+- persistierte Closure- und Kompressionsmetriken pro Projekt
 - FastAPI-Inspektions-API
 - lokale Inspektions-UI unter `/ui`
 - MCP-stdio-Server mit:
@@ -26,6 +30,8 @@ Was heute funktioniert:
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_open_work`
+  - `mem_completion_check`
   - `mem_context_pack`
 - automatisierte Tests
 

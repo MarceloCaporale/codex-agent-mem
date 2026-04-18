@@ -31,18 +31,21 @@ It is built for long audits, complex project continuity, and any workflow where 
 
 ## Status
 
-`0.5.0` is the current public baseline release.
+`0.6.0` is the current public baseline release.
 
 What works today:
 
 - Codex `notify` ingestion on `agent-turn-complete`
 - local SQLite persistence with FTS5
 - heuristic extraction of `session_summary`, `decision`, `objective`, `constraint`, `pending_item`, `completed_item`, `blocker`, and `completion_claim`
+- hierarchical Definition of Done tracking across `project_dod`, `mission_dod`, and `session_dod`
 - generated working-memory packs with approximate token budget and compression stats
+- budgeted packs for `micro`, `normal`, and `full` reinjection
 - automatic `AGENTS.md` sync when the generated pack is smaller than the source context
 - operational-state carry-forward so the next run can recover objective, pending work, blockers, and scope guardrails
-- false-completion guardrails that keep “done” from overriding open work when pending items or blockers still exist
-- context sync metrics persisted per project
+- deterministic closure control with `mem_open_work` and `mem_completion_check`
+- false-completion guardrails that keep “done” from overriding open work when pending items, blockers, or DoD gaps still exist
+- context sync and closure metrics persisted per project
 - FastAPI inspection API
 - local inspection UI at `/ui`
 - MCP stdio server with:
@@ -50,6 +53,8 @@ What works today:
   - `mem_get`
   - `mem_recent`
   - `mem_project_brief`
+  - `mem_open_work`
+  - `mem_completion_check`
   - `mem_context_pack`
 - automated tests
 

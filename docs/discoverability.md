@@ -21,7 +21,7 @@ This document captures the metadata and phrasing that best describes the current
 
 ## Recommended release framing
 
-`0.5.0` is the current public baseline release for `codex-agent-mem`: a local-first MCP memory layer for Codex built on SQLite, notify-based capture, compact AGENTS reinjection, operational-state carry-forward, false-completion guardrails, MCP retrieval, and a local inspection UI.
+`0.6.0` is the current public baseline release for `codex-agent-mem`: a local-first MCP memory layer for Codex built on SQLite, notify-based capture, hierarchical Definition of Done tracking, deterministic closure control, compact AGENTS reinjection, operational-state carry-forward, false-completion guardrails, MCP retrieval, and a local inspection UI.
 
 ## Search phrases this repo should naturally support
 

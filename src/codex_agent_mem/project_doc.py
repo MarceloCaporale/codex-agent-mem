@@ -24,6 +24,7 @@ def render_managed_block(context_pack: dict[str, Any]) -> str:
             START_MARKER,
             "## codex-agent-mem Generated Context",
             "",
+            f"> Budget: `{stats.get('budget', 'normal')}`",
             f"> Approx pack size: ~{stats['approx_pack_tokens']} tokens from ~{stats['approx_source_tokens']} source tokens.",
             "> This block is generated after completed Codex turns to keep continuity compact across sessions.",
             "",
@@ -60,12 +61,13 @@ def sync_project_doc(
     store: CodexAgentMemStore,
     project_key: str,
     cwd: Path,
+    budget: str = "normal",
     max_chars: int = 2200,
 ) -> dict[str, Any] | None:
     if not cwd.exists() or not cwd.is_dir():
         return None
 
-    context_pack = store.context_pack(project_key=project_key, max_chars=max_chars)
+    context_pack = store.context_pack(project_key=project_key, max_chars=max_chars, budget=budget)
     if context_pack is None:
         return None
     if context_pack["stats"]["approx_pack_tokens"] >= context_pack["stats"]["approx_source_tokens"]:

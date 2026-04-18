@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 - 2026-04-18
+
+- Added hierarchical Definition of Done tracking across project, mission, and session scopes.
+- Added deterministic closure control with `mem_open_work` and `mem_completion_check`.
+- Added `closure_mismatch` metrics and persisted closure-check event summaries per project.
+- Added budgeted context packs (`micro`, `normal`, `full`) with compact reinjection stats.
+- Hardened inline extraction and semantic deduplication so DoD labels and near-duplicate blockers are classified correctly.
+
 ## 0.5.0 - 2026-04-18
 
 - Added derived operational state for objective, constraints, pending work, completed work, blockers, and completion claims.
