@@ -7,6 +7,9 @@
 - Added governed repair proposals and derived repair events through `mem_repair_propose` and `mem_repair_apply`.
 - Extended the context-pack builder so target policies also apply to inherited memory, preventing excluded items from leaking into generated packs.
 - Added a local policy CLI and inspector/UI support for governance state, including policies, inheritance links, repairs, and their compact summaries.
+- Hardened the MCP stdio runtime with configurable idle shutdown, signal-aware cleanup, explicit SQLite close, and lifecycle logging for process diagnostics.
+- Added `mem_health_runtime`, plus SQLite `WAL` / `busy_timeout` defaults better suited to multiple MCP and notify processes touching the same local database.
+- Switched bootstrap examples so `--sync-project-doc` is opt-in instead of on by default, while keeping automatic reinjection available when explicitly enabled.
 
 ## 0.8.0 - 2026-04-18
 

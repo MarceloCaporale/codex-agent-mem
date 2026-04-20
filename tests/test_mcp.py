@@ -3,7 +3,7 @@ from pathlib import Path
 
 from codex_agent_mem.db import CodexAgentMemStore
 from codex_agent_mem.ingest import normalize_event
-from codex_agent_mem.mcp_stdio import CodexAgentMemMCPServer
+from codex_agent_mem.mcp_stdio import CodexAgentMemMCPServer, MCPRuntimeState
 
 
 def seed(store: CodexAgentMemStore, cwd: str):
@@ -32,7 +32,7 @@ def test_mcp_tools(tmp_path: Path):
     workspace = tmp_path / "demo-project"
     workspace.mkdir()
     seed(store, str(workspace))
-    server = CodexAgentMemMCPServer(store)
+    server = CodexAgentMemMCPServer(store, MCPRuntimeState(db_path=tmp_path / "codex_agent_mem.db", idle_timeout_seconds=300))
 
     init = server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}})
     assert init["result"]["serverInfo"]["name"] == "codex-agent-mem"
@@ -47,6 +47,7 @@ def test_mcp_tools(tmp_path: Path):
     assert "mem_context_pack" in names
     assert "mem_provenance" in names
     assert "mem_health" in names
+    assert "mem_health_runtime" in names
     assert "mem_snapshot_list" in names
     assert "mem_policy_list" in names
     assert "mem_policy_validate" in names
@@ -122,6 +123,14 @@ def test_mcp_tools(tmp_path: Path):
         "params": {"name": "mem_health", "arguments": {"project_key": "demo-project"}},
     })
     assert "score" in health["result"]["structuredContent"]
+    runtime_health = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 111,
+        "method": "tools/call",
+        "params": {"name": "mem_health_runtime", "arguments": {}},
+    })
+    assert runtime_health["result"]["structuredContent"]["connection_model"] == "one_process_per_connection"
+    assert runtime_health["result"]["structuredContent"]["requests_count"] >= 1
     snapshot_create = server.handle_request({
         "jsonrpc": "2.0",
         "id": 12,

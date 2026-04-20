@@ -7,16 +7,18 @@ notify = [
   '-m',
   'codex_agent_mem.codex_notify',
   '--project-from-cwd',
-  '--sync-project-doc',
   '--db-path',
   'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db'
 ]
+# Add '--sync-project-doc' before '--db-path' if you want automatic AGENTS.md reinjection.
 
 [mcp_servers."codex-agent-mem"]
 command = 'C:\Path\To\python.exe'
 args = [
   '-m',
   'codex_agent_mem.mcp_stdio',
+  '--idle-timeout-seconds',
+  '300',
   '--db-path',
   'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db'
 ]
@@ -52,6 +54,9 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers."codex-agent-mem".tools.mem_health]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_health_runtime]
 approval_mode = "approve"
 
 [mcp_servers."codex-agent-mem".tools.mem_snapshot_list]

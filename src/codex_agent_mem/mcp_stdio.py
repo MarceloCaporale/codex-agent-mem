@@ -2,18 +2,104 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import queue
+import signal
 import sys
+import threading
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from codex_agent_mem import __version__
 from codex_agent_mem.config import AppConfig
 from codex_agent_mem.db import CodexAgentMemStore
+from codex_agent_mem.ingest import now_iso
+
+
+_EOF = object()
+
+
+@dataclass
+class MCPRuntimeState:
+    db_path: Path
+    idle_timeout_seconds: int | None
+    pid: int = field(default_factory=os.getpid)
+    ppid: int = field(default_factory=os.getppid)
+    started_at: str = field(default_factory=now_iso)
+    requests_count: int = 0
+    last_request_ts: str | None = None
+    last_request_method: str | None = None
+    last_tool_name: str | None = None
+    exit_reason: str = "running"
+    _started_perf: float = field(default_factory=time.monotonic, repr=False)
+    _last_request_perf: float | None = None
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+
+    def __post_init__(self) -> None:
+        self._last_request_perf = self._started_perf
+
+    def note_request(self, method: str, tool_name: str | None = None) -> None:
+        now_perf = time.monotonic()
+        now_ts = now_iso()
+        with self._lock:
+            self.requests_count += 1
+            self.last_request_ts = now_ts
+            self.last_request_method = method
+            self.last_tool_name = tool_name
+            self._last_request_perf = now_perf
+
+    def set_exit_reason(self, reason: str) -> None:
+        with self._lock:
+            if self.exit_reason == "running":
+                self.exit_reason = reason
+
+    def snapshot(self) -> dict[str, Any]:
+        with self._lock:
+            now_perf = time.monotonic()
+            idle_seconds = round(now_perf - self._last_request_perf, 3) if self._last_request_perf is not None else None
+            return {
+                "pid": self.pid,
+                "ppid": self.ppid,
+                "db_path": str(self.db_path),
+                "protocol": "stdio",
+                "connection_model": "one_process_per_connection",
+                "server_version": __version__,
+                "started_at": self.started_at,
+                "uptime_seconds": round(now_perf - self._started_perf, 3),
+                "requests_count": self.requests_count,
+                "last_request_ts": self.last_request_ts,
+                "last_request_method": self.last_request_method,
+                "last_tool_name": self.last_tool_name,
+                "idle_seconds": idle_seconds,
+                "idle_timeout_seconds": self.idle_timeout_seconds,
+                "exit_reason": self.exit_reason,
+            }
+
+    def should_exit_for_idle(self) -> bool:
+        if self.idle_timeout_seconds is None:
+            return False
+        if self._last_request_perf is None:
+            return False
+        return (time.monotonic() - self._last_request_perf) >= self.idle_timeout_seconds
+
+
+def _runtime_log(event: str, **fields: Any) -> None:
+    payload = {
+        "source": "codex-agent-mem.mcp_stdio",
+        "event": event,
+        "ts": now_iso(),
+        **fields,
+    }
+    sys.stderr.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    sys.stderr.flush()
 
 
 class CodexAgentMemMCPServer:
-    def __init__(self, store: CodexAgentMemStore):
+    def __init__(self, store: CodexAgentMemStore, runtime: MCPRuntimeState):
         self.store = store
+        self.runtime = runtime
         self.protocol_version = "2025-06-18"
 
     def list_tools(self) -> list[dict[str, Any]]:
@@ -141,6 +227,14 @@ class CodexAgentMemMCPServer:
                         "project_key": {"type": "string"},
                     },
                     "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_health_runtime",
+                "description": "Return runtime health for this stdio MCP process: pid, uptime, idle timeout, request counts, and exit diagnostics.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
                 },
             },
             {
@@ -304,9 +398,12 @@ class CodexAgentMemMCPServer:
         method = message.get("method")
         msg_id = message.get("id")
         params = message.get("params") or {}
+        tool_name = params.get("name") if method == "tools/call" else None
 
         if method in {"initialized", "notifications/initialized"}:
             return None
+        if method:
+            self.runtime.note_request(str(method), str(tool_name) if tool_name else None)
         if method == "initialize":
             return {
                 "jsonrpc": "2.0",
@@ -379,6 +476,8 @@ class CodexAgentMemMCPServer:
                     data = self.store.health_report(arguments["project_key"], record=False)
                     if data is None:
                         raise ValueError("Project not found")
+                elif name == "mem_health_runtime":
+                    data = self.runtime.snapshot()
                 elif name == "mem_snapshot_list":
                     data = self.store.list_snapshots(
                         arguments["project_key"],
@@ -469,24 +568,110 @@ def _write_response(message: dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
+def _stdin_reader(out_queue: queue.Queue[Any], stop_event: threading.Event) -> None:
+    try:
+        for line in sys.stdin:
+            if stop_event.is_set():
+                break
+            out_queue.put(line)
+    except Exception as exc:  # pragma: no cover - defensive runtime path
+        out_queue.put(("reader_error", str(exc)))
+    finally:
+        out_queue.put(_EOF)
+
+
+def _install_signal_handlers(runtime: MCPRuntimeState, stop_event: threading.Event) -> None:
+    def _handler(signum: int, _frame: object) -> None:
+        signame = signal.Signals(signum).name.lower()
+        runtime.set_exit_reason(f"signal_{signame}")
+        _runtime_log(
+            "signal",
+            pid=runtime.pid,
+            ppid=runtime.ppid,
+            signal=signame,
+            db_path=str(runtime.db_path),
+        )
+        stop_event.set()
+
+    for name in ("SIGINT", "SIGTERM"):
+        sig = getattr(signal, name, None)
+        if sig is None:
+            continue
+        try:
+            signal.signal(sig, _handler)
+        except (ValueError, OSError, RuntimeError):  # pragma: no cover - platform dependent
+            continue
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the codex-agent-mem MCP stdio server")
     parser.add_argument("--db-path", type=Path, default=AppConfig().db_path)
+    parser.add_argument(
+        "--idle-timeout-seconds",
+        type=int,
+        default=300,
+        help="Defensive shutdown after this much MCP inactivity. Use 0 to disable.",
+    )
     args = parser.parse_args(argv)
     _configure_stdio()
-    server = CodexAgentMemMCPServer(CodexAgentMemStore(args.db_path))
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
+    stop_event = threading.Event()
+    runtime = MCPRuntimeState(
+        db_path=args.db_path,
+        idle_timeout_seconds=args.idle_timeout_seconds if args.idle_timeout_seconds > 0 else None,
+    )
+    _install_signal_handlers(runtime, stop_event)
+    store = CodexAgentMemStore(args.db_path)
+    server = CodexAgentMemMCPServer(store, runtime)
+    input_queue: queue.Queue[Any] = queue.Queue()
+    reader = threading.Thread(target=_stdin_reader, args=(input_queue, stop_event), daemon=True)
+    reader.start()
+    _runtime_log(
+        "start",
+        pid=runtime.pid,
+        ppid=runtime.ppid,
+        db_path=str(args.db_path),
+        idle_timeout_seconds=runtime.idle_timeout_seconds,
+    )
+    try:
+        while not stop_event.is_set():
+            try:
+                item = input_queue.get(timeout=0.25)
+            except queue.Empty:
+                if runtime.should_exit_for_idle():
+                    runtime.set_exit_reason("idle_timeout")
+                    break
+                continue
+            if item is _EOF:
+                runtime.set_exit_reason("stdin_eof")
+                break
+            if isinstance(item, tuple) and item and item[0] == "reader_error":
+                runtime.set_exit_reason("stdin_reader_error")
+                _runtime_log(
+                    "reader_error",
+                    pid=runtime.pid,
+                    ppid=runtime.ppid,
+                    db_path=str(args.db_path),
+                    error=item[1],
+                )
+                break
+            line = str(item).strip()
+            if not line:
+                continue
+            try:
+                message = json.loads(line)
+                response = server.handle_request(message)
+                if response is not None:
+                    _write_response(response)
+            except Exception as exc:
+                err = {"jsonrpc": "2.0", "error": {"code": -32603, "message": str(exc)}}
+                _write_response(err)
+    finally:
+        stop_event.set()
+        runtime_snapshot = runtime.snapshot()
         try:
-            message = json.loads(line)
-            response = server.handle_request(message)
-            if response is not None:
-                _write_response(response)
-        except Exception as exc:
-            err = {"jsonrpc": "2.0", "error": {"code": -32603, "message": str(exc)}}
-            _write_response(err)
+            store.close()
+        finally:
+            _runtime_log("exit", **runtime_snapshot)
     return 0
 
 

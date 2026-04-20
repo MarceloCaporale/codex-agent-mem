@@ -6,7 +6,7 @@ Codex とコーディングエージェントのワークフロー向けの、�
 
 codex-agent-mem は、永続的なプロジェクト記憶をモデルランタイムの外に保持し、継続性をより小さな working pack に圧縮し、operational state をセッション間で持ち越します。これにより Codex は、繰り返しの少ない状態で、誤った「完了」を減らしつつ、より強いコンテキスト制御の下で作業を再開できます。
 
-Alpha リリース。速い反復、小さなスライス、公開ベースラインを順番に積み上げる方針です。
+公開ベースライン。小さく検証可能なスライスで構築され、まだ進化中ですが、すでに実運用を意識した形です。
 
 ## v0.9.0 の追加点
 
@@ -23,7 +23,7 @@ Alpha リリース。速い反復、小さなスライス、公開ベースラ�
 
 - **生コンテキストの再送ではなく継続性の圧縮**: 生成した pack が本当に小さいときだけ `AGENTS.md` に同期
 - **セッションをまたぐ operational state**: objective、constraints、pending work、blockers、Definition of Done、scope guardrails を保持
-- **Codex ネイティブ統合**: `notify`、MCP stdio、自動 `AGENTS.md` 同期を前提に設計
+- **Codex ネイティブ統合**: `notify`、MCP stdio、任意の `AGENTS.md` 同期、そしてより防御的なランタイム終了処理を前提に設計
 - **実用的なトークン節約**: コンパクト pack が勝つケースでは、繰り返しコンテキストをおおむね `20%` から `55%` 削減
 
 ### Closure Control
@@ -50,7 +50,7 @@ Alpha リリース。速い反復、小さなスライス、公開ベースラ�
 - `project_dod`、`mission_dod`、`session_dod` にまたがる階層的な Definition of Done
 - おおよそのトークン規模を持つコンパクトな continuity pack の生成
 - `micro`、`normal`、`full` の予算付き pack
-- pack が元のコンテキストより実際に小さい場合の `AGENTS.md` 自動同期
+- pack が元のコンテキストより実際に小さい場合の `AGENTS.md` 任意同期
 - 次のセッションで目的、未完了項目、blocker、スコープガードを復元するための operational state 持ち越し
 - `mem_open_work` と `mem_completion_check` による決定的な closure control
 - `mem_recent_changes` による最近変更の差分取得
@@ -60,6 +60,7 @@ Alpha リリース。速い反復、小さなスライス、公開ベースラ�
 - `budget=auto` のときに最小で適切な budget を自動選択
 - 各 observation に対する provenance を永続化し、`mem_provenance` で取得可能
 - `mem_health` によるプロジェクト健全性診断
+- `mem_health_runtime` による MCP プロセスのランタイム診断
 - `mem_snapshot_create`、`mem_snapshot_list`、`mem_snapshot_restore` によるバージョン付きプロジェクトスナップショット
 - `mem_policy_validate`、`mem_policy_add`、`mem_policy_list`、`mem_policy_remove` によるガバナンス付きメモリポリシー
 - `mem_inheritance_add`、`mem_inheritance_list`、`mem_inheritance_remove` による選択的 inheritance リンク
@@ -79,6 +80,7 @@ Alpha リリース。速い反復、小さなスライス、公開ベースラ�
   - `mem_context_pack`
   - `mem_provenance`
   - `mem_health`
+  - `mem_health_runtime`
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
@@ -145,7 +147,9 @@ codex-agent-mem-smoke
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-このコマンドは `notify`、`[mcp_servers."codex-agent-mem"]`、そして読み取り専用 MCP ツールの承認ブロックを出力するので、`~/.codex/config.toml` に貼り付けられます。
+このコマンドは `notify`、`[mcp_servers."codex-agent-mem"]`、明示的な stdio idle timeout、そして読み取り専用 MCP ツールの承認ブロックを出力するので、`~/.codex/config.toml` に貼り付けられます。
+
+自動 `AGENTS.md` 再注入も使いたい場合は、`notify` コマンドに `--sync-project-doc` を追加してください。
 
 サンプルファイルは [examples/codex](./examples/codex/) にもあります。
 

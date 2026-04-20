@@ -6,7 +6,7 @@
 
 codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续性压缩成更小的工作 pack，并跨会话保留操作状态，让 Codex 以更少重复、更少误判完成、更多上下文控制继续工作。
 
-Alpha 版本。快速迭代、小而明确的切片、按顺序公开发布基线版本。
+公开基线版本。以小而可验证的切片构建，仍在继续演进，但已经面向真实使用。
 
 ## v0.9.0 新增内容
 
@@ -23,7 +23,7 @@ Alpha 版本。快速迭代、小而明确的切片、按顺序公开发布基�
 
 - **压缩连续性，而不是反复重放原始上下文**：只有当生成 pack 确实更小时才同步到 `AGENTS.md`
 - **跨会话保留操作状态**：持续保存 objective、constraints、pending work、blockers、Definition of Done 与 scope guardrails
-- **原生适配 Codex**：围绕 `notify`、MCP stdio 和自动 `AGENTS.md` 同步设计
+- **原生适配 Codex**：围绕 `notify`、MCP stdio、可选的 `AGENTS.md` 同步以及更稳健的运行时清理设计
 - **实际可见的 token 节省**：当紧凑 pack 胜出时，重复上下文通常可减少约 `20%` 到 `55%`
 
 ### 闭合控制
@@ -50,7 +50,7 @@ Alpha 版本。快速迭代、小而明确的切片、按顺序公开发布基�
 - 分层的 Definition of Done：`project_dod`、`mission_dod`、`session_dod`
 - 生成带有近似 token 预算的紧凑连续性 pack
 - `micro`、`normal`、`full` 三档 pack 预算
-- 当 pack 确实小于源上下文时自动同步到 `AGENTS.md`
+- 当 pack 确实小于源上下文时可选地同步到 `AGENTS.md`
 - 延续操作状态，让下一次会话能恢复目标、待办、阻塞项和范围保护规则
 - 通过 `mem_open_work` 和 `mem_completion_check` 提供确定性的闭合检查
 - 通过 `mem_recent_changes` 查看最近变化增量
@@ -60,6 +60,7 @@ Alpha 版本。快速迭代、小而明确的切片、按顺序公开发布基�
 - 当使用 `budget=auto` 时自动选择最合适的上下文预算
 - 为每条 observation 持久化 provenance，并可通过 `mem_provenance` 查询
 - 通过 `mem_health` 提供项目健康诊断
+- 通过 `mem_health_runtime` 提供 MCP 进程运行时诊断
 - 通过 `mem_snapshot_create`、`mem_snapshot_list`、`mem_snapshot_restore` 提供版本化项目快照
 - 通过 `mem_policy_validate`、`mem_policy_add`、`mem_policy_list`、`mem_policy_remove` 提供受治理的记忆策略
 - 通过 `mem_inheritance_add`、`mem_inheritance_list`、`mem_inheritance_remove` 提供选择性继承链接
@@ -79,6 +80,7 @@ Alpha 版本。快速迭代、小而明确的切片、按顺序公开发布基�
   - `mem_context_pack`
   - `mem_provenance`
   - `mem_health`
+  - `mem_health_runtime`
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
@@ -145,7 +147,9 @@ codex-agent-mem-smoke
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-该命令会输出 `notify`、`[mcp_servers."codex-agent-mem"]` 以及只读 MCP 工具的审批配置，可直接粘贴到 `~/.codex/config.toml`。
+该命令会输出 `notify`、`[mcp_servers."codex-agent-mem"]`、显式的 stdio idle timeout，以及只读 MCP 工具的审批配置，可直接粘贴到 `~/.codex/config.toml`。
+
+如果你还想启用自动 `AGENTS.md` 回写，请把 `--sync-project-doc` 加到 `notify` 命令里。
 
 示例文件也位于 [examples/codex](./examples/codex/)。
 

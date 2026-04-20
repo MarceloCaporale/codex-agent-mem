@@ -6,7 +6,7 @@ Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中�
 
 `codex-agent-mem` keeps durable project memory outside the model runtime, compresses continuity into smaller working packs, and carries forward operational state so Codex can resume with less repetition, fewer false “done” claims, and more control over what stays in context.
 
-Alpha release. Fast iteration, narrow slices, and public baselines shipped in sequence.
+Public baseline. Built in small, testable slices and still evolving, but already aligned for real use.
 
 ## What’s new in v0.9.0
 
@@ -23,7 +23,7 @@ Latest releases: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 
 
 - **Compact continuity, not raw replay**: turns repeated session context into smaller `AGENTS.md` working packs when compression is actually favorable
 - **Operational state that survives sessions**: keeps objective, constraints, pending work, blockers, Definition of Done, and scope guardrails visible and reusable
-- **Codex-native integration**: built around `notify`, MCP stdio, and automatic `AGENTS.md` sync for real Codex workflows
+- **Codex-native integration**: built around `notify`, MCP stdio, optional `AGENTS.md` sync, and defensive runtime cleanup for real Codex workflows
 - **Practical token savings**: often reduces repeated continuity replay by roughly `20%` to `55%` when the compact pack wins
 
 ### Closure Control
@@ -62,6 +62,7 @@ What works today:
 - automatic budget selection for context packs when `budget=auto`
 - memory provenance persisted per observation and queryable through `mem_provenance`
 - diagnostic health reporting through `mem_health`
+- MCP runtime diagnostics through `mem_health_runtime`
 - versioned project snapshots through `mem_snapshot_create`, `mem_snapshot_list`, and `mem_snapshot_restore`
 - governed memory policies through `mem_policy_validate`, `mem_policy_add`, `mem_policy_list`, and `mem_policy_remove`
 - selective inheritance links through `mem_inheritance_add`, `mem_inheritance_list`, and `mem_inheritance_remove`
@@ -81,6 +82,7 @@ What works today:
   - `mem_context_pack`
   - `mem_provenance`
   - `mem_health`
+  - `mem_health_runtime`
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
@@ -206,7 +208,9 @@ codex-agent-mem-bootstrap-codex --db-path "$HOME/.codex_agent_mem/codex_agent_me
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-That prints the `notify` block, the `[mcp_servers."codex-agent-mem"]` block, the `--sync-project-doc` flag for automatic context reinjection, and read-only MCP tool approvals you can paste into `~/.codex/config.toml`.
+That prints the `notify` block, the `[mcp_servers."codex-agent-mem"]` block, an explicit stdio idle-timeout, and read-only MCP tool approvals you can paste into `~/.codex/config.toml`.
+
+Automatic `AGENTS.md` reinjection is now opt-in. Add `--sync-project-doc` to the `notify` command only if you want generated working-memory blocks written back into the working directory.
 
 Example files also live under [examples/codex](./examples/codex/).
 
@@ -237,6 +241,8 @@ codex-agent-mem-mcp --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
 ```powershell
 codex-agent-mem-mcp --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
+
+The current MCP transport is stdio. That means one process per host connection is normal; it is not a singleton daemon. The defensive idle timeout is there to let unused or orphaned instances exit cleanly.
 
 Manually rebuild the generated continuity block for one directory:
 

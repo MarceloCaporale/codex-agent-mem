@@ -47,7 +47,9 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 ```
 
 Paste the generated output into `~/.codex/config.toml`.
-The snippet already includes `--sync-project-doc` plus read-only MCP tool approvals needed for non-interactive Codex runs.
+The snippet already includes read-only MCP tool approvals plus a defensive MCP idle timeout for non-interactive Codex runs.
+
+If you also want automatic `AGENTS.md` reinjection, add `--sync-project-doc` to the `notify` command before `--db-path`.
 
 ## 4. Optional local services
 

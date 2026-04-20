@@ -9,9 +9,9 @@ It also exposes a local FastAPI inspector for humans:
 
 3. `/ui` for project, session, turn, and observation browsing
 
-And it can reinject compressed continuity automatically:
+And it can reinject compressed continuity when enabled:
 
-4. `AGENTS.md` sync for generated working memory when the pack is smaller than the source context
+4. optional `AGENTS.md` sync for generated working memory when the pack is smaller than the source context
 
 And it now exposes explicit audit and persistence utilities:
 
@@ -29,7 +29,7 @@ And on top of that, it now supports governed memory selection:
 - heuristic extraction produces `session_summary`, `decision`, and operational-state observations
 - the store derives operational state from those observations: objective, constraints, pending items, completed items, blockers, and completion claims
 - the store compiles a working-memory pack from recent turns, durable decisions, and operational state
-- when that pack is smaller than the source context, `AGENTS.md` is updated in the working directory
+- when that pack is smaller than the source context and reinjection is enabled, `AGENTS.md` is updated in the working directory
 - every generated pack event is recorded as a context sync metric for later inspection
 - observation provenance, health reports, and snapshot events are persisted for later audit
 - project policies, inheritance links, and repair events are also persisted so continuity selection stays explainable
@@ -49,6 +49,7 @@ And on top of that, it now supports governed memory selection:
   - `mem_context_pack`
   - `mem_provenance`
   - `mem_health`
+  - `mem_health_runtime`
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
@@ -78,10 +79,12 @@ The generated config uses:
 
 - `notify`
 - `[mcp_servers."codex-agent-mem"]`
-- `--sync-project-doc`
+- `--idle-timeout-seconds` for defensive stdio cleanup
 - per-tool `approval_mode = "approve"` for the read-only retrieval tools
 - Python module targets under `codex_agent_mem`
 - snapshot, audit, and read-only governance tools approved alongside the continuity tools
+
+`--sync-project-doc` is now opt-in. Add it to `notify` only if you want automatic `AGENTS.md` reinjection in the working directory.
 
 ## MCP tool approvals
 
@@ -123,6 +126,10 @@ An optional HTTP wrapper also exists:
 - [examples/codex/notify_writer.py](../examples/codex/notify_writer.py)
 
 That path is useful only if you explicitly want `notify -> HTTP -> local API`.
+
+## MCP lifecycle note
+
+The current transport is stdio. That means one MCP process per host connection is expected; this integration does not claim a singleton daemon. `codex-agent-mem` now adds an idle timeout, signal-aware shutdown, runtime diagnostics, and explicit SQLite cleanup so unused or orphaned stdio instances exit more defensively.
 
 ## Current limits
 

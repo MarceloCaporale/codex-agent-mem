@@ -45,6 +45,10 @@ def connect(db_path: Path) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=5000;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    conn.execute("PRAGMA temp_store=MEMORY;")
     conn.execute("PRAGMA foreign_keys=ON;")
     return conn
 
@@ -76,6 +80,13 @@ class CodexAgentMemStore:
         self.conn = connect(db_path)
         schema_sql = files("codex_agent_mem").joinpath("schema.sql").read_text(encoding="utf-8")
         bootstrap(self.conn, schema_sql)
+
+    def close(self) -> None:
+        conn = getattr(self, "conn", None)
+        if conn is None:
+            return
+        self.conn = None
+        conn.close()
 
     @staticmethod
     def _json(value: Any) -> str:

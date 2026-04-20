@@ -19,6 +19,7 @@ READ_ONLY_MCP_TOOLS = (
     "mem_context_pack",
     "mem_provenance",
     "mem_health",
+    "mem_health_runtime",
     "mem_snapshot_list",
     "mem_snapshot_create",
     "mem_snapshot_restore",
@@ -35,6 +36,8 @@ def build_codex_toml_snippet(
     db_path: Path,
     server_name: str = "codex-agent-mem",
     project_from_cwd: bool = True,
+    sync_project_doc: bool = False,
+    idle_timeout_seconds: int = 300,
 ) -> str:
     lines = [
         "# Paste this into ~/.codex/config.toml",
@@ -42,8 +45,9 @@ def build_codex_toml_snippet(
         f"  '{python_exe}',",
         "  '-m',",
         "  'codex_agent_mem.codex_notify',",
-        "  '--sync-project-doc',",
     ]
+    if sync_project_doc:
+        lines.append("  '--sync-project-doc',")
     if project_from_cwd:
         lines.append("  '--project-from-cwd',")
     lines.extend(
@@ -57,6 +61,8 @@ def build_codex_toml_snippet(
             "args = [",
             "  '-m',",
             "  'codex_agent_mem.mcp_stdio',",
+            "  '--idle-timeout-seconds',",
+            f"  '{idle_timeout_seconds}',",
             "  '--db-path',",
             f"  '{db_path}',",
             "]",
@@ -79,6 +85,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db-path", type=Path, default=AppConfig().db_path)
     parser.add_argument("--server-name", default="codex-agent-mem")
     parser.add_argument("--no-project-from-cwd", action="store_true")
+    parser.add_argument("--sync-project-doc", action="store_true")
+    parser.add_argument("--idle-timeout-seconds", type=int, default=300)
     return parser
 
 
@@ -90,6 +98,8 @@ def main(argv: list[str] | None = None) -> int:
         db_path=args.db_path,
         server_name=args.server_name,
         project_from_cwd=not args.no_project_from_cwd,
+        sync_project_doc=args.sync_project_doc,
+        idle_timeout_seconds=args.idle_timeout_seconds,
     )
     print(snippet)
     return 0

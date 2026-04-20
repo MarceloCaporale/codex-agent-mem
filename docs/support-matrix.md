@@ -9,16 +9,17 @@
 | Windows CI | Supported | Covered in GitHub Actions |
 | macOS local development | Expected but not verified | No CI coverage yet |
 | Codex notify capture | Supported | Current primary capture path |
-| AGENTS-based continuity reinjection | Supported | Enabled through `--sync-project-doc` when the generated pack is smaller than source context |
+| AGENTS-based continuity reinjection | Supported | Opt-in through `--sync-project-doc` when the generated pack is smaller than source context |
 | Operational-state carry-forward | Supported | Objective, pending work, blockers, and guardrails are derived and injected into the working-memory pack |
 | False-completion guardrails | Supported | The generated pack explicitly tells Codex not to declare completion while pending work remains |
-| MCP stdio retrieval | Supported | Current primary retrieval path |
+| MCP stdio retrieval | Supported | Current primary retrieval path; one process per host connection is normal |
 | `mem_context_pack` compact retrieval | Supported | Returns the compressed continuity pack and approximate token budget |
 | `mem_context_pack` auto budget | Supported | Selects the smallest fitting budget profile from `micro`, `normal`, and `full` |
 | `mem_recent_changes` delta retrieval | Supported | Summarizes what changed since the last meaningful continuity baseline |
 | `mem_scope_guard` continuity guard | Supported | Exposes must-not-drop scope, active constraints, and closure conflicts |
 | `mem_provenance` audit retrieval | Supported | Shows where one derived observation came from, including turn/session context and source payload hash |
 | `mem_health` diagnostics | Supported | Reports project health score, sync quality, and structural warnings without mutating memory |
+| `mem_health_runtime` diagnostics | Supported | Reports PID, uptime, request counts, idle timeout, and basic process lifecycle state for the active stdio server |
 | Snapshot list/create/restore | Supported | Creates versioned project snapshots and restores them as derived state, not silent history mutation |
 | FastAPI inspection API | Supported | Local inspection surface |
 | Context sync metrics | Supported | Pack sync/skip events are stored per project and exposed through API/UI, including budget reason and build timing |

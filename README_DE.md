@@ -6,7 +6,7 @@ Portable, auditierbare und local-first Memory-Schicht für Codex und Coding-Agen
 
 codex-agent-mem hält dauerhafte Projektkontinuität außerhalb des Modell-Runtimes, komprimiert sie in kleinere Working Packs und trägt Operational State über Sessions hinweg weiter, damit Codex mit weniger Wiederholung, weniger falschem „fertig“ und mehr Kontrolle über den Kontext weiterarbeiten kann.
 
-Alpha-Release. Schnelle Iteration, kleine Slices und öffentliche Baselines in Folge.
+Öffentliche Baseline. In kleinen, testbaren Slices gebaut, noch in Weiterentwicklung, aber bereits auf reale Nutzung ausgerichtet.
 
 ## Neu in v0.9.0
 
@@ -23,7 +23,7 @@ Sichtbare Releases: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8
 
 - **Kompakte Kontinuität statt rohem Replay**: schreibt kleinere `AGENTS.md`-Packs nur dann, wenn Kompression wirklich günstiger ist
 - **Persistenter Operational State**: behält Ziel, Constraints, offene Arbeit, Blocker, Definition of Done und Scope-Guardrails
-- **Codex-native Integration**: gebaut für `notify`, MCP stdio und automatische `AGENTS.md`-Synchronisierung
+- **Codex-native Integration**: gebaut für `notify`, MCP stdio, optionale `AGENTS.md`-Synchronisierung und defensives Runtime-Cleanup
 - **Praktische Token-Ersparnis**: reduziert wiederholten Kontext oft um etwa `20%` bis `55%`, wenn das kompakte Pack gewinnt
 
 ### Closure Control
@@ -50,7 +50,7 @@ Was heute funktioniert:
 - hierarchische Definition of Done über `project_dod`, `mission_dod` und `session_dod`
 - generierte kompakte Continuity-Packs mit ungefährer Token-Schätzung
 - Budget-Profile für Packs: `micro`, `normal` und `full`
-- automatische `AGENTS.md`-Synchronisierung, wenn das Pack wirklich kleiner als der Quellkontext ist
+- optionale `AGENTS.md`-Synchronisierung, wenn das Pack wirklich kleiner als der Quellkontext ist
 - Weitergabe von Operational State, damit die nächste Session Ziel, offene Punkte, Blocker und Scope-Guardrails wiederherstellen kann
 - deterministische Closure-Control mit `mem_open_work` und `mem_completion_check`
 - Delta-Sicht auf neue Änderungen über `mem_recent_changes`
@@ -60,6 +60,7 @@ Was heute funktioniert:
 - automatische Budgetwahl für Context-Packs bei `budget=auto`
 - persistierte Memory-Provenance pro Observation, abrufbar über `mem_provenance`
 - Gesundheitsdiagnose pro Projekt über `mem_health`
+- Runtime-Diagnose für den MCP-Prozess über `mem_health_runtime`
 - versionierte Projektsnapshots über `mem_snapshot_create`, `mem_snapshot_list` und `mem_snapshot_restore`
 - gesteuerte Memory-Policies über `mem_policy_validate`, `mem_policy_add`, `mem_policy_list` und `mem_policy_remove`
 - selektive Inheritance-Links über `mem_inheritance_add`, `mem_inheritance_list` und `mem_inheritance_remove`
@@ -79,6 +80,7 @@ Was heute funktioniert:
   - `mem_context_pack`
   - `mem_provenance`
   - `mem_health`
+  - `mem_health_runtime`
   - `mem_snapshot_list`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
@@ -145,7 +147,9 @@ Ein sofort einsetzbares Snippet erzeugen:
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-Das gibt den `notify`-Block, den Block `[mcp_servers."codex-agent-mem"]` und die Read-only-Freigaben für die MCP-Tools aus, die du in `~/.codex/config.toml` einfügen kannst.
+Das gibt den `notify`-Block, den Block `[mcp_servers."codex-agent-mem"]`, einen expliziten stdio-Idle-Timeout und die Read-only-Freigaben für die MCP-Tools aus, die du in `~/.codex/config.toml` einfügen kannst.
+
+Wenn du zusätzlich automatische `AGENTS.md`-Reinjektion willst, füge `--sync-project-doc` zum `notify`-Befehl hinzu.
 
 Beispieldateien liegen außerdem unter [examples/codex](./examples/codex/).
 

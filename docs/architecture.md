@@ -9,7 +9,7 @@ codex-agent-mem stays intentionally narrow in the current release line:
 5. the store derives objective, constraints, pending work, completed work, blockers, and completion claims from those observations
 6. a compact working-memory pack is compiled from recent turns, durable decisions, and operational state
 7. the generated pack carries a scope guard when open work remains
-8. if that pack is smaller than the source context, the current directory `AGENTS.md` is updated
+8. if reinjection is enabled and that pack is smaller than the source context, the current directory `AGENTS.md` is updated
 9. every sync or skip is recorded into context-sync metrics
 10. Codex or another client reads those observations and compact packs through MCP
 11. the local FastAPI inspector renders projects, sessions, turns, observations, operational state, and sync metrics from the same store
