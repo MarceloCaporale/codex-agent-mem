@@ -2,15 +2,15 @@
 
 ## Focus
 
-`v1.0` is not about adding more memory features first.
+`v1.0` is the release where `codex-agent-mem` becomes not just a correct MCP with strong memory features, but a **low-impact continuity runtime** that stays useful even when the host lifecycle is noisy or imperfect.
 
-It is about making `codex-agent-mem` more efficient, more observable, and cheaper to run under real host pressure.
+The priority is no longer “more memory surface first”.
 
-The next major slice is:
+The priority is:
 
-**observability + low-impact runtime + more efficient continuity selection**
+**lower process cost + lower response cost + less repeated continuity transfer**
 
-## Why this is the right next step
+## Why `v1.0` is different
 
 `v0.6` through `v0.9` already established:
 
@@ -20,140 +20,183 @@ The next major slice is:
 - governed policies, inheritance, and repairs
 - stdio runtime hardening
 
-The next bottleneck is different:
+That means the next problem is not feature absence. It is **efficiency under real usage**:
 
-- long-lived hosts can behave badly
-- stdio MCP means one process per host connection is normal
-- repeated initialization still costs too much when the host opens or retains more connections than it should
-- runtime efficiency now matters as much as memory quality
+- long-lived hosts can retain more MCP processes than they should
+- stdio naturally means one process per host connection
+- repeated startup cost matters when lifecycle noise grows
+- large or duplicated tool responses waste exactly the tokens this project is meant to save
+- unchanged continuity should not be rebuilt and resent repeatedly
 
-So `v1.0` should prioritize lifecycle cost and runtime evidence before adding broader feature surface.
+## Product goal for `v1.0`
 
-## v1.0 goals
+By the end of `v1.0`, `codex-agent-mem` should be able to say:
 
-`v1.0` should make it possible to say:
+- retrieval can run in a clearly lower-impact mode
+- unused MCP connections cost very little
+- tool responses are compact by default and expand only on demand
+- repeated short-lived calls avoid redundant work
+- unchanged continuity packs can be reused instead of resent
+- runtime degradation is easier to detect and explain
+- daemonized reuse exists as an option, not a hidden requirement
 
-- this process started for a known reason
-- this much work was actually done
-- this much context was saved
-- this host behavior is normal or abnormal
-- this runtime path is low-impact when memory is only being read
+## Guiding principle
+
+The implementation order matters.
+
+`v1.0` should follow this rule:
+
+**reduce cost first, initialize late, send less, rebuild less, observe better, daemonize last**
+
+The daemon remains the structural north star, but it should not be the first implementation step.
+
+## What `v1.0` is optimizing
+
+`v1.0` explicitly optimizes three different costs:
+
+1. **process cost**
+2. **response cost**
+3. **continuity reuse cost**
+
+The roadmap should be evaluated against those three axes, not only against feature count.
 
 ## Implementation order
 
-### 1. Runtime observability first
+### 1. Low-impact runtime mode
 
-Add stronger local runtime evidence before changing transport architecture.
+This is the first priority.
 
-Deliverables:
+Before adding more instrumentation, the MCP should become cheaper to run under noisy host behavior.
 
-- aggregated runtime telemetry
-- per-process lifecycle events
-- local JSONL event stream
-- better runtime summaries in `mem_health_runtime`
-- explicit `spawn_storm_warning` signal when too many equivalent MCP processes appear for the same `db_path`
+#### Deliverables
 
-Why first:
-
-- it turns suspicion into evidence
-- it makes later daemon work measurable
-- it helps distinguish healthy one-process-per-connection behavior from host leakage
-
-### 2. Low-impact runtime modes
-
-Add modes that reduce cost even if the host opens more processes than expected.
-
-Deliverables:
-
-- read-only runtime mode for retrieval-only use
-- tool-surface profiles such as:
+- explicit `--read-only` mode for retrieval-only runtime
+- explicit tool-surface profiles:
   - `minimal`
   - `standard`
   - `full`
-- smaller default profile for Codex Desktop
-- explicit documentation of which tools mutate state and which do not
+- bootstrap support so Codex Desktop can default to a smaller profile
+- runtime self-reporting of the active profile and mutability mode
 
-Why second:
+#### Minimal profile target
 
-- most retrieval calls do not need write capability
-- fewer exposed tools means lower handshake and maintenance cost
-- it reduces contention before any daemon architecture exists
+The first `minimal` profile should stay continuity-first and low-noise:
+
+- `mem_context_pack`
+- `mem_open_work`
+- `mem_completion_check`
+- `mem_health_runtime`
+
+`mem_search` should move to `standard` unless it can be made similarly cheap by default.
+
+#### Why this comes first
+
+- fewer tools means less handshake and lifecycle overhead
+- real `read-only` mode reduces write contention
+- this lowers cost even if the host still opens too many stdio connections
+
+### 2. Response diet and compact MCP outputs
+
+Once the runtime surface is smaller, the next waste to remove is oversized tool output.
+
+#### Deliverables
+
+- compact-by-default MCP responses
+- `content.text` becomes a compact capsule rather than full pretty JSON
+- full structured data stays in `structuredContent` when supported
+- explicit response modes:
+  - `compact`
+  - `balanced`
+  - `verbose`
+- common narrowing arguments where appropriate:
+  - `detail`
+  - `max_items`
+  - `max_chars`
+  - `include_provenance`
+
+#### Design rule
+
+The runtime should not send the same payload twice in two verbose forms.
+
+#### Why this comes second
+
+- response tokens are part of the product cost
+- reducing output size can save tokens immediately without changing memory semantics
 
 ### 3. Lazy initialization
 
-Do not fully initialize heavy runtime state until a tool actually needs it.
+Once the process surface and response size are smaller, the next priority is startup cost.
 
-Deliverables:
+#### Deliverables
 
-- delayed store initialization where possible
-- delayed optional subsystems
-- “almost free” startup for unused MCP connections
+- defer store-heavy initialization until the first tool that really needs it
+- avoid initializing optional subsystems for profiles that never use them
+- make a connection that starts and exits without useful work almost free
 
-Why third:
+#### Why this comes third
 
-- many host connections may initialize MCP and never call it
-- that should not cost a full store bootstrap
+- many hosts initialize MCPs optimistically
+- a connection that is never used meaningfully should not pay the full runtime cost
 
-### 4. Short per-process cache
+### 4. Revision-stamped short cache
 
-Avoid rebuilding the same continuity answer repeatedly inside one short-lived process.
+After startup cost is reduced, the next waste to remove is short-window recomputation.
 
-Good targets:
+#### Initial cache targets
 
 - `mem_context_pack`
 - `mem_project_brief`
 - `mem_open_work`
 - `mem_scope_guard`
 
-Cache key ideas:
+#### Cache key ideas
 
 - `project_key`
+- `project_revision`
 - `budget`
-- `db_last_modified`
 - optional policy fingerprint
+- optional inheritance fingerprint
 
-Cache lifetime:
+#### Cache lifetime
 
-- short only, such as `5` to `30` seconds
+Short only:
 
-Why fourth:
+- `5` to `30` seconds
 
-- it removes pointless recomputation during retries or repeated handshakes
-- it stays safe because invalidation can be conservative
+#### Why this comes fourth
 
-### 5. Optional daemon architecture
+- retries and repeated handshakes can ask the same question several times in a row
+- caching against a project revision is more reliable than file mtime for SQLite-based state
 
-Only after instrumentation and low-impact modes are in place, add the larger transport improvement.
+### 5. Continuity pack hash and not-modified protocol
 
-Goal:
+After short-window recomputation is reduced, the next gain is reusing continuity when it has not changed.
 
-- one heavier local daemon per user or database
-- stdio bridge stays lightweight
-- repeated host connections no longer imply repeated heavy initialization
+#### Deliverables
 
-Deliverables:
+- `known_pack_hash` support for `mem_context_pack`
+- `not_modified=true` responses when continuity is unchanged
+- a stable compact spine for continuity:
+  - objective
+  - hard constraints
+  - open work
+  - blockers
+  - DoD gaps
+  - critical decisions
+  - memory IDs or references
 
-- optional daemon mode
-- lightweight stdio bridge or client
-- documented fallback to plain stdio
+#### Why this matters
 
-Why fifth instead of first:
+- unchanged continuity should not be resent just because the host asks again
+- this saves tokens without reducing precision
 
-- it is the biggest architectural change
-- it is easier to justify once real telemetry proves where the cost is
-- it avoids overcorrecting before the runtime is measured
+### 6. Runtime warning and health enrichment
 
-## Concrete deliverables
+Once the runtime is already cheaper and quieter, expand observability in the most immediately useful places.
 
-### Runtime telemetry
+#### Deliverables
 
-- local `events.jsonl` or equivalent
-- start / initialize / tool-call / idle-timeout / signal / stdin-eof / exit events
-- no cloud dependency
-
-### Runtime health
-
-Extend `mem_health_runtime` with fields such as:
+Extend `mem_health_runtime` with:
 
 - `spawn_storm_warning`
 - `same_db_process_count`
@@ -162,57 +205,110 @@ Extend `mem_health_runtime` with fields such as:
 - `lazy_initialized`
 - `cache_hits`
 - `cache_misses`
+- `last_request_ts`
 
-### Low-impact profiles
+#### Why this is phase six
 
-Suggested first profile split:
+- by this point the runtime is already cheaper
+- diagnostics are then describing a lower-cost system instead of merely documenting an expensive one
 
-- `minimal`
-  - `mem_search`
-  - `mem_context_pack`
-  - `mem_open_work`
-  - `mem_completion_check`
-  - `mem_health_runtime`
-- `standard`
-  - current core retrieval set
-- `full`
-  - current full surface including audit and governance tools
+### 7. Local runtime telemetry
 
-### Read-only fast mode
+After the runtime is smaller and health reporting is stronger, add fuller lifecycle evidence.
 
-The MCP process should be able to declare:
+#### Deliverables
 
-- this process can answer queries
-- this process will not mutate stored memory
+- local JSONL event stream
+- per-process lifecycle events such as:
+  - `process_start`
+  - `initialize`
+  - `tool_list`
+  - `tool_call`
+  - `idle_timeout`
+  - `stdin_eof`
+  - `signal`
+  - `process_exit`
+- bounded logging with rotation and size limits
 
-That reduces SQLite write contention and makes lifecycle reasoning cleaner.
+#### Event fields
+
+- `pid`
+- `ppid`
+- `db_path`
+- `project_key` when available
+- `profile`
+- `read_only`
+- `start_ts`
+- `event_ts`
+- `requests_count`
+- `idle_timeout_seconds`
+- `exit_reason`
+
+#### Why not earlier
+
+Once the main lifecycle diagnosis is already understood, telemetry is more valuable as operational evidence than as the first engineering move.
+
+### 8. Optional daemon architecture
+
+Only after the runtime is already lower-impact, compact, instrumented, and measured should the project add the bigger transport improvement.
+
+#### Goal
+
+- one heavier daemon per user or per database
+- a lightweight stdio bridge in front of it
+- cheaper handling of repeated host connections
+
+#### Deliverables
+
+- optional daemon mode
+- stdio bridge or thin client
+- documented fallback to plain stdio
+- runtime evidence showing when daemon mode is actually beneficial
+
+#### Why last
+
+- it is the most invasive architectural change
+- it should be justified by measured cost, not only by theory
+- stdio remains the honest baseline and should continue to work
+
+## Packaging direction
+
+`v1.0` should also reduce unnecessary install weight where possible.
+
+The preferred direction is:
+
+- keep core MCP/runtime dependencies minimal
+- move API/UI dependencies into an optional extra where practical
+
+This is not the first implementation step, but it supports the same low-impact goal.
+
+## Concrete acceptance criteria
+
+`v1.0` should be considered successful when all of the following are true:
+
+1. A retrieval-only Codex Desktop configuration can run `codex-agent-mem` in a clearly documented lower-impact mode.
+2. A connection that initializes but does not perform meaningful work has noticeably lower startup cost than today.
+3. Core tools return materially smaller responses by default without losing critical continuity precision.
+4. Repeated short-lived retrieval calls avoid unnecessary recomputation for compact packs and project summaries.
+5. `mem_context_pack` can avoid resending unchanged continuity when given a known pack hash.
+6. `mem_health_runtime` can distinguish ordinary stdio reuse from likely spawn-storm conditions.
+7. Local runtime telemetry exists without adding any cloud dependency.
+8. The daemon path exists as an option, not as a forced transport rewrite.
 
 ## Non-goals for this slice
 
-Not first in `v1.0`:
+The following should not displace the roadmap above:
 
-- embeddings as a default requirement
-- vector store as baseline
+- embeddings as a baseline requirement
+- vector search as the primary retrieval layer
+- major UI redesign
 - broader multi-agent orchestration
-- UI redesign as a primary goal
+- expanding governance surface further before runtime efficiency work lands
 
-Those may still happen later, but they are not what most improves efficiency right now.
+## Final framing
 
-## Acceptance criteria
+After `v1.0`, the product promise becomes more precise:
 
-`v1.0` should be considered successful when:
+**operational continuity + deterministic closure control + auditable compact reinjection + governed memory selection + low-impact, low-noise runtime behavior**
 
-1. runtime events are observable locally without external infrastructure
-2. `mem_health_runtime` can distinguish normal reuse from likely spawn storms
-3. retrieval-only use can run in a clearly documented lower-impact mode
-4. repeated short-lived calls avoid redundant pack rebuilding through safe short caching
-5. the daemon path exists as an option, not as a breaking requirement
-6. the repository can explain these behaviors clearly to both humans and other agents
-
-## Product framing after `v1.0`
-
-The product framing stays the same, but gets sharper:
-
-**operational continuity + deterministic closure control + auditable compact reinjection + governed memory selection + observable low-impact runtime behavior**
-
-That is the right direction if the goal is not only “more memory”, but memory that stays cheap, explainable, and resilient under real Codex use.
+That is the right outcome for a project whose value is not just “remember more”, but “remember what matters while staying cheap, explainable, and resilient in real Codex use.”
