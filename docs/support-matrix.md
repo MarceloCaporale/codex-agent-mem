@@ -13,6 +13,7 @@
 | Operational-state carry-forward | Supported | Objective, pending work, blockers, and guardrails are derived and injected into the working-memory pack |
 | False-completion guardrails | Supported | The generated pack explicitly tells Codex not to declare completion while pending work remains |
 | MCP stdio retrieval | Supported | Current primary retrieval path; one process per host connection is normal |
+| Codex Desktop long-lived host note | Documented | `codex-agent-mem` hardens its own stdio runtime, but long-lived Desktop lifecycle issues can still amplify process accumulation; see the dedicated Codex Desktop note |
 | `mem_context_pack` compact retrieval | Supported | Returns the compressed continuity pack and approximate token budget |
 | `mem_context_pack` auto budget | Supported | Selects the smallest fitting budget profile from `micro`, `normal`, and `full` |
 | `mem_recent_changes` delta retrieval | Supported | Summarizes what changed since the last meaningful continuity baseline |

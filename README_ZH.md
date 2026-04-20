@@ -14,8 +14,9 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 - 在项目之间进行选择性 inheritance，而不是盲目混合连续性
 - 基于 health 的 repair 提案与衍生 repair 事件
 - 在本地 UI 与文档中可见的 governance 信息
+- 面向长生命周期 Codex host 的运行时加固：idle timeout、signal-aware cleanup、SQLite `WAL`/`busy_timeout` 与 `mem_health_runtime`
 
-可见版本: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+可见版本: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
 
 ## 你得到的能力
 

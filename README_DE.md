@@ -14,8 +14,9 @@ codex-agent-mem hält dauerhafte Projektkontinuität außerhalb des Modell-Runti
 - selektive Inheritance zwischen Projekten ohne blindes Vermischen von Kontinuität
 - Repair-Vorschläge und abgeleitete Repairs auf Basis von Health
 - Governance-Sichtbarkeit in lokaler UI und Dokumentation
+- Runtime-Hardening für langlebige Codex-Hosts: Idle-Timeout, signalbewusster Shutdown, SQLite `WAL`/`busy_timeout` und `mem_health_runtime`
 
-Sichtbare Releases: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+Sichtbare Releases: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
 
 ## Was es liefert
 

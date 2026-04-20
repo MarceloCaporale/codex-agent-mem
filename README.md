@@ -14,8 +14,9 @@ Public baseline. Built in small, testable slices and still evolving, but already
 - selective inheritance across projects without blindly mixing continuity
 - governed repair proposals and repair events derived from health
 - governance visibility in the local inspector and public docs
+- runtime hardening for long-lived Codex hosts: idle timeout, signal-aware cleanup, SQLite `WAL`/`busy_timeout`, and `mem_health_runtime`
 
-Latest releases: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+Latest releases: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
 
 ## What you get
 
@@ -36,7 +37,7 @@ Latest releases: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 
 - **Governed memory selection**: applies project policies, inheritance rules, and repair events instead of mixing everything blindly
 - **Fully local and auditable**: SQLite + FTS5, provenance, health diagnostics, snapshots, and a local inspector UI with no external memory service
 
-Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md) | [Discoverability Metadata](./docs/discoverability.md)
+Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Codex Desktop Note](./docs/codex-desktop-lifecycle-note.md) | [Support Matrix](./docs/support-matrix.md) | [V1 Roadmap](./docs/v1-roadmap.md) | [Design Decisions](./docs/design-decisions.md)
 
 Built for long audits, multi-step project continuity, and workflows where the real failure mode is not only forgetting decisions, but also dropping scope, losing blockers, and declaring completion too early.
 
@@ -114,6 +115,7 @@ What is intentionally not in scope yet:
 - Carrying only decisions is not enough; the runtime also needs active objective, open work, blockers, and a rule against false closure.
 - SQLite keeps the implementation local-first, auditable, and easy to inspect.
 - The current release intentionally focuses on a narrow, testable slice rather than a broad unfinished platform.
+- Codex Desktop and `codex exec --ephemeral` do not currently behave the same way under long-lived MCP load; see the diagnostic note if you need the exact runtime boundary.
 
 ## Important expectation
 
@@ -316,6 +318,8 @@ Important: this is not a fixed guarantee per prompt. If the compact pack is not 
 - [docs/quickstart.md](./docs/quickstart.md) - shortest install and first-run path
 - [docs/codex-integration.md](./docs/codex-integration.md) - how notify and MCP fit into Codex
 - [docs/support-matrix.md](./docs/support-matrix.md) - current support and known gaps
+- [docs/codex-desktop-lifecycle-note.md](./docs/codex-desktop-lifecycle-note.md) - observed Codex Desktop lifecycle behavior and practical mitigations
+- [docs/v1-roadmap.md](./docs/v1-roadmap.md) - `v1.0` direction for observability, low-impact runtime behavior, and efficiency
 - [docs/design-decisions.md](./docs/design-decisions.md) - explicit product and architecture decisions
 - [docs/architecture.md](./docs/architecture.md) - narrow technical architecture of the current release
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - contribution workflow and quality bar

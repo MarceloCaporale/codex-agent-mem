@@ -131,6 +131,30 @@ That path is useful only if you explicitly want `notify -> HTTP -> local API`.
 
 The current transport is stdio. That means one MCP process per host connection is expected; this integration does not claim a singleton daemon. `codex-agent-mem` now adds an idle timeout, signal-aware shutdown, runtime diagnostics, and explicit SQLite cleanup so unused or orphaned stdio instances exit more defensively.
 
+## Codex Desktop lifecycle note
+
+Current evidence points to a host-side lifecycle problem in long-lived Codex Desktop sessions rather than a single MCP being the sole root cause.
+
+Observed pattern:
+
+- `codex exec --ephemeral` with the same global MCP config finishes cleanly
+- the long-lived Codex Desktop app-server can retain multiple MCP roots across threads or workspace changes
+- that makes every active MCP more expensive when the host stops reusing or cleaning them properly
+
+What `codex-agent-mem` v0.9.0 does about it:
+
+- makes `--sync-project-doc` opt-in instead of default
+- adds an explicit stdio idle timeout
+- adds signal-aware shutdown and explicit SQLite close
+- reports runtime state through `mem_health_runtime`
+- hardens SQLite defaults for concurrent local use
+
+That does not claim to fix the host bug. It reduces the blast radius and makes the MCP easier to audit.
+
+For the full diagnostic note and temporary mitigations, see:
+
+- [Codex Desktop Lifecycle Note](./codex-desktop-lifecycle-note.md)
+
 ## Current limits
 
 - no one-click GitHub MCP install

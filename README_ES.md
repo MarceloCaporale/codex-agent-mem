@@ -14,8 +14,9 @@ Baseline publica. Construida en slices chicos y verificables, todavia en evoluci
 - inheritance selectiva entre proyectos sin mezclar continuidad a ciegas
 - propuestas de repair y repairs derivados desde health
 - visibilidad de gobernanza en la UI local y en la documentacion
+- runtime hardening para hosts Codex de larga vida: idle timeout, cierre por senales, SQLite con `WAL`/`busy_timeout` y `mem_health_runtime`
 
-Releases visibles: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+Releases visibles: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
 
 ## Lo que ofrece
 

@@ -14,8 +14,9 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 - 継続性を盲目的に混ぜずに行う、プロジェクト間の選択的 inheritance
 - health から導かれる repair proposal と派生 repair event
 - ローカル UI とドキュメントで見える governance 状態
+- 長寿命の Codex host 向け runtime hardening: idle timeout、signal-aware cleanup、SQLite `WAL`/`busy_timeout`、`mem_health_runtime`
 
-参照しやすいリリース: [v0.9.0 Governance](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+参照しやすいリリース: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
 
 ## 提供するもの
 
