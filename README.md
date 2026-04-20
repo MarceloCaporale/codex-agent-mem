@@ -37,7 +37,7 @@ Latest releases: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---20
 - **Governed memory selection**: applies project policies, inheritance rules, and repair events instead of mixing everything blindly
 - **Fully local and auditable**: SQLite + FTS5, provenance, health diagnostics, snapshots, and a local inspector UI with no external memory service
 
-Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Codex Desktop Note](./docs/codex-desktop-lifecycle-note.md) | [Support Matrix](./docs/support-matrix.md) | [V1 Roadmap](./docs/v1-roadmap.md) | [Design Decisions](./docs/design-decisions.md)
+Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Codex Desktop Note](./docs/codex-desktop-lifecycle-note.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md)
 
 Built for long audits, multi-step project continuity, and workflows where the real failure mode is not only forgetting decisions, but also dropping scope, losing blockers, and declaring completion too early.
 
@@ -319,7 +319,6 @@ Important: this is not a fixed guarantee per prompt. If the compact pack is not 
 - [docs/codex-integration.md](./docs/codex-integration.md) - how notify and MCP fit into Codex
 - [docs/support-matrix.md](./docs/support-matrix.md) - current support and known gaps
 - [docs/codex-desktop-lifecycle-note.md](./docs/codex-desktop-lifecycle-note.md) - observed Codex Desktop lifecycle behavior and practical mitigations
-- [docs/v1-roadmap.md](./docs/v1-roadmap.md) - `v1.0` direction for observability, low-impact runtime behavior, and efficiency
 - [docs/design-decisions.md](./docs/design-decisions.md) - explicit product and architecture decisions
 - [docs/architecture.md](./docs/architecture.md) - narrow technical architecture of the current release
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - contribution workflow and quality bar
