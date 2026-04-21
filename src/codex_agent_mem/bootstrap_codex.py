@@ -29,6 +29,30 @@ READ_ONLY_MCP_TOOLS = (
     "mem_repair_propose",
 )
 
+MINIMAL_MCP_TOOLS = (
+    "mem_context_pack",
+    "mem_open_work",
+    "mem_completion_check",
+    "mem_health_runtime",
+)
+
+MUTATING_MCP_TOOLS = {
+    "mem_snapshot_create",
+    "mem_snapshot_restore",
+    "mem_policy_add",
+    "mem_policy_remove",
+    "mem_inheritance_add",
+    "mem_inheritance_remove",
+    "mem_repair_apply",
+}
+
+
+def _tools_for_profile(profile: str, *, read_only: bool) -> tuple[str, ...]:
+    tools = MINIMAL_MCP_TOOLS if profile == "minimal" else READ_ONLY_MCP_TOOLS
+    if read_only:
+        return tuple(tool for tool in tools if tool not in MUTATING_MCP_TOOLS)
+    return tools
+
 
 def build_codex_toml_snippet(
     *,
@@ -38,6 +62,9 @@ def build_codex_toml_snippet(
     project_from_cwd: bool = True,
     sync_project_doc: bool = False,
     idle_timeout_seconds: int = 300,
+    mcp_profile: str = "full",
+    mcp_read_only: bool = False,
+    response_mode: str = "compact",
 ) -> str:
     lines = [
         "# Paste this into ~/.codex/config.toml",
@@ -63,12 +90,22 @@ def build_codex_toml_snippet(
             "  'codex_agent_mem.mcp_stdio',",
             "  '--idle-timeout-seconds',",
             f"  '{idle_timeout_seconds}',",
+            "  '--profile',",
+            f"  '{mcp_profile}',",
+            "  '--response-mode',",
+            f"  '{response_mode}',",
+        ]
+    )
+    if mcp_read_only:
+        lines.append("  '--read-only',")
+    lines.extend(
+        [
             "  '--db-path',",
             f"  '{db_path}',",
             "]",
         ]
     )
-    for tool_name in READ_ONLY_MCP_TOOLS:
+    for tool_name in _tools_for_profile(mcp_profile, read_only=mcp_read_only):
         lines.extend(
             [
                 "",
@@ -87,6 +124,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-project-from-cwd", action="store_true")
     parser.add_argument("--sync-project-doc", action="store_true")
     parser.add_argument("--idle-timeout-seconds", type=int, default=300)
+    parser.add_argument("--mcp-profile", choices=["minimal", "standard", "full"], default="full")
+    parser.add_argument("--mcp-read-only", action="store_true")
+    parser.add_argument("--response-mode", choices=["compact", "balanced", "verbose"], default="compact")
     return parser
 
 
@@ -100,6 +140,9 @@ def main(argv: list[str] | None = None) -> int:
         project_from_cwd=not args.no_project_from_cwd,
         sync_project_doc=args.sync_project_doc,
         idle_timeout_seconds=args.idle_timeout_seconds,
+        mcp_profile=args.mcp_profile,
+        mcp_read_only=args.mcp_read_only,
+        response_mode=args.response_mode,
     )
     print(snippet)
     return 0

@@ -8,15 +8,24 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 
 公开基线版本。以小而可验证的切片构建，仍在继续演进，但已经面向真实使用。
 
-## v0.9.0 新增内容
+## v1.0.0 新增内容
 
-- 通过治理策略实现显式的记忆包含与排除
-- 在项目之间进行选择性 inheritance，而不是盲目混合连续性
-- 基于 health 的 repair 提案与衍生 repair 事件
-- 在本地 UI 与文档中可见的 governance 信息
-- 面向长生命周期 Codex host 的运行时加固：idle timeout、signal-aware cleanup、SQLite `WAL`/`busy_timeout` 与 `mem_health_runtime`
+- 低影响 MCP 运行模式：`minimal`、`standard`、`full`
+- 真正的 `--read-only`，阻止可变更 tool 和旁路写入
+- SQLite lazy initialization，让未使用的 MCP 连接保持轻量
+- 默认返回紧凑 MCP 文本，完整 payload 保留在 `structuredContent`
+- `known_pack_hash` / `not_modified`，避免重复发送未变化的连续性 pack
+- heartbeat、spawn-storm warning、可选 telemetry，以及可选 daemon/stdio bridge
 
-可见版本: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+可见版本: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+
+## 可验证结果
+
+`codex-agent-mem` 包含一个可复现的 verification sandbox，以及 v1.0.0 的公开 evidence export。
+
+当前公开运行使用 **Codex Desktop、模型 GPT-5.4、reasoning effort xhigh**，基于合成 fixtures 执行。它测量上下文压缩、通过 `known_pack_hash` 避免重复发送、lazy initialization、最小 tool surface、read-only safety、response diet、本地 telemetry、closure control，以及一个 sub-agent handoff 示例。
+
+参见：[Verification Evidence](./docs/verification/) 和 [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md)。
 
 ## 你得到的能力
 
@@ -41,7 +50,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 
 ## 状态
 
-`0.9.0` 是当前的基础版本。
+`1.0.0` 是当前的基础版本。
 
 当前已实现：
 

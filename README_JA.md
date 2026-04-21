@@ -8,15 +8,24 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 
 公開ベースライン。小さく検証可能なスライスで構築され、まだ進化中ですが、すでに実運用を意識した形です。
 
-## v0.9.0 の追加点
+## v1.0.0 の追加点
 
-- 明示的な include / exclude のためのガバナンス付きメモリポリシー
-- 継続性を盲目的に混ぜずに行う、プロジェクト間の選択的 inheritance
-- health から導かれる repair proposal と派生 repair event
-- ローカル UI とドキュメントで見える governance 状態
-- 長寿命の Codex host 向け runtime hardening: idle timeout、signal-aware cleanup、SQLite `WAL`/`busy_timeout`、`mem_health_runtime`
+- 低負荷 MCP プロファイル: `minimal`、`standard`、`full`
+- 変更系 tool と副作用的な書き込みを抑止する実用的な `--read-only`
+- 未使用 MCP 接続のための SQLite lazy initialization
+- デフォルトでは短い MCP テキスト応答、完全な payload は `structuredContent` に保持
+- 変更のない continuity pack を再送しない `known_pack_hash` / `not_modified`
+- heartbeat、spawn-storm warning、任意 telemetry、任意 daemon/stdio bridge による runtime diagnostics
 
-参照しやすいリリース: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+参照しやすいリリース: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+
+## 検証可能な結果
+
+`codex-agent-mem` には、v1.0.0 向けの再現可能な verification sandbox と公開用 evidence export が含まれています。
+
+現在の公開ランは、**Codex Desktop、モデル GPT-5.4、reasoning effort xhigh** で合成 fixture を使って実行されました。測定対象は、コンテキスト圧縮、`known_pack_hash` による再送回避、lazy initialization、最小 tool surface、read-only safety、response diet、local telemetry、closure control、sub-agent handoff example です。
+
+参照: [Verification Evidence](./docs/verification/) と [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md)。
 
 ## 提供するもの
 
@@ -41,7 +50,7 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 
 ## 状態
 
-`0.9.0` は現在のベースリリースです。
+`1.0.0` は現在のベースリリースです。
 
 現在動作しているもの:
 

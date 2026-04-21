@@ -88,6 +88,9 @@ class CodexAgentMemStore:
         self.conn = None
         conn.close()
 
+    def set_query_only(self, enabled: bool = True) -> None:
+        self.conn.execute(f"PRAGMA query_only={'ON' if enabled else 'OFF'};")
+
     @staticmethod
     def _json(value: Any) -> str:
         return json.dumps(value, ensure_ascii=False, sort_keys=True)
@@ -1048,9 +1051,14 @@ class CodexAgentMemStore:
                     break
         return inherited_items
 
-    def _repair_proposals_from_health(self, project_key: str) -> list[dict[str, Any]]:
+    def _repair_proposals_from_health(
+        self,
+        project_key: str,
+        *,
+        record_if_missing: bool = True,
+    ) -> list[dict[str, Any]]:
         report = self.latest_health_report(project_key)
-        if report is None:
+        if report is None and record_if_missing:
             self.health_report(project_key, record=True)
             report = self.latest_health_report(project_key)
         if report is None:
@@ -1277,7 +1285,7 @@ class CodexAgentMemStore:
             "inheritances": governance["inheritances"],
             "repairs": governance["repairs"],
             "policy_effects": governance["policy_effects"],
-            "repair_proposals": self._repair_proposals_from_health(project_key),
+            "repair_proposals": self._repair_proposals_from_health(project_key, record_if_missing=False),
         }
 
     def recent_decisions(self, project_key: str, limit: int = 10) -> list[dict[str, Any]]:
@@ -1293,6 +1301,31 @@ class CodexAgentMemStore:
             (project_key, limit),
         ).fetchall()
         return [dict(row) for row in rows]
+
+    def project_revision(self, project_key: str) -> dict[str, Any] | None:
+        project = self._project_row(project_key)
+        if project is None:
+            return None
+        project_id = int(project["id"])
+        row = self.conn.execute(
+            """
+            SELECT
+              p.updated_at AS project_updated_at,
+              (SELECT MAX(o.updated_at) FROM observations o WHERE o.project_id = p.id) AS latest_observation_at,
+              (SELECT MAX(d.updated_at) FROM decisions d WHERE d.project_id = p.id) AS latest_decision_at,
+              (SELECT MAX(c.generated_at) FROM context_sync_events c WHERE c.project_id = p.id) AS latest_sync_at,
+              (SELECT MAX(h.generated_at) FROM health_reports h WHERE h.project_id = p.id) AS latest_health_at,
+              (SELECT COUNT(*) FROM memory_policies mp WHERE mp.project_id = p.id) AS policies_count,
+              (SELECT COUNT(*) FROM project_inheritances pi WHERE pi.target_project_id = p.id) AS inheritances_count,
+              (SELECT COUNT(*) FROM repair_events re WHERE re.project_id = p.id) AS repairs_count
+            FROM projects p
+            WHERE p.id = ?
+            """,
+            (project_id,),
+        ).fetchone()
+        data = dict(row)
+        data["project_key"] = project_key
+        return data
 
     def operational_observations(self, project_key: str, limit: int = 80) -> list[dict[str, Any]]:
         return self._operational_observations(project_key, limit=limit)

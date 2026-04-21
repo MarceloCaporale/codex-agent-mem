@@ -8,15 +8,24 @@ codex-agent-mem conserva memoria duradera fuera del runtime del modelo, comprime
 
 Baseline publica. Construida en slices chicos y verificables, todavia en evolucion, pero ya pensada para uso real.
 
-## Novedades de v0.9.0
+## Novedades de v1.0.0
 
-- policies de memoria para inclusion y exclusion explicita
-- inheritance selectiva entre proyectos sin mezclar continuidad a ciegas
-- propuestas de repair y repairs derivados desde health
-- visibilidad de gobernanza en la UI local y en la documentacion
-- runtime hardening para hosts Codex de larga vida: idle timeout, cierre por senales, SQLite con `WAL`/`busy_timeout` y `mem_health_runtime`
+- perfiles MCP de bajo impacto: `minimal`, `standard` y `full`
+- modo `--read-only` real para bloquear tools mutantes y evitar escrituras laterales
+- inicializacion lazy de SQLite para conexiones MCP no usadas
+- respuestas MCP compactas por defecto, conservando el payload completo en `structuredContent`
+- `known_pack_hash` / `not_modified` para no reenviar packs de continuidad sin cambios
+- diagnostico runtime con heartbeat, spawn-storm warning, telemetria opcional y daemon/bridge stdio opcional
 
-Releases visibles: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+Releases visibles: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+
+## Resultados verificables
+
+`codex-agent-mem` incluye un sandbox reproducible de verificacion y un export publico de evidencia para v1.0.0.
+
+La corrida publica actual fue ejecutada con **Codex Desktop, modelo GPT-5.4, razonamiento xhigh** sobre fixtures sinteticos. Mide compresion de contexto, evitacion de reenvio con `known_pack_hash`, inicializacion lazy, perfil minimo de tools, seguridad read-only, response diet, telemetria local, control de cierre y un ejemplo con sub-agentes.
+
+Ver: [Verification Evidence](./docs/verification/) y [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md).
 
 ## Lo que ofrece
 
@@ -41,7 +50,7 @@ Sirve para auditorias largas, continuidad de proyectos complejos y sesiones dond
 
 ## Estado
 
-`0.9.0` es la release base actual.
+`1.0.0` es la release base actual.
 
 Hoy funciona:
 

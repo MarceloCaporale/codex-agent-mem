@@ -8,15 +8,24 @@ codex-agent-mem hält dauerhafte Projektkontinuität außerhalb des Modell-Runti
 
 Öffentliche Baseline. In kleinen, testbaren Slices gebaut, noch in Weiterentwicklung, aber bereits auf reale Nutzung ausgerichtet.
 
-## Neu in v0.9.0
+## Neu in v1.0.0
 
-- gesteuerte Memory-Policies für explizite Inklusion und Exklusion
-- selektive Inheritance zwischen Projekten ohne blindes Vermischen von Kontinuität
-- Repair-Vorschläge und abgeleitete Repairs auf Basis von Health
-- Governance-Sichtbarkeit in lokaler UI und Dokumentation
-- Runtime-Hardening für langlebige Codex-Hosts: Idle-Timeout, signalbewusster Shutdown, SQLite `WAL`/`busy_timeout` und `mem_health_runtime`
+- Low-Impact-MCP-Profile: `minimal`, `standard` und `full`
+- echtes `--read-only`, das mutierende Tools blockiert und Nebenwrites vermeidet
+- Lazy SQLite Initialization für ungenutzte MCP-Verbindungen
+- kompakte MCP-Antworttexte per Default, vollständiger Payload bleibt in `structuredContent`
+- `known_pack_hash` / `not_modified`, damit unveränderte Continuity-Packs nicht erneut gesendet werden
+- Runtime-Diagnostik mit Heartbeat, Spawn-Storm-Warnung, optionaler Telemetrie und optionalem Daemon/stdio-Bridge
 
-Sichtbare Releases: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+Sichtbare Releases: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+
+## Verifizierbare Ergebnisse
+
+`codex-agent-mem` enthält eine reproduzierbare Verification-Sandbox und einen öffentlichen Evidence-Export für v1.0.0.
+
+Der aktuelle öffentliche Lauf wurde mit **Codex Desktop, Modell GPT-5.4, Reasoning Effort xhigh** auf synthetischen Fixtures ausgeführt. Er misst Kontextkompression, Wiederverwendungsprüfung mit `known_pack_hash`, Lazy Initialization, minimales Tool-Profil, Read-only-Sicherheit, Response Diet, lokale Telemetrie, Closure Control und ein Beispiel mit Sub-Agents.
+
+Siehe: [Verification Evidence](./docs/verification/) und [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md).
 
 ## Was es liefert
 
@@ -41,7 +50,7 @@ Geeignet für lange Audits, komplexe Projektkontinuität und Sessions, in denen 
 
 ## Status
 
-`0.9.0` ist die aktuelle Basis-Release.
+`1.0.0` ist die aktuelle Basis-Release.
 
 Was heute funktioniert:
 

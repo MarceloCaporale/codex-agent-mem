@@ -12,7 +12,7 @@ The strongest current diagnosis is:
 
 In other words:
 
-`codex-agent-mem` needed runtime hardening, and `v0.9.0` adds it, but the broader Desktop lifecycle issue sits above any one MCP.
+`codex-agent-mem` needed runtime hardening. `v0.9.0` added the first defensive lifecycle layer, and `v1.0.0` adds lower-impact runtime modes, lazy initialization, compact responses, pack-hash reuse, heartbeat diagnostics, optional telemetry, and an optional daemon/stdio bridge. The broader Desktop lifecycle issue still sits above any one MCP.
 
 ## What was observed
 
@@ -43,7 +43,7 @@ If the host keeps too many MCP processes alive:
 
 So the right product response is not denial. It is defensive runtime behavior.
 
-## What `v0.9.0` already hardens
+## What `v0.9.0` and `v1.0.0` harden
 
 `v0.9.0` adds several runtime-facing defenses:
 
@@ -61,13 +61,24 @@ So the right product response is not denial. It is defensive runtime behavior.
 
 These changes do not claim to fix Codex Desktop itself. They reduce unnecessary work, shorten orphan lifetime, and leave better evidence behind.
 
+`v1.0.0` adds a lower-impact operating mode:
+
+- `--profile minimal|standard|full`
+- `--read-only`
+- compact `content.text` responses with full data preserved in `structuredContent`
+- lazy SQLite initialization for cheap unused connections
+- `known_pack_hash` / `not_modified` for unchanged continuity packs
+- heartbeat-based `same_db_process_count` and `spawn_storm_warning`
+- optional bounded local telemetry
+- optional `codex-agent-mem-daemon` plus stdio bridge mode
+
 ## Practical guidance today
 
 Until the long-lived Desktop lifecycle is cleaner, the safest operating guidance is:
 
 1. Keep the active MCP set as small as possible in Codex Desktop.
 2. Prefer `codex exec --ephemeral` for controlled or long-running flows.
-3. Keep `codex-agent-mem` on `v0.9.0` or newer.
+3. Keep `codex-agent-mem` on `v1.0.0` or newer when using Codex Desktop heavily.
 4. Turn on `--sync-project-doc` only when you actually want automatic `AGENTS.md` reinjection.
 5. Use `mem_health_runtime` when diagnosing process buildup.
 6. Fully restart Codex Desktop if long-lived degradation returns.

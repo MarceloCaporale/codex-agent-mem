@@ -21,6 +21,10 @@ And on top of that, it now supports governed memory selection:
 
 6. policies, inheritance links, and repair flows to keep continuity explicit instead of silently mixing memory
 
+For low-impact Desktop and long-running hosts, v1.0 also adds:
+
+7. read-only MCP mode, profile-based tool surfaces, compact responses, lazy SQLite initialization, pack-hash reuse, runtime heartbeat diagnostics, optional telemetry, and an optional local daemon/stdio bridge
+
 ## Capture flow
 
 - Codex emits `agent-turn-complete`
@@ -65,6 +69,8 @@ And on top of that, it now supports governed memory selection:
 
 `mem_context_pack` also supports `budget=auto`, so the runtime can select the smallest fitting reinjection profile instead of always forcing one fixed budget.
 
+In v1.0, `mem_context_pack` also returns a stable `pack_hash` and accepts `known_pack_hash`. If the generated continuity pack did not change, the server can return a compact `not_modified=true` response instead of resending the full pack.
+
 ## Generate the config snippet
 
 ```bash
@@ -80,9 +86,30 @@ The generated config uses:
 - `notify`
 - `[mcp_servers."codex-agent-mem"]`
 - `--idle-timeout-seconds` for defensive stdio cleanup
+- `--profile` for profile-aware tool surfaces
+- `--response-mode` for compact, balanced, or verbose MCP text responses
 - per-tool `approval_mode = "approve"` for the read-only retrieval tools
 - Python module targets under `codex_agent_mem`
 - snapshot, audit, and read-only governance tools approved alongside the continuity tools
+
+For a lower-impact Codex Desktop profile, generate:
+
+```bash
+codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only
+```
+
+```powershell
+codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only
+```
+
+That exposes only:
+
+- `mem_context_pack`
+- `mem_open_work`
+- `mem_completion_check`
+- `mem_health_runtime`
+
+and disables mutating MCP tools.
 
 `--sync-project-doc` is now opt-in. Add it to `notify` only if you want automatic `AGENTS.md` reinjection in the working directory.
 
@@ -141,13 +168,40 @@ Observed pattern:
 - the long-lived Codex Desktop app-server can retain multiple MCP roots across threads or workspace changes
 - that makes every active MCP more expensive when the host stops reusing or cleaning them properly
 
-What `codex-agent-mem` v0.9.0 does about it:
+What `codex-agent-mem` does about it:
 
 - makes `--sync-project-doc` opt-in instead of default
 - adds an explicit stdio idle timeout
 - adds signal-aware shutdown and explicit SQLite close
 - reports runtime state through `mem_health_runtime`
 - hardens SQLite defaults for concurrent local use
+- supports `--profile minimal --read-only` for lower-impact Desktop setups
+- avoids opening SQLite for `initialize`, `tools/list`, and `mem_health_runtime`
+- avoids resending unchanged context packs when `known_pack_hash` matches
+- can run behind an optional local daemon if the host opens many stdio connections
+
+## Optional daemon mode
+
+Stdio remains the default and most compatible transport.
+
+If a host repeatedly opens MCP stdio connections, you can run a local daemon:
+
+```bash
+codex-agent-mem-daemon --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db" --profile minimal --read-only
+```
+
+Then point the stdio bridge at it:
+
+```bash
+codex-agent-mem-mcp --daemon-url http://127.0.0.1:37773 --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
+On Windows PowerShell:
+
+```powershell
+codex-agent-mem-daemon --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db --profile minimal --read-only
+codex-agent-mem-mcp --daemon-url http://127.0.0.1:37773 --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
 
 That does not claim to fix the host bug. It reduces the blast radius and makes the MCP easier to audit.
 

@@ -21,7 +21,7 @@ This document captures the metadata and phrasing that best describes the current
 
 ## Recommended release framing
 
-`0.9.0` is the current baseline release for `codex-agent-mem`: a local-first MCP continuity layer for Codex built on SQLite, notify-based capture, hierarchical Definition of Done tracking, deterministic closure control, recent-change deltas, scope-guard retrieval, auto-budget compact AGENTS reinjection, operational-state carry-forward, false-completion guardrails, provenance-aware auditing, health diagnostics, project snapshots, governed memory selection, selective inheritance, repair events, MCP retrieval, and a local inspection UI.
+`1.0.0` is the current baseline release for `codex-agent-mem`: a local-first MCP continuity layer for Codex built on SQLite, notify-based capture, hierarchical Definition of Done tracking, deterministic closure control, recent-change deltas, scope-guard retrieval, auto-budget compact AGENTS reinjection, operational-state carry-forward, false-completion guardrails, provenance-aware auditing, health diagnostics, project snapshots, governed memory selection, selective inheritance, repair events, low-impact MCP profiles, read-only runtime mode, compact MCP responses, pack-hash reuse, lazy SQLite initialization, runtime heartbeat diagnostics, optional telemetry, optional daemon/stdio bridge, MCP retrieval, and a local inspection UI.
 
 ## Search phrases this repo should naturally support
 

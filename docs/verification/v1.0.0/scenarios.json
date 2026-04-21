@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "fixture_kind": "synthetic_public_verification",
+  "privacy": "No private chats, real sessions, credentials, or user project data.",
+  "execution_context": {
+    "agent_runtime": "Codex Desktop",
+    "model": "GPT-5.4",
+    "reasoning_effort": "xhigh"
+  },
+  "scenarios": [
+    {
+      "id": "small_project_continuity",
+      "title": "Small project continuity",
+      "plain_language": "A short project where the agent should remember objective, constraints and open work without repeating the whole discussion.",
+      "turn_count": 4,
+      "detail_repetitions": 4,
+      "include_blocker": false,
+      "include_completion_claim": false,
+      "subagents": []
+    },
+    {
+      "id": "medium_agent_workflow",
+      "title": "Medium agent workflow",
+      "plain_language": "A realistic multi-step implementation with repeated decisions, pending work and DoD requirements.",
+      "turn_count": 9,
+      "detail_repetitions": 12,
+      "include_blocker": true,
+      "include_completion_claim": false,
+      "subagents": []
+    },
+    {
+      "id": "large_repeated_audit",
+      "title": "Large repeated audit",
+      "plain_language": "A long audit where the same constraints and decisions would normally be re-sent many times.",
+      "turn_count": 18,
+      "detail_repetitions": 26,
+      "include_blocker": true,
+      "include_completion_claim": true,
+      "subagents": []
+    },
+    {
+      "id": "subagent_handoff_example",
+      "title": "Sub-agent handoff example",
+      "plain_language": "A project where an explorer sub-agent audits context and a worker sub-agent implements a bounded change.",
+      "turn_count": 12,
+      "detail_repetitions": 16,
+      "include_blocker": true,
+      "include_completion_claim": true,
+      "subagents": [
+        {
+          "role": "explorer",
+          "task": "Audit the memory surface and identify which facts must never be dropped."
+        },
+        {
+          "role": "worker",
+          "task": "Implement the bounded runtime-efficiency patch without touching documentation."
+        }
+      ]
+    }
+  ]
+}

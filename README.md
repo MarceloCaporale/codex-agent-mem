@@ -8,15 +8,24 @@ Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中�
 
 Public baseline. Built in small, testable slices and still evolving, but already aligned for real use.
 
-## What’s new in v0.9.0
+## What’s new in v1.0.0
 
-- governed memory policies for explicit inclusion and exclusion
-- selective inheritance across projects without blindly mixing continuity
-- governed repair proposals and repair events derived from health
-- governance visibility in the local inspector and public docs
-- runtime hardening for long-lived Codex hosts: idle timeout, signal-aware cleanup, SQLite `WAL`/`busy_timeout`, and `mem_health_runtime`
+- low-impact MCP runtime profiles: `minimal`, `standard`, and `full`
+- real `--read-only` mode that blocks mutating tools and avoids closure writes
+- lazy SQLite initialization so unused MCP connections stay cheap
+- compact MCP responses by default, with full payloads kept in `structuredContent`
+- `known_pack_hash` / `not_modified` support so unchanged continuity packs are not resent
+- runtime heartbeat diagnostics, spawn-storm warning, optional telemetry, and an optional daemon/stdio bridge
 
-Latest releases: [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18) | [v0.8.0 Persistence & Observability](./CHANGELOG.md#080---2026-04-18)
+Latest releases: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+
+## Verifiable Results
+
+`codex-agent-mem` includes a reproducible verification sandbox and a public evidence export for v1.0.0.
+
+The current public run was executed with **Codex Desktop, model GPT-5.4, reasoning effort xhigh** on synthetic fixtures. It reports context compression, repeated-pack avoidance with `known_pack_hash`, lazy initialization, minimal tool surface, read-only safety, response diet, local telemetry, closure control, and a sub-agent handoff example.
+
+See: [Verification Evidence](./docs/verification/) and [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md).
 
 ## What you get
 
@@ -43,7 +52,7 @@ Built for long audits, multi-step project continuity, and workflows where the re
 
 ## Status
 
-`0.9.0` is the current baseline release.
+`1.0.0` is the current baseline release.
 
 What works today:
 
@@ -68,6 +77,15 @@ What works today:
 - governed memory policies through `mem_policy_validate`, `mem_policy_add`, `mem_policy_list`, and `mem_policy_remove`
 - selective inheritance links through `mem_inheritance_add`, `mem_inheritance_list`, and `mem_inheritance_remove`
 - governed repair proposals and derived repair events through `mem_repair_propose` and `mem_repair_apply`
+- low-impact MCP profiles through `--profile minimal|standard|full`
+- read-only MCP mode through `--read-only`
+- compact MCP response text with full `structuredContent`
+- `known_pack_hash` / `not_modified` continuity-pack reuse
+- short in-process caching for expensive read tools
+- lazy SQLite initialization for cheap unused MCP connections
+- enriched runtime health with profile, mutability, cache, lazy-init, heartbeat, and spawn-storm diagnostics
+- optional local runtime telemetry through `--telemetry-mode off|summary|debug`
+- optional local daemon through `codex-agent-mem-daemon` and stdio bridge mode with `--daemon-url`
 - FastAPI inspection API
 - local inspection UI at `/ui`, including recent changes, scope guard, provenance, health, snapshots, and governance state
 - local policy CLI with `codex-agent-mem-policy`
@@ -317,6 +335,7 @@ Important: this is not a fixed guarantee per prompt. If the compact pack is not 
 - [AGENTS.md](./AGENTS.md) - repo map and operational guide for coding agents
 - [docs/quickstart.md](./docs/quickstart.md) - shortest install and first-run path
 - [docs/codex-integration.md](./docs/codex-integration.md) - how notify and MCP fit into Codex
+- [docs/verification](./docs/verification/) - reproducible public metrics and v1.0.0 evidence
 - [docs/support-matrix.md](./docs/support-matrix.md) - current support and known gaps
 - [docs/codex-desktop-lifecycle-note.md](./docs/codex-desktop-lifecycle-note.md) - observed Codex Desktop lifecycle behavior and practical mitigations
 - [docs/design-decisions.md](./docs/design-decisions.md) - explicit product and architecture decisions

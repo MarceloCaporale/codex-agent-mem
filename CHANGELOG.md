@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0 - 2026-04-21
+
+- Added low-impact MCP runtime modes with `--profile minimal|standard|full`, `--read-only`, and enriched `mem_health_runtime` fields for profile, mutability, cache, lazy initialization, and spawn-storm diagnostics.
+- Added response diet support: compact `content.text` by default, full data retained in `structuredContent`, and `--response-mode compact|balanced|verbose` for debugging or compatibility needs.
+- Added lazy store initialization so `initialize`, `tools/list`, and `mem_health_runtime` can run without opening SQLite.
+- Added short in-process caching for expensive read tools using project revision fingerprints instead of SQLite file mtimes.
+- Added stable `pack_hash` support for `mem_context_pack`, plus `known_pack_hash` / `not_modified` responses to avoid resending unchanged continuity packs.
+- Added local heartbeat-based runtime diagnostics, `same_db_process_count`, and `spawn_storm_warning` without adding a process-inspection dependency.
+- Added optional local runtime telemetry with bounded `events.jsonl` output and `off|summary|debug` modes.
+- Added an optional local MCP daemon and stdio bridge through `codex-agent-mem-daemon` and `codex-agent-mem-mcp --daemon-url ...`; stdio remains the default.
+- Added reproducible public verification evidence under `docs/verification/`, including token-savings metrics, lazy-init checks, read-only safety, response diet, telemetry smoke, and a sub-agent handoff scenario.
+
 ## 0.9.0 - 2026-04-18
 
 - Added governed memory policies for inclusion and exclusion control through `mem_policy_validate`, `mem_policy_add`, `mem_policy_list`, and `mem_policy_remove`.

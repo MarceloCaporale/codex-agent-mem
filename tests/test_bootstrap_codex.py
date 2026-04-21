@@ -46,3 +46,24 @@ def test_bootstrap_codex_snippet_can_opt_into_project_doc_sync():
     )
     assert "--sync-project-doc" in snippet
     assert "'180'" in snippet
+
+
+def test_bootstrap_codex_snippet_can_emit_minimal_read_only_profile():
+    snippet = build_codex_toml_snippet(
+        python_exe=r"C:\Tools\Python\python.exe",
+        db_path=Path(r"C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db"),
+        mcp_profile="minimal",
+        mcp_read_only=True,
+        response_mode="compact",
+    )
+    assert "--profile" in snippet
+    assert "'minimal'" in snippet
+    assert "--read-only" in snippet
+    assert "--response-mode" in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_context_pack]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_open_work]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_completion_check]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_health_runtime]' in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_search]' not in snippet
+    assert '[mcp_servers."codex-agent-mem".tools.mem_snapshot_create]' not in snippet
+    assert snippet.count('approval_mode = "approve"') == 4

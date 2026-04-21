@@ -19,21 +19,14 @@ args = [
   'codex_agent_mem.mcp_stdio',
   '--idle-timeout-seconds',
   '300',
+  '--profile',
+  'minimal',
+  '--response-mode',
+  'compact',
+  '--read-only',
   '--db-path',
   'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db'
 ]
-
-[mcp_servers."codex-agent-mem".tools.mem_search]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_get]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_recent]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_project_brief]
-approval_mode = "approve"
 
 [mcp_servers."codex-agent-mem".tools.mem_open_work]
 approval_mode = "approve"
@@ -57,25 +50,4 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers."codex-agent-mem".tools.mem_health_runtime]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_snapshot_list]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_snapshot_create]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_snapshot_restore]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_policy_list]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_policy_validate]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_inheritance_list]
-approval_mode = "approve"
-
-[mcp_servers."codex-agent-mem".tools.mem_repair_propose]
 approval_mode = "approve"
