@@ -19,6 +19,15 @@ codex-agent-mem hält dauerhafte Projektkontinuität außerhalb des Modell-Runti
 
 Sichtbare Releases: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
 
+## Snapshot
+
+| Szenario | Quell-Tokens | Pack-Tokens | Ersparnis | `not_modified` | Tools | Lazy init | Read-only |
+|---|---:|---:|---:|---|---:|---|---|
+| Small project continuity | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
+| Medium agent workflow | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
+| Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
+| Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
+
 ## Verifizierbare Ergebnisse
 
 `codex-agent-mem` enthält eine reproduzierbare Verification-Sandbox und einen öffentlichen Evidence-Export für v1.0.0.
