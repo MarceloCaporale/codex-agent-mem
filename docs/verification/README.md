@@ -4,6 +4,8 @@ This directory contains reproducible, sanitized evidence for codex-agent-mem.
 
 The current v1.0.0 public run was executed with Codex Desktop, model GPT-5.4, reasoning effort xhigh.
 
+All verification data is synthetic. The runner uses local SQLite files and local JSON/Markdown outputs only; it does not send memory, prompts, telemetry, or project data to external servers.
+
 The v1.0.0 verification set covers:
 
 - context compression and token savings;
@@ -21,3 +23,4 @@ Start here:
 - `v1.0.0/RESULTS.md`
 - `v1.0.0/results.json`
 - `v1.0.0/METHODOLOGY.md`
+- `v1.0.0/checksums_sha256.txt`

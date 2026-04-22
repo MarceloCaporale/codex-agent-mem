@@ -17,6 +17,9 @@ Execution context:
 | Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
 | Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
 
+Across these fixtures: ~22,950 source tokens -> ~920 pack tokens.
+Approximate repeated-context reduction: 95.99% (~22,030 tokens not resent).
+
 ## Token savings by scenario
 
 ### Small project continuity
@@ -108,7 +111,7 @@ Text shown to the model can be kept compact while the structured payload remains
 
 | Scenario | Compact text chars | Balanced text chars | Verbose text chars |
 |---|---:|---:|---:|
-| Small project continuity | 160 | 209 | 20,566 |
+| Small project continuity | 160 | 209 | 20,565 |
 | Medium agent workflow | 160 | 209 | 42,793 |
 | Large repeated audit | 160 | 209 | 75,965 |
 | Sub-agent handoff example | 160 | 209 | 54,476 |

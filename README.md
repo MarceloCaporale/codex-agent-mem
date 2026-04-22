@@ -6,6 +6,10 @@ Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中�
 
 `codex-agent-mem` keeps durable project memory outside the model runtime, compresses continuity into smaller working packs, and carries forward operational state so Codex can resume with less repetition, fewer false “done” claims, and more control over what stays in context.
 
+Everything is stored and processed locally by this MCP: SQLite database, FTS index, snapshots, telemetry metadata, and the optional inspector UI. `codex-agent-mem` does not send your memory, project data, prompts, or telemetry to any external server.
+
+Born for Codex and GPT-5.x workflows, `codex-agent-mem` has grown into a portable MCP memory layer for MCP-compatible agent runtimes such as Codex CLI, Codex Desktop, Gemini CLI with Gemini 3.1 Pro, Claude Code with Opus 4.7 or Sonnet 4.6, and custom local agent stacks. It lives locally, keeps memory auditable and pull-based, and does not send your stored memory to any external service.
+
 Public baseline. Built in small, testable slices and still evolving, but already aligned for real use.
 
 ## What’s new in v1.0.0
@@ -28,6 +32,16 @@ Latest releases: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | 
 | Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
 | Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
 
+Across these reproducible fixtures, repeated operational context was reduced from ~22,950 source tokens to ~920 memory-pack tokens, an approximate 96.0% reduction. This is not a universal guarantee; it shows the effect when an agent would otherwise resend the same project continuity.
+
+### Runtime validation snapshot
+
+| Runtime | Setup | Observed metrics | Result |
+|---|---|---|---|
+| Codex Desktop | GPT-5.4, reasoning effort xhigh, synthetic v1.0 fixtures | ~22,950 source tokens -> ~920 pack tokens, ~96.0% repeated-context reduction, `not_modified=true` on repeated packs | Public reproducible verification |
+| Gemini CLI | Gemini 3.1 Pro, `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | stable process, request counter increased as expected, `mem_search` returned object root `{items, count}` with `count=2` | Live MCP validation passed |
+| Claude Code | Claude Opus 4.7, `codex-agent-mem` MCP stdio only, `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2`, `spawn_storm_warning=false`, `mem_search count=2` | Live MCP validation passed |
+
 ## Verifiable Results
 
 `codex-agent-mem` includes a reproducible verification sandbox and a public evidence export for v1.0.0.
@@ -36,6 +50,16 @@ The current public run was executed with **Codex Desktop, model GPT-5.4, reasoni
 
 See: [Verification Evidence](./docs/verification/) and [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md).
 
+## Claude Code and claude-mem
+
+`codex-agent-mem` runs in Claude Code as a standard MCP stdio server. It does not install session-start hooks, stop hooks, or automatic post-turn summarization. Memory is retrieved on demand through MCP tools such as `mem_context_pack`, `mem_search`, `mem_open_work`, and `mem_completion_check`.
+
+If you already use `claude-mem`, both tools can technically coexist. For low-latency workflows, use one active memory layer at a time. In local validation, `codex-agent-mem` alone kept the runtime compact (`same_db_process_count=2`, `spawn_storm_warning=false`). Running it alongside `claude-mem` increased visible tool surface to 61 tools, added a session-start memory block of about 6,995 tokens, and showed post-turn stop-hook delays. This does not break `codex-agent-mem`, but it makes results harder to compare and can increase latency.
+
+Use `codex-agent-mem` when you prefer local-first, auditable, pull-based memory with explicit retrieval and deterministic closure checks. Use additional memory plugins only when you intentionally want their automatic hook-based behavior.
+
+For token-sensitive Claude Code workflows, `codex-agent-mem` is designed to be cheap by default: no session-start injection, no stop-hook summarization, compact responses, explicit budgets, and `pack_hash` / `not_modified` short-circuiting for unchanged packs.
+
 ## What you get
 
 ### Continuity
@@ -43,7 +67,7 @@ See: [Verification Evidence](./docs/verification/) and [v1.0.0 Results](./docs/v
 - **Compact continuity, not raw replay**: turns repeated session context into smaller `AGENTS.md` working packs when compression is actually favorable
 - **Operational state that survives sessions**: keeps objective, constraints, pending work, blockers, Definition of Done, and scope guardrails visible and reusable
 - **Codex-native integration**: built around `notify`, MCP stdio, optional `AGENTS.md` sync, and defensive runtime cleanup for real Codex workflows
-- **Practical token savings**: often reduces repeated continuity replay by roughly `20%` to `55%` when the compact pack wins
+- **Practical token savings**: reduces repeated continuity replay when the compact pack wins; the public v1.0 fixtures show 88% to 97% reduction on repeated-context scenarios
 
 ### Closure Control
 
@@ -53,7 +77,7 @@ See: [Verification Evidence](./docs/verification/) and [v1.0.0 Results](./docs/v
 ### Governance and Audit
 
 - **Governed memory selection**: applies project policies, inheritance rules, and repair events instead of mixing everything blindly
-- **Fully local and auditable**: SQLite + FTS5, provenance, health diagnostics, snapshots, and a local inspector UI with no external memory service
+- **Fully local and auditable**: SQLite + FTS5, provenance, health diagnostics, snapshots, and a local inspector UI with no external memory service and no outbound memory sync
 
 Key docs: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Codex Integration](./docs/codex-integration.md) | [Codex Desktop Note](./docs/codex-desktop-lifecycle-note.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md)
 
@@ -239,7 +263,22 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 
 That prints the `notify` block, the `[mcp_servers."codex-agent-mem"]` block, an explicit stdio idle-timeout, and read-only MCP tool approvals you can paste into `~/.codex/config.toml`.
 
+For long-lived Codex Desktop sessions, prefer a longer MCP idle timeout such as `--idle-timeout-seconds 1800` so the Desktop thread is less likely to keep a closed stdio transport. For short CLI or `codex exec` runs, `300` seconds is usually enough and keeps cleanup faster.
+
 Automatic `AGENTS.md` reinjection is now opt-in. Add `--sync-project-doc` to the `notify` command only if you want generated working-memory blocks written back into the working directory.
+
+## How agents should use it
+
+Once configured, the agent should use `codex-agent-mem` proactively when continuity matters. You should not need to repeat "use the memory MCP" every few turns.
+
+Recommended pattern:
+
+- start with `mem_context_pack` when prior decisions, pending work, blockers, constraints, or project state may matter
+- pass `known_pack_hash` on repeated checks so unchanged packs return `not_modified` instead of resending context
+- use `mem_search` only when the compact pack is not enough
+- before claiming done, call `mem_open_work` and `mem_completion_check` for implementation, validation, publishing, migration, or documentation tasks
+
+This is where the practical token savings come from: compact continuity first, targeted expansion only when needed, and no repeated pack when nothing changed.
 
 Example files also live under [examples/codex](./examples/codex/).
 
@@ -272,6 +311,8 @@ codex-agent-mem-mcp --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
 The current MCP transport is stdio. That means one process per host connection is normal; it is not a singleton daemon. The defensive idle timeout is there to let unused or orphaned instances exit cleanly.
+
+Recommended defaults: use a longer timeout for Codex Desktop sessions, for example `1800` seconds, and a shorter timeout for CLI/ephemeral runs, for example `300` seconds.
 
 Manually rebuild the generated continuity block for one directory:
 
@@ -311,16 +352,16 @@ In plain language: this usually aims to cut down the amount of repeated context 
 
 What we can say honestly from local validation:
 
-- in favorable cases, the compact pack reduced replayed context by about `20%` to `55%`
-- many real runs landed around `one-third to one-half less` repeated context
-- if a workflow would otherwise need to replay about `1000` tokens of prior context, a reasonable expectation is often something more like `450` to `800` tokens instead
+- the public v1.0 fixtures reduced repeated context from ~22,950 source tokens to ~920 memory-pack tokens, about `96.0%` in that controlled scenario
+- individual repeated-context scenarios in the fixture suite landed between `88%` and `97%` reduction
+- live runtime checks in Gemini CLI and Claude Code confirmed compact MCP retrieval, stable process lifecycle, read-only mode, and object-root `mem_search` responses
 
-Examples from local validation:
+Examples from the public v1.0 verification sandbox:
 
-- `401 -> 218` approximate tokens
-- `312 -> 144` approximate tokens
-- `290 -> 227` approximate tokens
-- `337 -> 240` approximate tokens
+- `1,841 -> 216` approximate tokens
+- `4,855 -> 233` approximate tokens
+- `9,731 -> 232` approximate tokens
+- `6,523 -> 239` approximate tokens
 
 Important: this is not a fixed guarantee per prompt. If the compact pack is not actually smaller than the source context, `codex-agent-mem` skips reinjection instead of pretending it saved tokens.
 

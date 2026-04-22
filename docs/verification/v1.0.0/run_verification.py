@@ -32,6 +32,14 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def copy2_if_different(src: Path, dst: Path) -> None:
+    src_resolved = src.resolve()
+    dst_resolved = dst.resolve() if dst.exists() else dst
+    if src_resolved == dst_resolved:
+        return
+    shutil.copy2(src, dst)
+
+
 def approx_tokens(text: str) -> int:
     return max(1, round(len(text) / 4))
 
@@ -393,6 +401,7 @@ def write_methodology(path: Path, fixtures_hash: str, runner_hash: str) -> None:
                 "- Model: GPT-5.4",
                 "- Reasoning effort: xhigh",
                 "- Data: synthetic fixtures only",
+                "- Network / privacy: local files and local SQLite only; no memory, prompts, telemetry, or project data are sent to external servers by this runner",
                 "",
                 "## What is measured",
                 "",
@@ -434,6 +443,8 @@ def write_public_readme(path: Path) -> None:
                 "",
                 "The current v1.0.0 public run was executed with Codex Desktop, model GPT-5.4, reasoning effort xhigh.",
                 "",
+                "All verification data is synthetic. The runner uses local SQLite files and local JSON/Markdown outputs only; it does not send memory, prompts, telemetry, or project data to external servers.",
+                "",
                 "The v1.0.0 verification set covers:",
                 "",
                 "- context compression and token savings;",
@@ -451,6 +462,7 @@ def write_public_readme(path: Path) -> None:
                 "- `v1.0.0/RESULTS.md`",
                 "- `v1.0.0/results.json`",
                 "- `v1.0.0/METHODOLOGY.md`",
+                "- `v1.0.0/checksums_sha256.txt`",
                 "",
             ]
         ),
@@ -490,6 +502,16 @@ def write_results_markdown(path: Path, payload: dict[str, Any]) -> None:
                 blocked=str(item["read_only_safety"]["blocked"]).lower(),
             )
         )
+    total_source = sum(item["context_compression"]["source_tokens"] for item in payload["scenarios"])
+    total_pack = sum(item["context_compression"]["pack_tokens"] for item in payload["scenarios"])
+    total_saved = total_source - total_pack
+    lines.extend(
+        [
+            "",
+            f"Across these fixtures: ~{total_source:,} source tokens -> ~{total_pack:,} pack tokens.",
+            f"Approximate repeated-context reduction: {savings_percent(total_source, total_pack):.2f}% (~{total_saved:,} tokens not resent).",
+        ]
+    )
     lines.extend(["", "## Token savings by scenario", ""])
     for item in payload["scenarios"]:
         comp = item["context_compression"]
@@ -580,12 +602,12 @@ def copy_public_export(run_dir: Path, public_dir: Path, export_dir: Path, fixtur
     write_public_readme(public_dir.parent / "README.md")
     write_public_readme(export_dir.parent / "README.md")
     for name in ("RESULTS.md", "results.json", "METHODOLOGY.md", "checksums_sha256.txt"):
-        shutil.copy2(run_dir / name, public_dir / name)
-        shutil.copy2(run_dir / name, export_dir / name)
-    shutil.copy2(fixtures_path, public_dir / "scenarios.json")
-    shutil.copy2(fixtures_path, export_dir / "scenarios.json")
-    shutil.copy2(runner_path, public_dir / "run_verification.py")
-    shutil.copy2(runner_path, export_dir / "run_verification.py")
+        copy2_if_different(run_dir / name, public_dir / name)
+        copy2_if_different(run_dir / name, export_dir / name)
+    copy2_if_different(fixtures_path, public_dir / "scenarios.json")
+    copy2_if_different(fixtures_path, export_dir / "scenarios.json")
+    copy2_if_different(runner_path, public_dir / "run_verification.py")
+    copy2_if_different(runner_path, export_dir / "run_verification.py")
 
 
 def main() -> int:

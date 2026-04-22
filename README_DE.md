@@ -6,6 +6,10 @@ Portable, auditierbare und local-first Memory-Schicht für Codex und Coding-Agen
 
 codex-agent-mem hält dauerhafte Projektkontinuität außerhalb des Modell-Runtimes, komprimiert sie in kleinere Working Packs und trägt Operational State über Sessions hinweg weiter, damit Codex mit weniger Wiederholung, weniger falschem „fertig“ und mehr Kontrolle über den Kontext weiterarbeiten kann.
 
+Alles wird lokal durch dieses MCP gespeichert und verarbeitet: SQLite-Datenbank, FTS-Index, Snapshots, Telemetrie-Metadaten und die optionale Inspector-UI. `codex-agent-mem` sendet Memory, Projektdaten, Prompts oder Telemetrie nicht an externe Server.
+
+`codex-agent-mem` entstand für Codex- und GPT-5.x-Workflows, ist aber zu einer portablen MCP-Memory-Schicht für MCP-kompatible Agent-Runtimes gewachsen, darunter Codex CLI, Codex Desktop, Gemini CLI mit Gemini 3.1 Pro, Claude Code mit Opus 4.7 oder Sonnet 4.6 und eigene lokale Agent-Stacks. Es läuft lokal, hält Memory auditierbar und Pull-basiert und sendet gespeicherte Memory nicht an externe Dienste.
+
 Öffentliche Baseline. In kleinen, testbaren Slices gebaut, noch in Weiterentwicklung, aber bereits auf reale Nutzung ausgerichtet.
 
 ## Neu in v1.0.0
@@ -28,6 +32,16 @@ Sichtbare Releases: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21)
 | Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
 | Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
 
+Über diese reproduzierbaren Fixtures hinweg wurde wiederholter Operational Context von ca. 22.950 Quell-Tokens auf ca. 920 Memory-Pack-Tokens reduziert, also um ungefähr 96,0%. Das ist keine universelle Garantie; es zeigt den Effekt, wenn ein Agent sonst dieselbe Projektkontinuität erneut senden würde.
+
+### Runtime-Validierungs-Snapshot
+
+| Runtime | Setup | Beobachtete Metriken | Ergebnis |
+|---|---|---|---|
+| Codex Desktop | GPT-5.4, Reasoning Effort xhigh, synthetische v1.0-Fixtures | ca. 22.950 Quell-Tokens -> ca. 920 Pack-Tokens, ca. 96,0% weniger wiederholter Kontext, `not_modified=true` bei wiederholten Packs | Öffentliche reproduzierbare Verifikation |
+| Gemini CLI | Gemini 3.1 Pro, `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | stabiler Prozess, Request-Zähler stieg wie erwartet, `mem_search` gab Objektwurzel `{items, count}` mit `count=2` zurück | Live-MCP-Validierung bestanden |
+| Claude Code | Claude Opus 4.7, nur `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | Requests `3 -> 8`, Lazy init `false -> true`, `same_db_process_count=2`, `spawn_storm_warning=false`, `mem_search count=2` | Live-MCP-Validierung bestanden |
+
 ## Verifizierbare Ergebnisse
 
 `codex-agent-mem` enthält eine reproduzierbare Verification-Sandbox und einen öffentlichen Evidence-Export für v1.0.0.
@@ -36,6 +50,16 @@ Der aktuelle öffentliche Lauf wurde mit **Codex Desktop, Modell GPT-5.4, Reason
 
 Siehe: [Verification Evidence](./docs/verification/) und [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md).
 
+## Claude Code und claude-mem
+
+`codex-agent-mem` läuft in Claude Code als normaler MCP-stdio-Server. Es installiert keine Session-Start-Hooks, Stop-Hooks oder automatische Post-Turn-Zusammenfassungen. Speicher wird bei Bedarf über MCP-Tools wie `mem_context_pack`, `mem_search`, `mem_open_work` und `mem_completion_check` abgerufen.
+
+Wenn du bereits `claude-mem` nutzt, können beide Tools technisch zusammen laufen. Für Low-Latency-Workflows ist es besser, jeweils nur eine aktive Memory-Schicht zu verwenden. In lokaler Validierung blieb `codex-agent-mem` allein kompakt (`same_db_process_count=2`, `spawn_storm_warning=false`). Zusammen mit `claude-mem` stieg die sichtbare Tool-Oberfläche auf 61 Tools, ein Session-Start-Memory-Block von ca. 6.995 Tokens wurde hinzugefügt, und es traten Post-Turn-Stop-Hook-Verzögerungen auf. Das bricht `codex-agent-mem` nicht, erschwert aber den Vergleich von Ergebnissen und kann die Latenz erhöhen.
+
+Nutze `codex-agent-mem`, wenn du lokale, auditierbare, Pull-basierte Memory mit explizitem Retrieval und deterministischen Closure-Checks bevorzugst. Zusätzliche Memory-Plugins solltest du nur einsetzen, wenn du deren automatisches Hook-basiertes Verhalten bewusst willst.
+
+Für token-sensitive Claude-Code-Workflows ist `codex-agent-mem` bewusst günstig voreingestellt: keine Session-Start-Injektion, keine Stop-Hook-Zusammenfassung, kompakte Antworten, explizite Budgets und `pack_hash` / `not_modified` als Short-Circuit für unveränderte Packs.
+
 ## Was es liefert
 
 ### Kontinuität
@@ -43,7 +67,7 @@ Siehe: [Verification Evidence](./docs/verification/) und [v1.0.0 Results](./docs
 - **Kompakte Kontinuität statt rohem Replay**: schreibt kleinere `AGENTS.md`-Packs nur dann, wenn Kompression wirklich günstiger ist
 - **Persistenter Operational State**: behält Ziel, Constraints, offene Arbeit, Blocker, Definition of Done und Scope-Guardrails
 - **Codex-native Integration**: gebaut für `notify`, MCP stdio, optionale `AGENTS.md`-Synchronisierung und defensives Runtime-Cleanup
-- **Praktische Token-Ersparnis**: reduziert wiederholten Kontext oft um etwa `20%` bis `55%`, wenn das kompakte Pack gewinnt
+- **Praktische Token-Ersparnis**: reduziert wiederholte Kontinuität, wenn das kompakte Pack gewinnt; die öffentlichen v1.0-Fixtures zeigen 88% bis 97% Reduktion in Repeated-Context-Szenarien
 
 ### Closure Control
 
@@ -53,7 +77,7 @@ Siehe: [Verification Evidence](./docs/verification/) und [v1.0.0 Results](./docs
 ### Governance und Audit
 
 - **Gesteuerte Memory-Auswahl**: wendet Policies, Inheritance und Repairs an, statt alles blind zu mischen
-- **Voll lokal und auditierbar**: SQLite + FTS5, Provenance, Health, Snapshots und lokale UI ohne externen Memory-Service
+- **Voll lokal und auditierbar**: SQLite + FTS5, Provenance, Health, Snapshots und lokale UI ohne externen Memory-Service und ohne ausgehende Memory-Synchronisierung
 
 Geeignet für lange Audits, komplexe Projektkontinuität und Sessions, in denen nicht nur Entscheidungen erinnert werden müssen, sondern Scope-Verlust und falsche Abschlüsse verhindert werden sollen.
 
@@ -170,6 +194,19 @@ Das gibt den `notify`-Block, den Block `[mcp_servers."codex-agent-mem"]`, einen 
 
 Wenn du zusätzlich automatische `AGENTS.md`-Reinjektion willst, füge `--sync-project-doc` zum `notify`-Befehl hinzu.
 
+## Wie Agenten es verwenden sollten
+
+Nach der Konfiguration sollte der Agent `codex-agent-mem` proaktiv nutzen, wenn Kontinuität relevant ist. Du solltest nicht alle paar Turns erneut "nutze das Memory-MCP" schreiben müssen.
+
+Empfohlenes Muster:
+
+- mit `mem_context_pack` starten, wenn frühere Entscheidungen, offene Arbeit, Blocker, Constraints oder Projektstatus relevant sein können
+- bei wiederholten Abfragen `known_pack_hash` übergeben, damit unveränderte Packs `not_modified` zurückgeben statt Kontext erneut zu senden
+- `mem_search` nur nutzen, wenn das kompakte Pack nicht ausreicht
+- vor einem Abschluss-Claim `mem_open_work` und `mem_completion_check` für Implementierung, Validierung, Veröffentlichung, Migration oder Dokumentation aufrufen
+
+Daraus entsteht die praktische Token-Ersparnis: zuerst kompakte Kontinuität, gezielte Erweiterung nur bei Bedarf, und kein erneutes Senden desselben Packs, wenn sich nichts geändert hat.
+
 Beispieldateien liegen außerdem unter [examples/codex](./examples/codex/).
 
 ## Lokal ausführen
@@ -208,16 +245,16 @@ Einfach gesagt: Das Ziel ist, die Menge des wiederholten Kontexts zu verringern,
 
 Was wir aus lokaler Validierung ehrlich sagen können:
 
-- in günstigen Fällen reduzierte das kompakte Pack den erneut gesendeten Kontext um etwa `20%` bis `55%`
-- viele reale Läufe lagen ungefähr bei `ein Drittel bis zur Hälfte weniger` wiederholtem Kontext
-- wenn ein Ablauf sonst ungefähr `1000` Tokens an früherem Kontext erneut senden müsste, liegt eine vernünftige Erwartung oft eher bei `450` bis `800` Tokens
+- die öffentlichen v1.0-Fixtures reduzierten wiederholten Kontext von ca. 22.950 Quell-Tokens auf ca. 920 Pack-Tokens, also ungefähr `96,0%` in diesem kontrollierten Szenario
+- einzelne Repeated-Context-Szenarien in der Fixture-Suite lagen zwischen `88%` und `97%` Reduktion
+- Live-Checks in Gemini CLI und Claude Code bestätigten kompaktes MCP-Retrieval, stabilen Prozess-Lifecycle, Read-only-Modus und Objektwurzel-Antworten für `mem_search`
 
-Beispiele aus lokaler Validierung:
+Beispiele aus der öffentlichen v1.0-Verification-Sandbox:
 
-- `401 -> 218` ungefähre Tokens
-- `312 -> 144` ungefähre Tokens
-- `290 -> 227` ungefähre Tokens
-- `337 -> 240` ungefähre Tokens
+- `1,841 -> 216` ungefähre Tokens
+- `4,855 -> 233` ungefähre Tokens
+- `9,731 -> 232` ungefähre Tokens
+- `6,523 -> 239` ungefähre Tokens
 
 Wichtig: Das ist keine feste Garantie pro Prompt. Wenn das erzeugte Pack nicht wirklich kleiner als der Quellkontext ist, injiziert `codex-agent-mem` es nicht erneut und behauptet keine Einsparung, die nicht existiert.
 

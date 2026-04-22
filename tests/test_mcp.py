@@ -61,8 +61,9 @@ def test_mcp_tools(tmp_path: Path):
         "params": {"name": "mem_search", "arguments": {"query": "JWT", "project_key": "demo-project"}},
     })
     body = search["result"]["structuredContent"]
-    assert body
-    obs_id = body[0]["id"]
+    assert isinstance(body, dict)
+    assert body["count"] >= 1
+    obs_id = body["items"][0]["id"]
 
     get_obs = server.handle_request({
         "jsonrpc": "2.0",
@@ -144,7 +145,7 @@ def test_mcp_tools(tmp_path: Path):
         "method": "tools/call",
         "params": {"name": "mem_snapshot_list", "arguments": {"project_key": "demo-project"}},
     })
-    assert snapshot_list["result"]["structuredContent"]
+    assert snapshot_list["result"]["structuredContent"]["count"] >= 1
     snapshot_restore = server.handle_request({
         "jsonrpc": "2.0",
         "id": 14,
@@ -185,7 +186,7 @@ def test_mcp_tools(tmp_path: Path):
         "method": "tools/call",
         "params": {"name": "mem_policy_list", "arguments": {"project_key": "demo-project"}},
     })
-    assert policy_list["result"]["structuredContent"]
+    assert policy_list["result"]["structuredContent"]["count"] >= 1
 
     base_payload = {
         "runtime": "codex",
@@ -233,7 +234,7 @@ def test_mcp_tools(tmp_path: Path):
         "method": "tools/call",
         "params": {"name": "mem_inheritance_list", "arguments": {"project_key": "demo-project"}},
     })
-    assert inheritance_list["result"]["structuredContent"]
+    assert inheritance_list["result"]["structuredContent"]["count"] >= 1
 
     repair_propose = server.handle_request({
         "jsonrpc": "2.0",
@@ -241,7 +242,7 @@ def test_mcp_tools(tmp_path: Path):
         "method": "tools/call",
         "params": {"name": "mem_repair_propose", "arguments": {"project_key": "demo-project"}},
     })
-    assert isinstance(repair_propose["result"]["structuredContent"], list)
+    assert isinstance(repair_propose["result"]["structuredContent"]["items"], list)
 
     policy_remove = server.handle_request({
         "jsonrpc": "2.0",

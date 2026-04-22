@@ -81,7 +81,8 @@ Until the long-lived Desktop lifecycle is cleaner, the safest operating guidance
 3. Keep `codex-agent-mem` on `v1.0.0` or newer when using Codex Desktop heavily.
 4. Turn on `--sync-project-doc` only when you actually want automatic `AGENTS.md` reinjection.
 5. Use `mem_health_runtime` when diagnosing process buildup.
-6. Fully restart Codex Desktop if long-lived degradation returns.
+6. Prefer a longer MCP idle timeout for Desktop, for example `--idle-timeout-seconds 1800`; keep shorter values such as `300` for CLI/ephemeral runs.
+7. Fully restart Codex Desktop if long-lived degradation returns.
 
 ## Scope of this note
 

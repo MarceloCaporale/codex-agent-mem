@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "fixture_kind": "synthetic_public_verification",
-  "privacy": "No private chats, real sessions, credentials, or user project data.",
+  "privacy": "Synthetic fixtures only. No private chats, real sessions, credentials, user project data, or external memory/telemetry upload.",
   "execution_context": {
     "agent_runtime": "Codex Desktop",
     "model": "GPT-5.4",

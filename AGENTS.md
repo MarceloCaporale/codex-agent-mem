@@ -18,6 +18,17 @@ This repository is intentionally optimized for coding agents, deep-research tool
 - Current continuity surface: generated `AGENTS.md` working-memory block when compression is favorable
 - Current extraction strategy: heuristic `session_summary` and `decision` extraction
 
+## codex-agent-mem Operational Continuity
+
+- Use the `codex-agent-mem` MCP as the source of operational continuity for this repository.
+- The user should not need to remind Codex to use `codex-agent-mem`; apply it proactively when it reduces repeated context, prevents false completion, or improves continuity.
+- At the start of a task, call `mem_context_pack` with project key `codex-agent-mem` when previous context may matter.
+- If a prior pack hash is known, pass it as `known_pack_hash`; if the tool returns `not_modified=true`, do not repeat or summarize the same context.
+- During work, use `mem_search` only when the compact pack is insufficient.
+- Before claiming completion, call `mem_open_work` and `mem_completion_check`.
+- If pending work, blockers, or DoD gaps remain, do not claim the task is complete.
+- Do not invent memory state. If the MCP is unavailable or the project is not found, say so explicitly.
+
 ## What this project is not yet
 
 - Not an embeddings or vector database platform

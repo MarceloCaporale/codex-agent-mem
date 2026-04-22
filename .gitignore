@@ -13,3 +13,5 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+docs/verification/*/runs/
+docs/verification/*/export_public/

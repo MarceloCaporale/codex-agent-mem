@@ -6,6 +6,10 @@
 
 codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续性压缩成更小的工作 pack，并跨会话保留操作状态，让 Codex 以更少重复、更少误判完成、更多上下文控制继续工作。
 
+所有内容都由这个 MCP 在本地保存和处理：SQLite 数据库、FTS 索引、snapshots、telemetry metadata，以及可选的本地 inspector UI。`codex-agent-mem` 不会把你的 memory、project data、prompts 或 telemetry 发送到任何外部服务器。
+
+`codex-agent-mem` 最初为 Codex 和 GPT-5.x workflow 而生，但现在已经扩展为适用于 MCP-compatible agent runtimes 的 portable MCP memory layer，例如 Codex CLI、Codex Desktop、使用 Gemini 3.1 Pro 的 Gemini CLI、使用 Opus 4.7 或 Sonnet 4.6 的 Claude Code 和自定义本地 agent stacks。它在本地运行，保持 memory 可审计、pull-based，并且不会把已存储 memory 发送到任何外部服务。
+
 公开基线版本。以小而可验证的切片构建，仍在继续演进，但已经面向真实使用。
 
 ## v1.0.0 新增内容
@@ -28,6 +32,16 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 | Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
 | Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
 
+在这些可复现 fixtures 中，重复的 operational context 从约 22,950 source tokens 压缩到约 920 memory-pack tokens，约减少 96.0%。这不是通用保证；它展示的是当 agent 原本需要反复发送同一项目连续性时的效果。
+
+### Runtime validation snapshot
+
+| Runtime | 配置 | 观测指标 | 结果 |
+|---|---|---|---|
+| Codex Desktop | GPT-5.4，reasoning effort xhigh，v1.0 合成 fixtures | 约 22,950 source tokens -> 约 920 pack tokens，重复上下文约减少 96.0%，重复 pack 返回 `not_modified=true` | 公开可复现验证 |
+| Gemini CLI | Gemini 3.1 Pro，`codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | 进程稳定，request 计数按预期增加，`mem_search` 返回对象根 `{items, count}` 且 `count=2` | live MCP 验证通过 |
+| Claude Code | Claude Opus 4.7，仅启用 `codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | requests `3 -> 8`，lazy init `false -> true`，`same_db_process_count=2`，`spawn_storm_warning=false`，`mem_search count=2` | live MCP 验证通过 |
+
 ## 可验证结果
 
 `codex-agent-mem` 包含一个可复现的 verification sandbox，以及 v1.0.0 的公开 evidence export。
@@ -36,6 +50,16 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 
 参见：[Verification Evidence](./docs/verification/) 和 [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md)。
 
+## Claude Code 与 claude-mem
+
+`codex-agent-mem` 在 Claude Code 中作为标准 MCP stdio server 运行。它不会安装 session-start hook、stop hook，也不会做自动 post-turn 总结。内存只在需要时通过 `mem_context_pack`、`mem_search`、`mem_open_work` 和 `mem_completion_check` 等 MCP tools 拉取。
+
+如果你已经使用 `claude-mem`，两者技术上可以共存。对于低延迟 workflow，建议一次只启用一个 active memory layer。本地验证中，单独使用 `codex-agent-mem` 时 runtime 保持紧凑（`same_db_process_count=2`，`spawn_storm_warning=false`）。与 `claude-mem` 同时运行时，可见 tool surface 增加到 61 tools，session-start memory block 约 6,995 tokens，并观察到 post-turn stop-hook 延迟。这不会破坏 `codex-agent-mem`，但会让结果更难比较，并可能增加延迟。
+
+如果你想要 local-first、可审计、pull-based、显式 retrieval 和确定性的 closure checks，优先使用 `codex-agent-mem`。只有当你明确需要额外 memory plugin 的 hook-based 自动行为时，再启用它们。
+
+对于 token-sensitive 的 Claude Code workflow，`codex-agent-mem` 默认设计为低开销：没有 session-start injection，没有 stop-hook summarization，使用 compact responses、显式 budgets，并通过 `pack_hash` / `not_modified` 对未变化的 pack 进行 short-circuit。
+
 ## 你得到的能力
 
 ### 连续性
@@ -43,7 +67,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 - **压缩连续性，而不是反复重放原始上下文**：只有当生成 pack 确实更小时才同步到 `AGENTS.md`
 - **跨会话保留操作状态**：持续保存 objective、constraints、pending work、blockers、Definition of Done 与 scope guardrails
 - **原生适配 Codex**：围绕 `notify`、MCP stdio、可选的 `AGENTS.md` 同步以及更稳健的运行时清理设计
-- **实际可见的 token 节省**：当紧凑 pack 胜出时，重复上下文通常可减少约 `20%` 到 `55%`
+- **实际可见的 token 节省**：当紧凑 pack 胜出时减少重复连续性重发；公开 v1.0 fixtures 在 repeated-context 场景中显示 88% 到 97% 的减少
 
 ### 闭合控制
 
@@ -53,7 +77,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 ### 治理与审计
 
 - **受治理的记忆选择**：通过 policies、inheritance 与 repairs 控制进入 pack 的内容，而不是盲目混入
-- **完全本地且可审计**：SQLite + FTS5、provenance、health、snapshots 和本地 UI，无需外部记忆服务
+- **完全本地且可审计**：SQLite + FTS5、provenance、health、snapshots 和本地 UI，无需外部记忆服务，也没有向外同步 memory
 
 适合长时间审计、复杂项目连续工作，以及那些不仅要记住决策，还要避免丢失范围和过早宣告完成的场景。
 
@@ -170,6 +194,19 @@ codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_ag
 
 如果你还想启用自动 `AGENTS.md` 回写，请把 `--sync-project-doc` 加到 `notify` 命令里。
 
+## Agent 应该如何使用
+
+配置完成后，当连续性很重要时，agent 应主动使用 `codex-agent-mem`。你不应该每隔几轮就重复提醒它“使用 memory MCP”。
+
+推荐模式：
+
+- 当历史决策、未完成工作、blocker、约束或项目状态可能相关时，先调用 `mem_context_pack`
+- 重复检查时传入 `known_pack_hash`，未变化的 pack 会返回 `not_modified`，而不是再次发送上下文
+- 只有当紧凑 pack 不够时才使用 `mem_search`
+- 在实现、验证、发布、迁移或文档任务中声明完成之前，调用 `mem_open_work` 和 `mem_completion_check`
+
+实际 token 节省来自这个模式：先使用紧凑连续性，只在需要时展开细节，如果 pack 没变就不重复发送。
+
 示例文件也位于 [examples/codex](./examples/codex/)。
 
 ## 本地运行
@@ -208,16 +245,16 @@ codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 
 根据本地验证，目前可以诚实地这样描述：
 
-- 在较理想的场景下，紧凑 pack 对重复上下文的压缩大约在 `20%` 到 `55%`
-- 很多真实运行的结果，大约落在 `减少三分之一到一半` 的重复上下文
-- 如果某个流程原本需要重新发送大约 `1000` token 的旧上下文，一个合理的预期通常会更接近 `450` 到 `800` token
+- 公开 v1.0 fixtures 将重复上下文从约 22,950 source tokens 减少到约 920 pack tokens，在这个受控场景中约为 `96.0%`
+- fixture suite 中的各个 repeated-context 场景减少幅度在 `88%` 到 `97%`
+- Gemini CLI 与 Claude Code 的 live runtime checks 确认了 compact MCP retrieval、稳定进程生命周期、read-only mode，以及对象根形式的 `mem_search` 响应
 
-本地验证示例：
+公开 v1.0 verification sandbox 示例：
 
-- `401 -> 218` 近似 token
-- `312 -> 144` 近似 token
-- `290 -> 227` 近似 token
-- `337 -> 240` 近似 token
+- `1,841 -> 216` 近似 token
+- `4,855 -> 233` 近似 token
+- `9,731 -> 232` 近似 token
+- `6,523 -> 239` 近似 token
 
 重要说明：这不是对每个 prompt 的固定保证。如果生成的 pack 实际上并不比源上下文更小，`codex-agent-mem` 会跳过 reinjection，而不会假装自己节省了并不存在的 token。
 

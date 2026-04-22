@@ -82,6 +82,12 @@ def test_read_only_blocks_mutations_and_keeps_completion_check_read_only(tmp_pat
     provider = LazyStoreProvider(db_path, runtime)
     server = CodexAgentMemMCPServer(provider, runtime)
 
+    listed = server.handle_request({"jsonrpc": "2.0", "id": 3, "method": "tools/list", "params": {}})
+    listed_names = {tool["name"] for tool in listed["result"]["tools"]}
+    assert "mem_snapshot_create" not in listed_names
+    assert "mem_policy_add" not in listed_names
+    assert "mem_repair_apply" not in listed_names
+
     blocked = server.handle_request(
         {
             "jsonrpc": "2.0",
@@ -95,6 +101,7 @@ def test_read_only_blocks_mutations_and_keeps_completion_check_read_only(tmp_pat
     )
     assert blocked["result"]["isError"] is True
     assert "read-only" in blocked["result"]["content"][0]["text"]
+    assert isinstance(blocked["result"]["structuredContent"], dict)
 
     completion = server.handle_request(
         {
@@ -106,6 +113,19 @@ def test_read_only_blocks_mutations_and_keeps_completion_check_read_only(tmp_pat
     )
     assert completion["result"]["structuredContent"]["done"] is False
     assert provider.get().conn.execute("PRAGMA query_only;").fetchone()[0] == 1
+
+
+def test_structured_content_root_is_always_object_for_lists_and_scalars(tmp_path: Path):
+    db_path = tmp_path / "codex_agent_mem.db"
+    runtime = MCPRuntimeState(db_path=db_path, idle_timeout_seconds=300)
+    store = CodexAgentMemStore(db_path)
+    server = CodexAgentMemMCPServer(store, runtime)
+
+    list_result = server._tool_result([{"id": 1}, {"id": 2}])
+    assert list_result["structuredContent"] == {"items": [{"id": 1}, {"id": 2}], "count": 2}
+
+    scalar_result = server._tool_result("ok")
+    assert scalar_result["structuredContent"] == {"value": "ok"}
 
 
 def test_response_diet_and_pack_hash_not_modified(tmp_path: Path):

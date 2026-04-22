@@ -563,11 +563,14 @@ class CodexAgentMemMCPServer:
             },
         ]
         allowed_tools = PROFILE_TOOLS.get(self.runtime.profile)
-        if allowed_tools is None:
-            return tools
-        return [tool for tool in tools if str(tool["name"]) in allowed_tools]
+        if allowed_tools is not None:
+            tools = [tool for tool in tools if str(tool["name"]) in allowed_tools]
+        if self.runtime.read_only:
+            tools = [tool for tool in tools if str(tool["name"]) not in MUTATING_TOOLS]
+        return tools
 
     def _tool_result(self, data: Any, is_error: bool = False) -> dict[str, Any]:
+        structured = self._structured_content(data)
         if self.runtime.response_mode == "verbose":
             text = json.dumps(data, ensure_ascii=False, indent=2)
         elif self.runtime.response_mode == "balanced":
@@ -577,9 +580,16 @@ class CodexAgentMemMCPServer:
             text = compact_text_summary(data, is_error=is_error)
         return {
             "content": [{"type": "text", "text": text}],
-            "structuredContent": data,
+            "structuredContent": structured,
             "isError": is_error,
         }
+
+    def _structured_content(self, data: Any) -> dict[str, Any]:
+        if isinstance(data, dict):
+            return data
+        if isinstance(data, list):
+            return {"items": data, "count": len(data)}
+        return {"value": data}
 
     def _cache_key(self, tool_name: str, arguments: dict[str, Any], revision: dict[str, Any] | None) -> dict[str, Any]:
         return {
@@ -635,11 +645,11 @@ class CodexAgentMemMCPServer:
             name = params.get("name")
             arguments = params.get("arguments") or {}
             try:
+                if self.runtime.read_only and name in MUTATING_TOOLS:
+                    raise PermissionError(f"Tool is disabled in read-only mode: {name}")
                 listed_tools = {tool["name"] for tool in self.list_tools()}
                 if name not in listed_tools:
                     raise ValueError(f"Tool unavailable in profile '{self.runtime.profile}': {name}")
-                if self.runtime.read_only and name in MUTATING_TOOLS:
-                    raise PermissionError(f"Tool is disabled in read-only mode: {name}")
                 if name == "mem_search":
                     data = self.store.search_observations(
                         query=arguments.get("query", ""),

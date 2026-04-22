@@ -8,6 +8,7 @@ These results are reproducible evidence for codex-agent-mem v1.0.0.
 - Model: GPT-5.4
 - Reasoning effort: xhigh
 - Data: synthetic fixtures only
+- Network / privacy: local files and local SQLite only; no memory, prompts, telemetry, or project data are sent to external servers by this runner
 
 ## What is measured
 
@@ -22,8 +23,8 @@ These results are reproducible evidence for codex-agent-mem v1.0.0.
 
 ## Reproducibility
 
-- Fixtures SHA-256: `1e5c295c5b91b4cf9640451d13b645470771f3d068d0aa90b7bbcb964412e36d`
-- Runner SHA-256: `6f48ad8b454e53bbf624ba63a6b535066adadc5418f3119c61b7f4f614830972`
+- Fixtures SHA-256: `2e7e4dacf44727ae9b6181fb488c4ce062ba37af9c23e212ded4bab9b6105149`
+- Runner SHA-256: `e1fc6244f71b731d3ee7c88f86f1a02c10bcad53d9b9d66399d3809543d1ccb0`
 
 Run from the project environment with the public fixture and runner:
 

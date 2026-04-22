@@ -95,11 +95,11 @@ The generated config uses:
 For a lower-impact Codex Desktop profile, generate:
 
 ```bash
-codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only
+codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only --idle-timeout-seconds 1800
 ```
 
 ```powershell
-codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only
+codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only --idle-timeout-seconds 1800
 ```
 
 That exposes only:
@@ -110,6 +110,8 @@ That exposes only:
 - `mem_health_runtime`
 
 and disables mutating MCP tools.
+
+For CLI and short `codex exec` runs, a shorter timeout such as `--idle-timeout-seconds 300` is usually better because it cleans up unused stdio processes faster. For long-lived Codex Desktop threads, a longer timeout such as `1800` reduces the chance that the host keeps a closed MCP transport after the server exits for inactivity.
 
 `--sync-project-doc` is now opt-in. Add it to `notify` only if you want automatic `AGENTS.md` reinjection in the working directory.
 
@@ -157,6 +159,11 @@ That path is useful only if you explicitly want `notify -> HTTP -> local API`.
 ## MCP lifecycle note
 
 The current transport is stdio. That means one MCP process per host connection is expected; this integration does not claim a singleton daemon. `codex-agent-mem` now adds an idle timeout, signal-aware shutdown, runtime diagnostics, and explicit SQLite cleanup so unused or orphaned stdio instances exit more defensively.
+
+Use different timeout expectations by host:
+
+- Codex Desktop: prefer `--idle-timeout-seconds 1800` or higher for long threads where the host may keep a tool client alive.
+- Codex CLI / `codex exec --ephemeral`: prefer `--idle-timeout-seconds 300` for faster cleanup.
 
 ## Codex Desktop lifecycle note
 

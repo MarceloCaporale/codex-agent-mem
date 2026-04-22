@@ -5,11 +5,11 @@
     "model": "GPT-5.4",
     "reasoning_effort": "xhigh"
   },
-  "fixtures_sha256": "1e5c295c5b91b4cf9640451d13b645470771f3d068d0aa90b7bbcb964412e36d",
-  "generated_at_utc": "2026-04-21T23:28:12.758617+00:00",
-  "privacy": "No private chats, real sessions, credentials, or user project data.",
-  "run_id": "v1.0.0__2026-04-21_232808_UTC",
-  "runner_sha256": "6f48ad8b454e53bbf624ba63a6b535066adadc5418f3119c61b7f4f614830972",
+  "fixtures_sha256": "2e7e4dacf44727ae9b6181fb488c4ce062ba37af9c23e212ded4bab9b6105149",
+  "generated_at_utc": "2026-04-22T21:26:42.784943+00:00",
+  "privacy": "Synthetic fixtures only. No private chats, real sessions, credentials, user project data, or external memory/telemetry upload.",
+  "run_id": "v1.0.0__2026-04-22_212638_UTC",
+  "runner_sha256": "e1fc6244f71b731d3ee7c88f86f1a02c10bcad53d9b9d66399d3809543d1ccb0",
   "scenarios": [
     {
       "closure_control": {
@@ -21,7 +21,7 @@
         "primary_reason": "pending_items_open"
       },
       "context_compression": {
-        "build_ms": 0.54,
+        "build_ms": 0.56,
         "compression_ratio": 0.117,
         "pack_hash": "9c219f1ea5993da6389c683a029e57c40aed129186e9fdfbe9de8058845967d7",
         "pack_tokens": 216,
@@ -66,8 +66,8 @@
           "content_text_tokens_estimate": 40
         },
         "verbose": {
-          "content_text_chars": 20566,
-          "content_text_tokens_estimate": 5142
+          "content_text_chars": 20565,
+          "content_text_tokens_estimate": 5141
         }
       },
       "runtime": {
@@ -97,7 +97,7 @@
         "primary_reason": "pending_items_open"
       },
       "context_compression": {
-        "build_ms": 0.71,
+        "build_ms": 0.66,
         "compression_ratio": 0.048,
         "pack_hash": "762cd3a6bb36f47b76bf12f629b55e2c9d4c18b7e59a3a94083af580c012775b",
         "pack_tokens": 233,
@@ -173,7 +173,7 @@
         "primary_reason": "pending_items_open"
       },
       "context_compression": {
-        "build_ms": 0.99,
+        "build_ms": 1.14,
         "compression_ratio": 0.024,
         "pack_hash": "2a4983655139737e718c1a4315e1797a805eeb5294eba9e8dd5cb8472bcbad50",
         "pack_tokens": 232,
@@ -249,7 +249,7 @@
         "primary_reason": "pending_items_open"
       },
       "context_compression": {
-        "build_ms": 0.93,
+        "build_ms": 0.88,
         "compression_ratio": 0.037,
         "pack_hash": "55cfc4345a1ccafeb426c30e451a13fa8da84e928a501b165d8e82d5be7c4e46",
         "pack_tokens": 239,
