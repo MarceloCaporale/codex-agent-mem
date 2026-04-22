@@ -23,16 +23,18 @@ Public baseline. Built in small, testable slices and still evolving, but already
 
 Latest releases: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
 
-## Snapshot
+## Snapshot (synthetic v1.0 fixtures)
 
-| Scenario | Source tokens | Pack tokens | Saved | `not_modified` | Tools | Lazy init | Read-only |
-|---|---:|---:|---:|---|---:|---|---|
-| Small project continuity | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
-| Medium agent workflow | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
-| Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
-| Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
+| Scenario | Profile | Source tokens | Pack tokens | Saved | `not_modified` | Tools | Lazy init | Read-only |
+|---|---|---:|---:|---:|---|---:|---|---|
+| Small project continuity | `minimal` | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
+| Medium agent workflow | `minimal` | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
+| Large repeated audit | `minimal` | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
+| Sub-agent handoff example | `minimal` | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
 
 Across these reproducible fixtures, repeated operational context was reduced from ~22,950 source tokens to ~920 memory-pack tokens, an approximate 96.0% reduction. This is not a universal guarantee; it shows the effect when an agent would otherwise resend the same project continuity.
+
+`Tools=4` refers to the `minimal` profile used by these fixtures. The `standard` profile exposes 17 tools for broader retrieval, governance, and audit workflows.
 
 ### Runtime validation snapshot
 
@@ -40,7 +42,7 @@ Across these reproducible fixtures, repeated operational context was reduced fro
 |---|---|---|---|
 | Codex Desktop | GPT-5.4, reasoning effort xhigh, synthetic v1.0 fixtures | ~22,950 source tokens -> ~920 pack tokens, ~96.0% repeated-context reduction, `not_modified=true` on repeated packs | Public reproducible verification |
 | Gemini CLI | Gemini 3.1 Pro, `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | stable process, request counter increased as expected, `mem_search` returned object root `{items, count}` with `count=2` | Live MCP validation passed |
-| Claude Code | Claude Opus 4.7, `codex-agent-mem` MCP stdio only, `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2`, `spawn_storm_warning=false`, `mem_search count=2` | Live MCP validation passed |
+| Claude Code | Claude Opus 4.7, `codex-agent-mem` MCP stdio only, `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2` with one Claude Code host active, `spawn_storm_warning=false`, `mem_search count=2` | Live MCP validation passed |
 
 ## Verifiable Results
 
@@ -54,7 +56,7 @@ See: [Verification Evidence](./docs/verification/) and [v1.0.0 Results](./docs/v
 
 `codex-agent-mem` runs in Claude Code as a standard MCP stdio server. It does not install session-start hooks, stop hooks, or automatic post-turn summarization. Memory is retrieved on demand through MCP tools such as `mem_context_pack`, `mem_search`, `mem_open_work`, and `mem_completion_check`.
 
-If you already use `claude-mem`, both tools can technically coexist. For low-latency workflows, use one active memory layer at a time. In local validation, `codex-agent-mem` alone kept the runtime compact (`same_db_process_count=2`, `spawn_storm_warning=false`). Running it alongside `claude-mem` increased visible tool surface to 61 tools, added a session-start memory block of about 6,995 tokens, and showed post-turn stop-hook delays. This does not break `codex-agent-mem`, but it makes results harder to compare and can increase latency.
+If you already use `claude-mem`, both tools can technically coexist. For lower-overhead, lower-latency workflows, use one active memory layer at a time. In local validation with one Claude Code host active, `codex-agent-mem` alone kept the runtime compact (`same_db_process_count=2`, `spawn_storm_warning=false`). Running it alongside `claude-mem` increased visible tool surface to 61 tools, added a session-start memory block of about 6,995 tokens, and showed post-turn stop-hook delays. This does not break `codex-agent-mem`, but it makes results harder to compare and can increase overhead and latency.
 
 Use `codex-agent-mem` when you prefer local-first, auditable, pull-based memory with explicit retrieval and deterministic closure checks. Use additional memory plugins only when you intentionally want their automatic hook-based behavior.
 
@@ -95,7 +97,7 @@ What works today:
 - hierarchical Definition of Done tracking across `project_dod`, `mission_dod`, and `session_dod`
 - generated working-memory packs with approximate token budget and compression stats
 - budgeted packs for `micro`, `normal`, and `full` reinjection
-- automatic `AGENTS.md` sync when the generated pack is smaller than the source context
+- opt-in `AGENTS.md` sync through `--sync-project-doc` when the generated pack is smaller than the source context
 - operational-state carry-forward so the next run can recover objective, pending work, blockers, and scope guardrails
 - deterministic closure control with `mem_open_work` and `mem_completion_check`
 - recent-change deltas through `mem_recent_changes`
@@ -341,7 +343,7 @@ That inserts a sample turn, extracts observations, and verifies recent retrieval
 ## What saves tokens now
 
 - The package compiles a smaller working-memory pack from recent turns, durable decisions, and derived operational state.
-- When that pack is actually smaller than the source context, it is synced into `AGENTS.md` for the working directory.
+- When `--sync-project-doc` is enabled and that pack is actually smaller than the source context, it is synced into `AGENTS.md` for the working directory.
 - Codex loads `AGENTS.md` before the user prompt, so future sessions can start with compressed continuity instead of forcing you to restate old scope.
 - `mem_context_pack` exposes the same compact pack over MCP for on-demand retrieval.
 - The pack now carries forward pending work and blockers, so a future run can recover “what remains” instead of only “what was decided.”

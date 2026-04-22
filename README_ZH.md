@@ -23,16 +23,18 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 
 可见版本: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
 
-## Snapshot
+## Snapshot（v1.0 合成 fixtures）
 
-| 场景 | Source tokens | Pack tokens | 节省 | `not_modified` | Tools | Lazy init | Read-only |
-|---|---:|---:|---:|---|---:|---|---|
-| Small project continuity | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
-| Medium agent workflow | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
-| Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
-| Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
+| 场景 | Profile | Source tokens | Pack tokens | 节省 | `not_modified` | Tools | Lazy init | Read-only |
+|---|---|---:|---:|---:|---|---:|---|---|
+| Small project continuity | `minimal` | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
+| Medium agent workflow | `minimal` | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
+| Large repeated audit | `minimal` | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
+| Sub-agent handoff example | `minimal` | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
 
 在这些可复现 fixtures 中，重复的 operational context 从约 22,950 source tokens 压缩到约 920 memory-pack tokens，约减少 96.0%。这不是通用保证；它展示的是当 agent 原本需要反复发送同一项目连续性时的效果。
+
+`Tools=4` 指这些 fixtures 使用的 `minimal` profile。`standard` profile 会暴露 17 个 tools，用于更完整的 retrieval、governance 与 audit workflow。
 
 ### Runtime validation snapshot
 
@@ -40,7 +42,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 |---|---|---|---|
 | Codex Desktop | GPT-5.4，reasoning effort xhigh，v1.0 合成 fixtures | 约 22,950 source tokens -> 约 920 pack tokens，重复上下文约减少 96.0%，重复 pack 返回 `not_modified=true` | 公开可复现验证 |
 | Gemini CLI | Gemini 3.1 Pro，`codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | 进程稳定，request 计数按预期增加，`mem_search` 返回对象根 `{items, count}` 且 `count=2` | live MCP 验证通过 |
-| Claude Code | Claude Opus 4.7，仅启用 `codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | requests `3 -> 8`，lazy init `false -> true`，`same_db_process_count=2`，`spawn_storm_warning=false`，`mem_search count=2` | live MCP 验证通过 |
+| Claude Code | Claude Opus 4.7，仅启用 `codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | requests `3 -> 8`，lazy init `false -> true`，单个 Claude Code host 活跃时 `same_db_process_count=2`，`spawn_storm_warning=false`，`mem_search count=2` | live MCP 验证通过 |
 
 ## 可验证结果
 
@@ -54,7 +56,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 
 `codex-agent-mem` 在 Claude Code 中作为标准 MCP stdio server 运行。它不会安装 session-start hook、stop hook，也不会做自动 post-turn 总结。内存只在需要时通过 `mem_context_pack`、`mem_search`、`mem_open_work` 和 `mem_completion_check` 等 MCP tools 拉取。
 
-如果你已经使用 `claude-mem`，两者技术上可以共存。对于低延迟 workflow，建议一次只启用一个 active memory layer。本地验证中，单独使用 `codex-agent-mem` 时 runtime 保持紧凑（`same_db_process_count=2`，`spawn_storm_warning=false`）。与 `claude-mem` 同时运行时，可见 tool surface 增加到 61 tools，session-start memory block 约 6,995 tokens，并观察到 post-turn stop-hook 延迟。这不会破坏 `codex-agent-mem`，但会让结果更难比较，并可能增加延迟。
+如果你已经使用 `claude-mem`，两者技术上可以共存。对于低开销、低延迟 workflow，建议一次只启用一个 active memory layer。本地验证中，在单个 Claude Code host 活跃时，单独使用 `codex-agent-mem` 的 runtime 保持紧凑（`same_db_process_count=2`，`spawn_storm_warning=false`）。与 `claude-mem` 同时运行时，可见 tool surface 增加到 61 tools，session-start memory block 约 6,995 tokens，并观察到 post-turn stop-hook 延迟。这不会破坏 `codex-agent-mem`，但会让结果更难比较，并可能增加开销和延迟。
 
 如果你想要 local-first、可审计、pull-based、显式 retrieval 和确定性的 closure checks，优先使用 `codex-agent-mem`。只有当你明确需要额外 memory plugin 的 hook-based 自动行为时，再启用它们。
 
@@ -93,7 +95,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 - 分层的 Definition of Done：`project_dod`、`mission_dod`、`session_dod`
 - 生成带有近似 token 预算的紧凑连续性 pack
 - `micro`、`normal`、`full` 三档 pack 预算
-- 当 pack 确实小于源上下文时可选地同步到 `AGENTS.md`
+- 通过 `--sync-project-doc`，在 pack 确实小于源上下文时可选地同步到 `AGENTS.md`
 - 延续操作状态，让下一次会话能恢复目标、待办、阻塞项和范围保护规则
 - 通过 `mem_open_work` 和 `mem_completion_check` 提供确定性的闭合检查
 - 通过 `mem_recent_changes` 查看最近变化增量

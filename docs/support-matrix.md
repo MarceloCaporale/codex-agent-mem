@@ -14,7 +14,7 @@
 | False-completion guardrails | Supported | The generated pack explicitly tells Codex not to declare completion while pending work remains |
 | MCP stdio retrieval | Supported | Current primary retrieval path; one process per host connection is normal |
 | Gemini CLI via MCP stdio | Validated | Live validation passed with `standard`, `read-only`, and `compact`; `mem_search` returned object-root `{items, count}` |
-| Claude Code via MCP stdio | Validated | Live validation passed with Opus 4.7. For low-latency workflows, avoid running multiple memory MCP layers at the same time |
+| Claude Code via MCP stdio | Validated | Live validation passed with Opus 4.7. For lower-overhead workflows, avoid running multiple memory MCP layers at the same time |
 | Claude Code with `claude-mem` also enabled | Compatible, higher overhead observed | Coexistence works, but local validation showed larger tool surface, session-start memory injection, and stop-hook latency from the additional memory layer |
 | Codex Desktop long-lived host note | Documented | `codex-agent-mem` hardens its own stdio runtime, but long-lived Desktop lifecycle issues can still amplify process accumulation; see the dedicated Codex Desktop note |
 | `mem_context_pack` compact retrieval | Supported | Returns the compressed continuity pack and approximate token budget |

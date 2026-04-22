@@ -222,6 +222,6 @@ For the full diagnostic note and temporary mitigations, see:
 - no Codex hooks adapter yet
 - no Codex App Server adapter yet
 - no automatic semantic memory layer
-- AGENTS sync is intentionally skipped when the generated pack is not smaller than the source context
+- AGENTS sync is opt-in and intentionally skipped when reinjection is enabled but the generated pack is not smaller than the source context
 - operational state is still heuristic and derived from turn text, not from a dedicated planner protocol
 - provenance is authoritative only for persisted payload/turn/session context that this capture path can actually see

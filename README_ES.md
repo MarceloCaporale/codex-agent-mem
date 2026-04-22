@@ -23,16 +23,18 @@ Baseline publica. Construida en slices chicos y verificables, todavia en evoluci
 
 Releases visibles: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
 
-## Snapshot
+## Snapshot (fixtures sinteticos v1.0)
 
-| Escenario | Tokens fuente | Tokens pack | Ahorro | `not_modified` | Tools | Lazy init | Read-only |
-|---|---:|---:|---:|---|---:|---|---|
-| Small project continuity | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
-| Medium agent workflow | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
-| Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
-| Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
+| Escenario | Perfil | Tokens fuente | Tokens pack | Ahorro | `not_modified` | Tools | Lazy init | Read-only |
+|---|---|---:|---:|---:|---|---:|---|---|
+| Small project continuity | `minimal` | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
+| Medium agent workflow | `minimal` | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
+| Large repeated audit | `minimal` | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
+| Sub-agent handoff example | `minimal` | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
 
 En estos fixtures reproducibles, el contexto operativo repetido se redujo de ~22,950 tokens fuente a ~920 tokens de pack, una reduccion aproximada de 96.0%. No es una garantia universal; muestra el efecto cuando el agente normalmente reenviaria la misma continuidad del proyecto.
+
+`Tools=4` corresponde al perfil `minimal` usado en estos fixtures. El perfil `standard` expone 17 tools para recuperacion, gobernanza y auditoria mas amplias.
 
 ### Snapshot de runtimes validados
 
@@ -40,7 +42,7 @@ En estos fixtures reproducibles, el contexto operativo repetido se redujo de ~22
 |---|---|---|---|
 | Codex Desktop | GPT-5.4, razonamiento xhigh, fixtures sinteticos v1.0 | ~22,950 tokens fuente -> ~920 tokens de pack, ~96.0% menos contexto repetido, `not_modified=true` en packs repetidos | Verificacion publica reproducible |
 | Gemini CLI | Gemini 3.1 Pro, MCP stdio `codex-agent-mem`, `standard`, `read-only`, `compact` | proceso estable, contador de requests subio como se esperaba, `mem_search` devolvio raiz objeto `{items, count}` con `count=2` | Validacion live aprobada |
-| Claude Code | Claude Opus 4.7, solo MCP stdio `codex-agent-mem`, `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2`, `spawn_storm_warning=false`, `mem_search count=2` | Validacion live aprobada |
+| Claude Code | Claude Opus 4.7, solo MCP stdio `codex-agent-mem`, `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2` con un host Claude Code activo, `spawn_storm_warning=false`, `mem_search count=2` | Validacion live aprobada |
 
 ## Resultados verificables
 
@@ -54,7 +56,7 @@ Ver: [Verification Evidence](./docs/verification/) y [v1.0.0 Results](./docs/ver
 
 `codex-agent-mem` funciona en Claude Code como servidor MCP stdio estandar. No instala hooks de inicio de sesion, hooks de cierre ni resumen automatico post-turno. La memoria se recupera bajo demanda con tools MCP como `mem_context_pack`, `mem_search`, `mem_open_work` y `mem_completion_check`.
 
-Si ya usas `claude-mem`, ambas herramientas pueden coexistir tecnicamente. Para flujos de baja latencia, conviene usar una sola capa de memoria activa a la vez. En validacion local, `codex-agent-mem` solo mantuvo el runtime compacto (`same_db_process_count=2`, `spawn_storm_warning=false`). Al correrlo junto a `claude-mem`, la superficie visible subio a 61 tools, se agrego un bloque de inicio de sesion de unos 6,995 tokens y aparecieron demoras post-turno por stop hooks. Esto no rompe `codex-agent-mem`, pero hace mas dificil comparar resultados y puede aumentar la latencia.
+Si ya usas `claude-mem`, ambas herramientas pueden coexistir tecnicamente. Para flujos de menor overhead y menor latencia, conviene usar una sola capa de memoria activa a la vez. En validacion local con un host Claude Code activo, `codex-agent-mem` solo mantuvo el runtime compacto (`same_db_process_count=2`, `spawn_storm_warning=false`). Al correrlo junto a `claude-mem`, la superficie visible subio a 61 tools, se agrego un bloque de inicio de sesion de unos 6,995 tokens y aparecieron demoras post-turno por stop hooks. Esto no rompe `codex-agent-mem`, pero hace mas dificil comparar resultados y puede aumentar overhead y latencia.
 
 Usa `codex-agent-mem` si prefieres memoria local-first, auditable, pull-based, con recuperacion explicita y cierre determinista. Usa plugins de memoria adicionales solo cuando busques intencionalmente su comportamiento automatico basado en hooks.
 
@@ -93,7 +95,7 @@ Hoy funciona:
 - Definition of Done jerarquica en `project_dod`, `mission_dod` y `session_dod`
 - generacion de packs compactos de continuidad con estimacion aproximada de tokens
 - presupuestos de pack `micro`, `normal` y `full`
-- sincronizacion opcional de `AGENTS.md` cuando el pack es realmente mas chico que el contexto fuente
+- sincronizacion opcional de `AGENTS.md` con `--sync-project-doc` cuando el pack es realmente mas chico que el contexto fuente
 - arrastre de estado operativo para recuperar objetivo, pendientes, blockers y guardarrailes de alcance en la siguiente sesion
 - control de cierre determinista con `mem_open_work` y `mem_completion_check`
 - deltas de cambios recientes con `mem_recent_changes`

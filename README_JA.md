@@ -23,16 +23,18 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 
 参照しやすいリリース: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
 
-## Snapshot
+## Snapshot (合成 v1.0 fixture)
 
-| シナリオ | Source tokens | Pack tokens | 削減率 | `not_modified` | Tools | Lazy init | Read-only |
-|---|---:|---:|---:|---|---:|---|---|
-| Small project continuity | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
-| Medium agent workflow | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
-| Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
-| Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
+| シナリオ | Profile | Source tokens | Pack tokens | 削減率 | `not_modified` | Tools | Lazy init | Read-only |
+|---|---|---:|---:|---:|---|---:|---|---|
+| Small project continuity | `minimal` | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
+| Medium agent workflow | `minimal` | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
+| Large repeated audit | `minimal` | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
+| Sub-agent handoff example | `minimal` | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
 
 これらの再現可能な fixture 全体では、繰り返し送られがちな operational context が約 22,950 source tokens から約 920 memory-pack tokens に圧縮され、約 96.0% の削減になりました。これは普遍的な保証ではなく、同じ project continuity を再送する必要があるケースでの効果を示すものです。
+
+`Tools=4` は、これらの fixture で使った `minimal` profile を指します。`standard` profile は、より広い retrieval、governance、audit workflow 向けに 17 tools を公開します。
 
 ### Runtime validation snapshot
 
@@ -40,7 +42,7 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 |---|---|---|---|
 | Codex Desktop | GPT-5.4、reasoning effort xhigh、v1.0 合成 fixture | 約 22,950 source tokens -> 約 920 pack tokens、約 96.0% の repeated-context 削減、繰り返し pack で `not_modified=true` | 公開・再現可能な検証 |
 | Gemini CLI | Gemini 3.1 Pro、`codex-agent-mem` MCP stdio、`standard`、`read-only`、`compact` | プロセス安定、request counter は期待どおり増加、`mem_search` は `{items, count}` の object root と `count=2` を返却 | live MCP 検証に合格 |
-| Claude Code | Claude Opus 4.7、`codex-agent-mem` MCP stdio のみ、`standard`、`read-only`、`compact` | requests `3 -> 8`、lazy init `false -> true`、`same_db_process_count=2`、`spawn_storm_warning=false`、`mem_search count=2` | live MCP 検証に合格 |
+| Claude Code | Claude Opus 4.7、`codex-agent-mem` MCP stdio のみ、`standard`、`read-only`、`compact` | requests `3 -> 8`、lazy init `false -> true`、Claude Code host が 1 つの状態で `same_db_process_count=2`、`spawn_storm_warning=false`、`mem_search count=2` | live MCP 検証に合格 |
 
 ## 検証可能な結果
 
@@ -54,7 +56,7 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 
 `codex-agent-mem` は Claude Code で標準 MCP stdio server として動作します。session-start hook、stop hook、自動 post-turn 要約はインストールしません。メモリは `mem_context_pack`、`mem_search`、`mem_open_work`、`mem_completion_check` などの MCP tools で必要なときだけ取得します。
 
-すでに `claude-mem` を使っている場合、両方を同時に動かすこと自体は技術的に可能です。ただし低レイテンシの workflow では、アクティブな memory layer は 1 つにすることを推奨します。ローカル検証では、`codex-agent-mem` 単体では runtime はコンパクトでした (`same_db_process_count=2`, `spawn_storm_warning=false`)。`claude-mem` と同時に動かすと、見える tool surface は 61 tools に増え、約 6,995 tokens の session-start memory block が追加され、post-turn stop-hook の遅延が観測されました。これは `codex-agent-mem` を壊すものではありませんが、結果比較を難しくし、レイテンシを増やす可能性があります。
+すでに `claude-mem` を使っている場合、両方を同時に動かすこと自体は技術的に可能です。ただし低オーバーヘッド・低レイテンシの workflow では、アクティブな memory layer は 1 つにすることを推奨します。ローカル検証では、Claude Code host が 1 つの状態で `codex-agent-mem` 単体の runtime はコンパクトでした (`same_db_process_count=2`, `spawn_storm_warning=false`)。`claude-mem` と同時に動かすと、見える tool surface は 61 tools に増え、約 6,995 tokens の session-start memory block が追加され、post-turn stop-hook の遅延が観測されました。これは `codex-agent-mem` を壊すものではありませんが、結果比較を難しくし、オーバーヘッドとレイテンシを増やす可能性があります。
 
 local-first、監査可能、pull-based、明示的 retrieval、決定論的 closure check を重視する場合は `codex-agent-mem` を使ってください。追加の memory plugin は、その hook-based な自動動作を意図的に使いたい場合だけ有効にするのが安全です。
 
@@ -93,7 +95,7 @@ token に敏感な Claude Code workflow では、`codex-agent-mem` はデフォ�
 - `project_dod`、`mission_dod`、`session_dod` にまたがる階層的な Definition of Done
 - おおよそのトークン規模を持つコンパクトな continuity pack の生成
 - `micro`、`normal`、`full` の予算付き pack
-- pack が元のコンテキストより実際に小さい場合の `AGENTS.md` 任意同期
+- `--sync-project-doc` を使い、pack が元のコンテキストより実際に小さい場合の `AGENTS.md` 任意同期
 - 次のセッションで目的、未完了項目、blocker、スコープガードを復元するための operational state 持ち越し
 - `mem_open_work` と `mem_completion_check` による決定的な closure control
 - `mem_recent_changes` による最近変更の差分取得
