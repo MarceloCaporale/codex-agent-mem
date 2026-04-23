@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://marcelocaporale.github.io/codex-agent-mem/sitemap.xml
