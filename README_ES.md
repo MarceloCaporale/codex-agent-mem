@@ -2,13 +2,17 @@
 
 Otros idiomas: [English](./README.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
-Memoria portable, auditable y local-first para Codex y flujos con agentes de programacion.
+Memoria portable, auditable y local-first para Codex, Claude y flujos con agentes de programacion en local o mediante CLI de terceros.
 
 codex-agent-mem conserva memoria duradera fuera del runtime del modelo, comprime continuidad en packs mas chicos, y arrastra estado operativo para que Codex retome con menos repeticion, menos cierres falsos y mas control sobre lo que entra en contexto.
 
 Todo se guarda y procesa localmente en este MCP: base SQLite, indice FTS, snapshots, metadata de telemetria y UI opcional de inspeccion. `codex-agent-mem` no envia tu memoria, datos del proyecto, prompts ni telemetria a ningun servidor externo.
 
-`codex-agent-mem` nacio para Codex y flujos GPT-5.x, pero evoluciono como una capa portable de memoria MCP para runtimes compatibles con MCP como Codex CLI, Codex Desktop, Gemini CLI con Gemini 3.1 Pro, Claude Code con Opus 4.7 o Sonnet 4.6, Qwen Code con modelos locales Qwen 3.6 / Qwen 3.5 via Ollama, DeepSeek-V3.2 y Minimax M2.5 via Ollama Cloud, y agentes locales personalizados. En evaluacion continua: Kimi Code CLI, GLM-5, Kimi K2.5 y Kimi K2.6. Kimi Code CLI conecta con el servidor MCP `codex-agent-mem` via stdio; la validacion live completa con tool-calls del modelo se mide por separado antes de publicarse como validada. Tambien fue auditado externamente a nivel de protocolo para compatibilidad con Grok / xAI y orquestadores MCP tipo DeepSeek. Vive en local, mantiene la memoria auditable y bajo demanda, y no envia tu memoria almacenada a ningun servicio externo.
+`codex-agent-mem` nacio para Codex y flujos GPT-5.x, pero evoluciono como una capa portable de memoria MCP para runtimes compatibles con MCP como Codex CLI, Codex Desktop, Gemini CLI con Gemini 3.1 Pro, Claude Code con Opus 4.7 o Sonnet 4.6, Qwen Code con modelos locales Qwen 3.6 / Qwen 3.5 via Ollama, DeepSeek-V3.2 y Minimax M2.5 via Ollama Cloud, y agentes locales personalizados. En evaluacion continua: Kimi Code CLI, GLM-5, Kimi K2.5 y Kimi K2.6. Kimi Code CLI conecta con el servidor MCP `codex-agent-mem` via stdio; la validacion live completa con tool-calls del modelo se mide por separado antes de publicarse como validada. Tambien fue auditado externamente a nivel de protocolo para compatibilidad con Grok / xAI y orquestadores MCP tipo DeepSeek.
+
+`codex-agent-mem` vive en local, mantiene la memoria auditable y bajo demanda, y no envia tu memoria almacenada a ningun servicio externo.
+
+Distincion de alcance: la validacion en Codex CLI y Codex Desktop no equivale a una validacion de conector ChatGPT web/app, y la validacion en Claude Code no equivale a una validacion de Claude web / claude.ai. ChatGPT web/app y Claude web quedan como superficies de integracion futuras separadas, no como runtimes validados en v1.0.
 
 Baseline publica. Construida en slices chicos y verificables, todavia en evolucion, pero ya pensada para uso real.
 
@@ -40,7 +44,8 @@ En estos fixtures reproducibles, el contexto operativo repetido se redujo de ~22
 
 | Runtime | Configuracion | Metricas observadas | Resultado |
 |---|---|---|---|
-| Codex Desktop | GPT-5.4, razonamiento xhigh, fixtures sinteticos v1.0 | ~22,950 tokens fuente -> ~920 tokens de pack, ~96.0% menos contexto repetido, `not_modified=true` en packs repetidos | Verificacion publica reproducible |
+| Codex Desktop | Codex Desktop usando GPT-5.4 en este entorno Codex, razonamiento xhigh, fixtures sinteticos v1.0 | ~22,950 tokens fuente -> ~920 tokens de pack, ~96.0% menos contexto repetido, `not_modified=true` en packs repetidos | Verificacion publica reproducible |
+| Codex CLI / `codex exec` | Ruta MCP stdio de Codex CLI, ejecucion corta / efimera | mismo servidor MCP local y estilo de config que Desktop; el lifecycle corto de CLI fue validado por separado del comportamiento del host largo-vivo de Desktop | Ruta Codex CLI validada |
 | Gemini CLI | Gemini 3.1 Pro, MCP stdio `codex-agent-mem`, `standard`, `read-only`, `compact` | proceso estable, contador de requests subio como se esperaba, `mem_search` devolvio raiz objeto `{items, count}` con `count=2` | Validacion live aprobada |
 | Claude Code | Claude Opus 4.7, solo MCP stdio `codex-agent-mem`, `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2` con un host Claude Code activo, `spawn_storm_warning=false`, `mem_search count=2` | Validacion live aprobada |
 | Qwen Code | Qwen Code 0.15.0, Ollama local, `qwen3.6:latest`, `standard`, `read-only`, `compact` | llamadas MCP reales a `mem_context_pack`, `mem_search`, `mem_open_work`, `mem_completion_check`, `mem_health_runtime`; requests `8`, lazy init `true`, `spawn_storm_warning=false`, `not_modified=true` | Validacion live local aprobada |
@@ -56,7 +61,7 @@ Grok es auditoria externa, no una sesion CLI live local en esta maquina. Qwen Co
 
 `codex-agent-mem` incluye un sandbox reproducible de verificacion y un export publico de evidencia para v1.0.0.
 
-La corrida publica actual fue ejecutada con **Codex Desktop, modelo GPT-5.4, razonamiento xhigh** sobre fixtures sinteticos. Mide compresion de contexto, evitacion de reenvio con `known_pack_hash`, inicializacion lazy, perfil minimo de tools, seguridad read-only, response diet, telemetria local, control de cierre y un ejemplo con sub-agentes.
+La corrida publica actual fue ejecutada con **Codex Desktop usando GPT-5.4 en este entorno Codex, razonamiento xhigh** sobre fixtures sinteticos. Mide compresion de contexto, evitacion de reenvio con `known_pack_hash`, inicializacion lazy, perfil minimo de tools, seguridad read-only, response diet, telemetria local, control de cierre y un ejemplo con sub-agentes. Es una validacion de Codex Desktop, no una validacion de conector ChatGPT web/app.
 
 Ver: [Verification Evidence](./docs/verification/) y [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md).
 

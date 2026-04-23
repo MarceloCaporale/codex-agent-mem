@@ -4,9 +4,11 @@ These are reproducible, sanitized results generated from synthetic fixtures.
 
 Execution context:
 
-- Runtime: Codex Desktop
+- Runtime: Codex Desktop in a Codex environment
 - Model: GPT-5.4
 - Reasoning effort: xhigh
+
+Scope: this validates Codex Desktop, not a ChatGPT web/app connector. Claude web / claude.ai support is also not inferred from these results.
 
 ## Snapshot
 

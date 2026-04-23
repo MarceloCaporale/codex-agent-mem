@@ -4,11 +4,13 @@ These results are reproducible evidence for codex-agent-mem v1.0.0.
 
 ## Execution environment
 
-- Runtime: Codex Desktop
+- Runtime: Codex Desktop in a Codex environment
 - Model: GPT-5.4
 - Reasoning effort: xhigh
 - Data: synthetic fixtures only
 - Network / privacy: local files and local SQLite only; no memory, prompts, telemetry, or project data are sent to external servers by this runner
+
+This methodology validates the Codex Desktop path. It does not validate a ChatGPT web/app connector, and it should not be used as evidence for Claude web / claude.ai support.
 
 ## What is measured
 

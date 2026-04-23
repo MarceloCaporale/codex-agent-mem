@@ -2,13 +2,17 @@
 
 其他语言版本：[English](./README.md) | [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [日本語](./README_JA.md)
 
-面向 Codex 和编程代理工作流的可移植、可审计、本地优先连续性记忆层。
+面向 Codex、Claude、本地编程代理和第三方 CLI workflows 的可移植、可审计、本地优先连续性记忆层。
 
 codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续性压缩成更小的工作 pack，并跨会话保留操作状态，让 Codex 以更少重复、更少误判完成、更多上下文控制继续工作。
 
 所有内容都由这个 MCP 在本地保存和处理：SQLite 数据库、FTS 索引、snapshots、telemetry metadata，以及可选的本地 inspector UI。`codex-agent-mem` 不会把你的 memory、project data、prompts 或 telemetry 发送到任何外部服务器。
 
-`codex-agent-mem` 最初为 Codex 和 GPT-5.x workflow 而生，但现在已经扩展为适用于 MCP-compatible agent runtimes 的 portable MCP memory layer，例如 Codex CLI、Codex Desktop、使用 Gemini 3.1 Pro 的 Gemini CLI、使用 Opus 4.7 或 Sonnet 4.6 的 Claude Code、通过 Ollama 使用本地 Qwen 3.6 / Qwen 3.5 models 的 Qwen Code、通过 Ollama Cloud 使用 DeepSeek-V3.2 与 Minimax M2.5，以及自定义本地 agent stacks。持续评估中：Kimi Code CLI、GLM-5、Kimi K2.5 与 Kimi K2.6。Kimi Code CLI 可以通过 stdio 连接到 `codex-agent-mem` MCP server；Kimi K2.5 / Kimi K2.6 的完整 live model tool-call validation 会单独测量后再声明。它也经过了针对 Grok / xAI 与 DeepSeek 类 MCP orchestrators 的 protocol-level compatibility 外部审计。它在本地运行，保持 memory 可审计、pull-based，并且不会把已存储 memory 发送到任何外部服务。
+`codex-agent-mem` 最初为 Codex 和 GPT-5.x workflow 而生，但现在已经扩展为适用于 MCP-compatible agent runtimes 的 portable MCP memory layer，例如 Codex CLI、Codex Desktop、使用 Gemini 3.1 Pro 的 Gemini CLI、使用 Opus 4.7 或 Sonnet 4.6 的 Claude Code、通过 Ollama 使用本地 Qwen 3.6 / Qwen 3.5 models 的 Qwen Code、通过 Ollama Cloud 使用 DeepSeek-V3.2 与 Minimax M2.5，以及自定义本地 agent stacks。持续评估中：Kimi Code CLI、GLM-5、Kimi K2.5 与 Kimi K2.6。Kimi Code CLI 可以通过 stdio 连接到 `codex-agent-mem` MCP server；Kimi K2.5 / Kimi K2.6 的完整 live model tool-call validation 会单独测量后再声明。它也经过了针对 Grok / xAI 与 DeepSeek 类 MCP orchestrators 的 protocol-level compatibility 外部审计。
+
+`codex-agent-mem` 在本地运行，保持 memory 可审计、pull-based，并且不会把已存储 memory 发送到任何外部服务。
+
+Scope distinction: Codex CLI 和 Codex Desktop 的验证不等同于 ChatGPT web/app connector 验证，Claude Code 的验证也不等同于 Claude web / claude.ai 验证。ChatGPT web/app 与 Claude web 会作为未来独立 integration surfaces 跟踪，不作为 v1.0 validated runtimes 声明。
 
 公开基线版本。以小而可验证的切片构建，仍在继续演进，但已经面向真实使用。
 
@@ -40,7 +44,8 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 
 | Runtime | 配置 | 观测指标 | 结果 |
 |---|---|---|---|
-| Codex Desktop | GPT-5.4，reasoning effort xhigh，v1.0 合成 fixtures | 约 22,950 source tokens -> 约 920 pack tokens，重复上下文约减少 96.0%，重复 pack 返回 `not_modified=true` | 公开可复现验证 |
+| Codex Desktop | 在这个 Codex environment 中使用 GPT-5.4 的 Codex Desktop，reasoning effort xhigh，v1.0 合成 fixtures | 约 22,950 source tokens -> 约 920 pack tokens，重复上下文约减少 96.0%，重复 pack 返回 `not_modified=true` | 公开可复现验证 |
+| Codex CLI / `codex exec` | Codex CLI MCP stdio path，short-lived / ephemeral execution | 使用与 Desktop 相同的 local MCP server 和 config style；short-lived CLI lifecycle 已与 long-lived Desktop host behavior 分开验证 | Validated Codex CLI path |
 | Gemini CLI | Gemini 3.1 Pro，`codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | 进程稳定，request 计数按预期增加，`mem_search` 返回对象根 `{items, count}` 且 `count=2` | live MCP 验证通过 |
 | Claude Code | Claude Opus 4.7，仅启用 `codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | requests `3 -> 8`，lazy init `false -> true`，单个 Claude Code host 活跃时 `same_db_process_count=2`，`spawn_storm_warning=false`，`mem_search count=2` | live MCP 验证通过 |
 | Qwen Code | Qwen Code 0.15.0，本地 Ollama，`qwen3.6:latest`，`standard`，`read-only`，`compact` | 对 `mem_context_pack`、`mem_search`、`mem_open_work`、`mem_completion_check`、`mem_health_runtime` 发起真实 MCP 调用；requests `8`，lazy init `true`，`spawn_storm_warning=false`，`not_modified=true` | 本地 live MCP 验证通过 |
@@ -56,7 +61,7 @@ Grok 行是外部审计结果，不是这台机器上的本地 live CLI session�
 
 `codex-agent-mem` 包含一个可复现的 verification sandbox，以及 v1.0.0 的公开 evidence export。
 
-当前公开运行使用 **Codex Desktop、模型 GPT-5.4、reasoning effort xhigh**，基于合成 fixtures 执行。它测量上下文压缩、通过 `known_pack_hash` 避免重复发送、lazy initialization、最小 tool surface、read-only safety、response diet、本地 telemetry、closure control，以及一个 sub-agent handoff 示例。
+当前公开运行使用 **在这个 Codex environment 中使用 GPT-5.4 的 Codex Desktop、reasoning effort xhigh**，基于合成 fixtures 执行。它测量上下文压缩、通过 `known_pack_hash` 避免重复发送、lazy initialization、最小 tool surface、read-only safety、response diet、本地 telemetry、closure control，以及一个 sub-agent handoff 示例。这是 Codex Desktop validation，不是 ChatGPT web/app connector validation。
 
 参见：[Verification Evidence](./docs/verification/) 和 [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md)。
 

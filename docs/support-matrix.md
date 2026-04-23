@@ -13,9 +13,13 @@
 | Operational-state carry-forward | Supported | Objective, pending work, blockers, and guardrails are derived and injected into the working-memory pack |
 | False-completion guardrails | Supported | The generated pack explicitly tells Codex not to declare completion while pending work remains |
 | MCP stdio retrieval | Supported | Current primary retrieval path; one process per host connection is normal |
+| Codex CLI / `codex exec` via MCP stdio | Validated | Short-lived Codex CLI execution uses the same local MCP server and config style as Desktop; validated separately from the long-lived Desktop host lifecycle |
+| Codex Desktop via MCP stdio | Validated | Public v1.0 verification uses Codex Desktop with GPT-5.4 in a Codex environment; this is not a ChatGPT web/app connector validation |
 | Gemini CLI via MCP stdio | Validated | Live validation passed with `standard`, `read-only`, and `compact`; `mem_search` returned object-root `{items, count}` |
 | Claude Code via MCP stdio | Validated | Live validation passed with Opus 4.7. For lower-overhead workflows, avoid running multiple memory MCP layers at the same time |
 | Claude Code with `claude-mem` also enabled | Compatible, higher overhead observed | Coexistence works, but local validation showed larger tool surface, session-start memory injection, and stop-hook latency from the additional memory layer |
+| ChatGPT web/app connector | Not validated in v1.0 | Do not infer ChatGPT connector support from the Codex Desktop + GPT-5.4 validation. ChatGPT web/app needs separate connector/bridge validation before being claimed |
+| Claude web / claude.ai | Not validated in v1.0 | Do not infer Claude web support from Claude Code validation. Claude Code runs local MCP stdio servers; Claude web / claude.ai needs a separate bridge or native connector path |
 | Qwen Code via MCP stdio | Validated | Live local validation passed with Qwen Code 0.15.0, Ollama, `qwen3.6:latest`, `standard`, `read-only`, and `compact`; validated `not_modified` and clean stdio exits |
 | Qwen local models through Ollama | Validated smoke | `qwen3.6:35b-a3b-q8_0` and `qwen3.5:9b` both invoked `mem_health_runtime` through Qwen Code + MCP stdio; `deepseek-r1:latest` did not pass this path because Ollama reports no tool support for that model |
 | DeepSeek-V3.2 through Ollama Cloud | Validated cloud-backed | `deepseek-v3.2:cloud` invoked `mem_context_pack`, `mem_search`, and `mem_health_runtime` through Qwen Code + MCP stdio; validated `not_modified`, but this is not local inference |

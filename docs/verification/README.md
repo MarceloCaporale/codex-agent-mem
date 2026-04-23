@@ -2,7 +2,7 @@
 
 This directory contains reproducible, sanitized evidence for codex-agent-mem.
 
-The current v1.0.0 public run was executed with Codex Desktop, model GPT-5.4, reasoning effort xhigh.
+The current v1.0.0 public run was executed with Codex Desktop using GPT-5.4 in a Codex environment, reasoning effort xhigh. This evidence validates the Codex Desktop path; it is not a ChatGPT web/app connector validation.
 
 All verification data is synthetic. The runner uses local SQLite files and local JSON/Markdown outputs only; it does not send memory, prompts, telemetry, or project data to external servers.
 

@@ -2,13 +2,17 @@
 
 他言語版: [English](./README.md) | [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md)
 
-Codex とコーディングエージェントのワークフロー向けの、ポータブルで監査可能なローカルファースト継続性メモリレイヤー。
+Codex、Claude、local coding agents、third-party CLI workflows 向けの、ポータブルで監査可能なローカルファースト継続性メモリレイヤー。
 
 codex-agent-mem は、永続的なプロジェクト記憶をモデルランタイムの外に保持し、継続性をより小さな working pack に圧縮し、operational state をセッション間で持ち越します。これにより Codex は、繰り返しの少ない状態で、誤った「完了」を減らしつつ、より強いコンテキスト制御の下で作業を再開できます。
 
 すべてはこの MCP によってローカルで保存・処理されます: SQLite database、FTS index、snapshots、telemetry metadata、任意の inspector UI。`codex-agent-mem` は memory、project data、prompts、telemetry を外部サーバーへ送信しません。
 
-`codex-agent-mem` は Codex と GPT-5.x workflow のために生まれましたが、現在は Codex CLI、Codex Desktop、Gemini 3.1 Pro を使う Gemini CLI、Opus 4.7 または Sonnet 4.6 を使う Claude Code、Ollama 経由の local Qwen 3.6 / Qwen 3.5 models を使う Qwen Code、Ollama Cloud 経由の DeepSeek-V3.2 と Minimax M2.5、独自の local agent stack など、MCP-compatible agent runtime 向けの portable MCP memory layer として使えます。Continuous evaluation: Kimi Code CLI, GLM-5, Kimi K2.5, and Kimi K2.6. Kimi Code CLI は `codex-agent-mem` MCP server に stdio で接続できますが、Kimi K2.5 / Kimi K2.6 の full live model tool-call validation は別途測定してから記載します。さらに Grok / xAI と DeepSeek 系 MCP orchestrator との protocol-level compatibility について外部監査も受けています。ローカルで動作し、memory を監査可能かつ pull-based に保ち、保存済み memory を外部サービスへ送信しません。
+`codex-agent-mem` は Codex と GPT-5.x workflow のために生まれましたが、現在は Codex CLI、Codex Desktop、Gemini 3.1 Pro を使う Gemini CLI、Opus 4.7 または Sonnet 4.6 を使う Claude Code、Ollama 経由の local Qwen 3.6 / Qwen 3.5 models を使う Qwen Code、Ollama Cloud 経由の DeepSeek-V3.2 と Minimax M2.5、独自の local agent stack など、MCP-compatible agent runtime 向けの portable MCP memory layer として使えます。Continuous evaluation: Kimi Code CLI, GLM-5, Kimi K2.5, and Kimi K2.6. Kimi Code CLI は `codex-agent-mem` MCP server に stdio で接続できますが、Kimi K2.5 / Kimi K2.6 の full live model tool-call validation は別途測定してから記載します。さらに Grok / xAI と DeepSeek 系 MCP orchestrator との protocol-level compatibility について外部監査も受けています。
+
+`codex-agent-mem` はローカルで動作し、memory を監査可能かつ pull-based に保ち、保存済み memory を外部サービスへ送信しません。
+
+Scope distinction: Codex CLI / Codex Desktop の検証は ChatGPT web/app connector の検証ではありません。同様に Claude Code の検証は Claude web / claude.ai の検証ではありません。ChatGPT web/app と Claude web は将来の別 integration surface として扱い、v1.0 validated runtime とは主張しません。
 
 公開ベースライン。小さく検証可能なスライスで構築され、まだ進化中ですが、すでに実運用を意識した形です。
 
@@ -40,7 +44,8 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 
 | Runtime | 構成 | 観測された指標 | 結果 |
 |---|---|---|---|
-| Codex Desktop | GPT-5.4、reasoning effort xhigh、v1.0 合成 fixture | 約 22,950 source tokens -> 約 920 pack tokens、約 96.0% の repeated-context 削減、繰り返し pack で `not_modified=true` | 公開・再現可能な検証 |
+| Codex Desktop | この Codex environment の GPT-5.4 を使う Codex Desktop、reasoning effort xhigh、v1.0 合成 fixture | 約 22,950 source tokens -> 約 920 pack tokens、約 96.0% の repeated-context 削減、繰り返し pack で `not_modified=true` | 公開・再現可能な検証 |
+| Codex CLI / `codex exec` | Codex CLI MCP stdio path、short-lived / ephemeral execution | Desktop と同じ local MCP server / config style を使用。short-lived CLI lifecycle は long-lived Desktop host behavior とは別に検証済み | Validated Codex CLI path |
 | Gemini CLI | Gemini 3.1 Pro、`codex-agent-mem` MCP stdio、`standard`、`read-only`、`compact` | プロセス安定、request counter は期待どおり増加、`mem_search` は `{items, count}` の object root と `count=2` を返却 | live MCP 検証に合格 |
 | Claude Code | Claude Opus 4.7、`codex-agent-mem` MCP stdio のみ、`standard`、`read-only`、`compact` | requests `3 -> 8`、lazy init `false -> true`、Claude Code host が 1 つの状態で `same_db_process_count=2`、`spawn_storm_warning=false`、`mem_search count=2` | live MCP 検証に合格 |
 | Qwen Code | Qwen Code 0.15.0、local Ollama、`qwen3.6:latest`、`standard`、`read-only`、`compact` | `mem_context_pack`、`mem_search`、`mem_open_work`、`mem_completion_check`、`mem_health_runtime` への実 MCP call。requests `8`、lazy init `true`、`spawn_storm_warning=false`、`not_modified=true` | local live MCP 検証に合格 |
@@ -56,7 +61,7 @@ Grok は外部 audit であり、このマシン上の local live CLI session �
 
 `codex-agent-mem` には、v1.0.0 向けの再現可能な verification sandbox と公開用 evidence export が含まれています。
 
-現在の公開ランは、**Codex Desktop、モデル GPT-5.4、reasoning effort xhigh** で合成 fixture を使って実行されました。測定対象は、コンテキスト圧縮、`known_pack_hash` による再送回避、lazy initialization、最小 tool surface、read-only safety、response diet、local telemetry、closure control、sub-agent handoff example です。
+現在の公開ランは、**この Codex environment の GPT-5.4 を使う Codex Desktop、reasoning effort xhigh** で合成 fixture を使って実行されました。測定対象は、コンテキスト圧縮、`known_pack_hash` による再送回避、lazy initialization、最小 tool surface、read-only safety、response diet、local telemetry、closure control、sub-agent handoff example です。これは Codex Desktop validation であり、ChatGPT web/app connector validation ではありません。
 
 参照: [Verification Evidence](./docs/verification/) と [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md)。
 

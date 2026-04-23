@@ -25,6 +25,8 @@ For low-impact Desktop and long-running hosts, v1.0 also adds:
 
 7. read-only MCP mode, profile-based tool surfaces, compact responses, lazy SQLite initialization, pack-hash reuse, runtime heartbeat diagnostics, optional telemetry, and an optional local daemon/stdio bridge
 
+Scope note: this document covers Codex CLI, `codex exec`, and Codex Desktop. It does not document or claim ChatGPT web/app connector support. ChatGPT connector validation is a separate future integration surface.
+
 ## Capture flow
 
 - Codex emits `agent-turn-complete`
