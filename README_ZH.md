@@ -8,7 +8,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 
 所有内容都由这个 MCP 在本地保存和处理：SQLite 数据库、FTS 索引、snapshots、telemetry metadata，以及可选的本地 inspector UI。`codex-agent-mem` 不会把你的 memory、project data、prompts 或 telemetry 发送到任何外部服务器。
 
-`codex-agent-mem` 最初为 Codex 和 GPT-5.x workflow 而生，但现在已经扩展为适用于 MCP-compatible agent runtimes 的 portable MCP memory layer，例如 Codex CLI、Codex Desktop、使用 Gemini 3.1 Pro 的 Gemini CLI、使用 Opus 4.7 或 Sonnet 4.6 的 Claude Code 和自定义本地 agent stacks。它在本地运行，保持 memory 可审计、pull-based，并且不会把已存储 memory 发送到任何外部服务。
+`codex-agent-mem` 最初为 Codex 和 GPT-5.x workflow 而生，但现在已经扩展为适用于 MCP-compatible agent runtimes 的 portable MCP memory layer，例如 Codex CLI、Codex Desktop、使用 Gemini 3.1 Pro 的 Gemini CLI、使用 Opus 4.7 或 Sonnet 4.6 的 Claude Code、通过 Ollama 使用本地 Qwen 3.6 / Qwen 3.5 models 的 Qwen Code、通过 Ollama Cloud 使用 DeepSeek-V3.2 与 Minimax M2.5，以及自定义本地 agent stacks。持续评估中：Kimi Code CLI、GLM-5、Kimi K2.5 与 Kimi K2.6。Kimi Code CLI 可以通过 stdio 连接到 `codex-agent-mem` MCP server；Kimi K2.5 / Kimi K2.6 的完整 live model tool-call validation 会单独测量后再声明。它也经过了针对 Grok / xAI 与 DeepSeek 类 MCP orchestrators 的 protocol-level compatibility 外部审计。它在本地运行，保持 memory 可审计、pull-based，并且不会把已存储 memory 发送到任何外部服务。
 
 公开基线版本。以小而可验证的切片构建，仍在继续演进，但已经面向真实使用。
 
@@ -43,6 +43,14 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 | Codex Desktop | GPT-5.4，reasoning effort xhigh，v1.0 合成 fixtures | 约 22,950 source tokens -> 约 920 pack tokens，重复上下文约减少 96.0%，重复 pack 返回 `not_modified=true` | 公开可复现验证 |
 | Gemini CLI | Gemini 3.1 Pro，`codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | 进程稳定，request 计数按预期增加，`mem_search` 返回对象根 `{items, count}` 且 `count=2` | live MCP 验证通过 |
 | Claude Code | Claude Opus 4.7，仅启用 `codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | requests `3 -> 8`，lazy init `false -> true`，单个 Claude Code host 活跃时 `same_db_process_count=2`，`spawn_storm_warning=false`，`mem_search count=2` | live MCP 验证通过 |
+| Qwen Code | Qwen Code 0.15.0，本地 Ollama，`qwen3.6:latest`，`standard`，`read-only`，`compact` | 对 `mem_context_pack`、`mem_search`、`mem_open_work`、`mem_completion_check`、`mem_health_runtime` 发起真实 MCP 调用；requests `8`，lazy init `true`，`spawn_storm_warning=false`，`not_modified=true` | 本地 live MCP 验证通过 |
+| Qwen 本地模型 smoke | Qwen Code 0.15.0 与 Ollama models `qwen3.6:35b-a3b-q8_0`、`qwen3.5:9b` | 两个模型都通过 CLI smoke，并通过 MCP stdio 调用 `mem_health_runtime`；requests `4`，`read_only=true`，干净 `stdin_eof` 退出 | 本地 live model smoke 通过 |
+| DeepSeek-V3.2 | Qwen Code 0.15.0，通过 Ollama Cloud 使用 `deepseek-v3.2:cloud`，`standard`，`read-only`，`compact` | 对 `mem_context_pack`、`mem_search`、`mem_health_runtime` 发起真实 MCP 调用；requests `6`，`spawn_storm_warning=false`，`not_modified=true` | cloud-backed live MCP 验证通过 |
+| Minimax M2.5 | Qwen Code 0.15.0，通过 Ollama Cloud 使用 `minimax-m2.5:cloud`，`standard`，`read-only`，`compact` | 对 `mem_context_pack`、`mem_search`、`mem_health_runtime` 发起真实 MCP 调用；requests `6`，`not_modified=true` | cloud-backed live MCP 验证通过 |
+| Kimi Code CLI | Kimi Code CLI 1.38.0，`codex-agent-mem` MCP stdio，`standard`，`read-only`，`compact` | `kimi mcp test codex-agent-mem` 成功连接并列出 17 个 tools；Kimi K2.5 / Kimi K2.6 的 model tool-call validation 仍处于 continuous evaluation | MCP 连接已验证；不声明模型运行验证 |
+| Grok / xAI | 外部 model/runtime audit；本机没有可用的 Grok CLI | 可通过 MCP stdio-capable orchestrator 或轻量 JSON-RPC stdio wrapper 实现 protocol compatibility | 已外部审计；非本机 live 验证 |
+
+Grok 行是外部审计结果，不是这台机器上的本地 live CLI session。Qwen Code 现在已经通过 Ollama-backed models 和 MCP stdio 做过本地验证。DeepSeek-V3.2 与 Minimax M2.5 已通过 Ollama Cloud-backed models 做过 live validation，但这不是本地推理。Kimi Code CLI 已完成 MCP 连接验证，但 Kimi K2.5 / Kimi K2.6 的 model-level validation 仍作为 continuous evaluation 处理，因为完整模型需要单独的 runtime path。一般来说，`codex-agent-mem` 在 MCP 层是 model-agnostic。表格列出已经完成 live measurement 的 model/runtime pairs，新的 pair 会在捕获到测量结果后加入。对于没有 native MCP client 的 host，预期集成路径是轻量 JSON-RPC stdio wrapper 或 MCP-capable orchestrator。
 
 ## 可验证结果
 
@@ -249,7 +257,7 @@ codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 
 - 公开 v1.0 fixtures 将重复上下文从约 22,950 source tokens 减少到约 920 pack tokens，在这个受控场景中约为 `96.0%`
 - fixture suite 中的各个 repeated-context 场景减少幅度在 `88%` 到 `97%`
-- Gemini CLI 与 Claude Code 的 live runtime checks 确认了 compact MCP retrieval、稳定进程生命周期、read-only mode，以及对象根形式的 `mem_search` 响应
+- Gemini CLI、Claude Code、Qwen Code 与通过 Ollama Cloud 的 DeepSeek-V3.2、Minimax M2.5 的 live runtime checks 确认了 compact MCP retrieval、稳定进程生命周期、read-only mode，以及在可见范围内的对象根/no-reinjection 行为
 
 公开 v1.0 verification sandbox 示例：
 

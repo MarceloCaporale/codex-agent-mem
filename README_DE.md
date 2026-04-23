@@ -8,7 +8,7 @@ codex-agent-mem hält dauerhafte Projektkontinuität außerhalb des Modell-Runti
 
 Alles wird lokal durch dieses MCP gespeichert und verarbeitet: SQLite-Datenbank, FTS-Index, Snapshots, Telemetrie-Metadaten und die optionale Inspector-UI. `codex-agent-mem` sendet Memory, Projektdaten, Prompts oder Telemetrie nicht an externe Server.
 
-`codex-agent-mem` entstand für Codex- und GPT-5.x-Workflows, ist aber zu einer portablen MCP-Memory-Schicht für MCP-kompatible Agent-Runtimes gewachsen, darunter Codex CLI, Codex Desktop, Gemini CLI mit Gemini 3.1 Pro, Claude Code mit Opus 4.7 oder Sonnet 4.6 und eigene lokale Agent-Stacks. Es läuft lokal, hält Memory auditierbar und Pull-basiert und sendet gespeicherte Memory nicht an externe Dienste.
+`codex-agent-mem` entstand für Codex- und GPT-5.x-Workflows, ist aber zu einer portablen MCP-Memory-Schicht für MCP-kompatible Agent-Runtimes gewachsen, darunter Codex CLI, Codex Desktop, Gemini CLI mit Gemini 3.1 Pro, Claude Code mit Opus 4.7 oder Sonnet 4.6, Qwen Code mit lokalen Qwen-3.6-/Qwen-3.5-Modellen über Ollama, DeepSeek-V3.2 und Minimax M2.5 über Ollama Cloud und eigene lokale Agent-Stacks. In kontinuierlicher Evaluierung: Kimi Code CLI, GLM-5, Kimi K2.5 und Kimi K2.6. Kimi Code CLI verbindet sich per stdio mit dem `codex-agent-mem` MCP-Server; die vollständige Live-Validierung mit Modell-Tool-Calls wird separat gemessen, bevor sie als validiert ausgewiesen wird. Es wurde außerdem extern auf Protokollkompatibilität mit Grok / xAI und DeepSeek-artigen MCP-Orchestratoren geprüft. Es läuft lokal, hält Memory auditierbar und Pull-basiert und sendet gespeicherte Memory nicht an externe Dienste.
 
 Öffentliche Baseline. In kleinen, testbaren Slices gebaut, noch in Weiterentwicklung, aber bereits auf reale Nutzung ausgerichtet.
 
@@ -43,6 +43,14 @@ Sichtbare Releases: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21)
 | Codex Desktop | GPT-5.4, Reasoning Effort xhigh, synthetische v1.0-Fixtures | ca. 22.950 Quell-Tokens -> ca. 920 Pack-Tokens, ca. 96,0% weniger wiederholter Kontext, `not_modified=true` bei wiederholten Packs | Öffentliche reproduzierbare Verifikation |
 | Gemini CLI | Gemini 3.1 Pro, `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | stabiler Prozess, Request-Zähler stieg wie erwartet, `mem_search` gab Objektwurzel `{items, count}` mit `count=2` zurück | Live-MCP-Validierung bestanden |
 | Claude Code | Claude Opus 4.7, nur `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | Requests `3 -> 8`, Lazy init `false -> true`, `same_db_process_count=2` mit einem aktiven Claude-Code-Host, `spawn_storm_warning=false`, `mem_search count=2` | Live-MCP-Validierung bestanden |
+| Qwen Code | Qwen Code 0.15.0, lokales Ollama, `qwen3.6:latest`, `standard`, `read-only`, `compact` | echte MCP-Aufrufe an `mem_context_pack`, `mem_search`, `mem_open_work`, `mem_completion_check`, `mem_health_runtime`; Requests `8`, Lazy init `true`, `spawn_storm_warning=false`, `not_modified=true` | Lokale Live-MCP-Validierung bestanden |
+| Lokale Qwen-Modell-Smokes | Qwen Code 0.15.0 mit Ollama-Modellen `qwen3.6:35b-a3b-q8_0` und `qwen3.5:9b` | beide Modelle bestanden CLI-Smokes und riefen `mem_health_runtime` über MCP stdio auf; Requests `4`, `read_only=true`, saubere `stdin_eof`-Exits | Lokale Live-Smokes bestanden |
+| DeepSeek-V3.2 | Qwen Code 0.15.0, `deepseek-v3.2:cloud` über Ollama Cloud, `standard`, `read-only`, `compact` | echte MCP-Aufrufe an `mem_context_pack`, `mem_search`, `mem_health_runtime`; Requests `6`, `spawn_storm_warning=false`, `not_modified=true` | Live-MCP-Validierung mit Cloud-Backend bestanden |
+| Minimax M2.5 | Qwen Code 0.15.0, `minimax-m2.5:cloud` über Ollama Cloud, `standard`, `read-only`, `compact` | echte MCP-Aufrufe an `mem_context_pack`, `mem_search`, `mem_health_runtime`; Requests `6`, `not_modified=true` | Live-MCP-Validierung mit Cloud-Backend bestanden |
+| Kimi Code CLI | Kimi Code CLI 1.38.0, `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | `kimi mcp test codex-agent-mem` verband sich erfolgreich und listete 17 Tools; die vollständige Tool-Call-Validierung mit Kimi K2.5 / Kimi K2.6 bleibt in kontinuierlicher Evaluierung | MCP-Verbindung validiert; Modelllauf nicht behauptet |
+| Grok / xAI | Externe Modell-/Runtime-Audit; keine lokale Grok CLI verfügbar | protokollkompatibel über MCP-stdio-fähige Orchestratoren oder einen dünnen JSON-RPC-stdio-Wrapper | Extern auditiert; nicht lokal live validiert |
+
+Grok ist eine externe Audit-Zeile, keine lokale Live-CLI-Session auf dieser Maschine. Qwen Code ist lokal mit Ollama-gestützten Modellen und MCP stdio validiert. DeepSeek-V3.2 und Minimax M2.5 wurden live mit Ollama-Cloud-gestützten Modellen validiert; das ist keine lokale Inferenz. Kimi Code CLI ist mit dem MCP verbunden, während die Modellvalidierung mit Kimi K2.5 / Kimi K2.6 weiterhin als kontinuierliche Evaluierung geführt wird, weil die vollständigen Modelle einen separaten Runtime-Pfad erfordern. Allgemein ist `codex-agent-mem` auf der MCP-Schicht modellagnostisch; die Tabelle listet bereits live gemessene Modell-/Runtime-Paare, und neue Paare werden ergänzt, sobald ihre Live-Messungen vorliegen. Für Hosts ohne nativen MCP-Client ist der erwartete Integrationsweg ein dünner JSON-RPC-stdio-Wrapper oder ein MCP-fähiger Orchestrator.
 
 ## Verifizierbare Ergebnisse
 
@@ -249,7 +257,7 @@ Was wir aus lokaler Validierung ehrlich sagen können:
 
 - die öffentlichen v1.0-Fixtures reduzierten wiederholten Kontext von ca. 22.950 Quell-Tokens auf ca. 920 Pack-Tokens, also ungefähr `96,0%` in diesem kontrollierten Szenario
 - einzelne Repeated-Context-Szenarien in der Fixture-Suite lagen zwischen `88%` und `97%` Reduktion
-- Live-Checks in Gemini CLI und Claude Code bestätigten kompaktes MCP-Retrieval, stabilen Prozess-Lifecycle, Read-only-Modus und Objektwurzel-Antworten für `mem_search`
+- Live-Checks in Gemini CLI, Claude Code, Qwen Code, DeepSeek-V3.2 über Ollama Cloud und Minimax M2.5 über Ollama Cloud bestätigten kompaktes MCP-Retrieval, stabilen Prozess-Lifecycle, Read-only-Modus und Objektwurzel-/No-Reinjection-Verhalten, soweit sichtbar
 
 Beispiele aus der öffentlichen v1.0-Verification-Sandbox:
 

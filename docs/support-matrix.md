@@ -16,6 +16,14 @@
 | Gemini CLI via MCP stdio | Validated | Live validation passed with `standard`, `read-only`, and `compact`; `mem_search` returned object-root `{items, count}` |
 | Claude Code via MCP stdio | Validated | Live validation passed with Opus 4.7. For lower-overhead workflows, avoid running multiple memory MCP layers at the same time |
 | Claude Code with `claude-mem` also enabled | Compatible, higher overhead observed | Coexistence works, but local validation showed larger tool surface, session-start memory injection, and stop-hook latency from the additional memory layer |
+| Qwen Code via MCP stdio | Validated | Live local validation passed with Qwen Code 0.15.0, Ollama, `qwen3.6:latest`, `standard`, `read-only`, and `compact`; validated `not_modified` and clean stdio exits |
+| Qwen local models through Ollama | Validated smoke | `qwen3.6:35b-a3b-q8_0` and `qwen3.5:9b` both invoked `mem_health_runtime` through Qwen Code + MCP stdio; `deepseek-r1:latest` did not pass this path because Ollama reports no tool support for that model |
+| DeepSeek-V3.2 through Ollama Cloud | Validated cloud-backed | `deepseek-v3.2:cloud` invoked `mem_context_pack`, `mem_search`, and `mem_health_runtime` through Qwen Code + MCP stdio; validated `not_modified`, but this is not local inference |
+| Minimax M2.5 through Ollama Cloud | Validated cloud-backed | `minimax-m2.5:cloud` invoked `mem_context_pack`, `mem_search`, and `mem_health_runtime` through Qwen Code + MCP stdio; validated `not_modified`, but this is not local inference |
+| Kimi Code CLI via MCP stdio | MCP-connected | Kimi Code CLI 1.38.0 connects to `codex-agent-mem` through stdio and lists 17 tools with `standard`, `read-only`, and `compact`; full Kimi K2.5 / Kimi K2.6 model tool-call validation is not claimed yet |
+| GLM-5, Kimi K2.5, and Kimi K2.6 through Ollama Cloud | Continuous evaluation | `glm-5:cloud`, `kimi-k2.5:cloud`, and `kimi-k2.6:cloud` are tracked as tool-capable Ollama Cloud candidates for future live measurements |
+| Ollama models with tool support | Candidate pattern | Tool-capable Ollama models can use the same MCP pattern through an MCP-capable runtime such as Qwen Code; the table records pairs already measured live |
+| Grok / xAI | Externally audited | Protocol-compatible through an MCP stdio-capable orchestrator or thin JSON-RPC stdio wrapper; no local Grok CLI validation on this machine |
 | Codex Desktop long-lived host note | Documented | `codex-agent-mem` hardens its own stdio runtime, but long-lived Desktop lifecycle issues can still amplify process accumulation; see the dedicated Codex Desktop note |
 | `mem_context_pack` compact retrieval | Supported | Returns the compressed continuity pack and approximate token budget |
 | `mem_context_pack` auto budget | Supported | Selects the smallest fitting budget profile from `micro`, `normal`, and `full` |

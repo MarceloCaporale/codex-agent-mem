@@ -8,7 +8,7 @@ Other languages: [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [中�
 
 Everything is stored and processed locally by this MCP: SQLite database, FTS index, snapshots, telemetry metadata, and the optional inspector UI. `codex-agent-mem` does not send your memory, project data, prompts, or telemetry to any external server.
 
-Born for Codex and GPT-5.x workflows, `codex-agent-mem` has grown into a portable MCP memory layer for MCP-compatible agent runtimes such as Codex CLI, Codex Desktop, Gemini CLI with Gemini 3.1 Pro, Claude Code with Opus 4.7 or Sonnet 4.6, and custom local agent stacks. It lives locally, keeps memory auditable and pull-based, and does not send your stored memory to any external service.
+Born for Codex and GPT-5.x workflows, `codex-agent-mem` has grown into a portable MCP memory layer for MCP-compatible agent runtimes such as Codex CLI, Codex Desktop, Gemini CLI with Gemini 3.1 Pro, Claude Code with Opus 4.7 or Sonnet 4.6, Qwen Code with local Qwen 3.6 / Qwen 3.5 models through Ollama, DeepSeek-V3.2 and Minimax M2.5 through Ollama Cloud, and custom local agent stacks. Continuous evaluation: Kimi Code CLI, GLM-5, Kimi K2.5, and Kimi K2.6. Kimi Code CLI connects to the `codex-agent-mem` MCP server through stdio; full live model tool-call validation is tracked separately before being claimed. It has also been externally audited for protocol-level compatibility with Grok / xAI and DeepSeek-style MCP orchestrators. It lives locally, keeps memory auditable and pull-based, and does not send your stored memory to any external service.
 
 Public baseline. Built in small, testable slices and still evolving, but already aligned for real use.
 
@@ -43,6 +43,14 @@ Across these reproducible fixtures, repeated operational context was reduced fro
 | Codex Desktop | GPT-5.4, reasoning effort xhigh, synthetic v1.0 fixtures | ~22,950 source tokens -> ~920 pack tokens, ~96.0% repeated-context reduction, `not_modified=true` on repeated packs | Public reproducible verification |
 | Gemini CLI | Gemini 3.1 Pro, `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | stable process, request counter increased as expected, `mem_search` returned object root `{items, count}` with `count=2` | Live MCP validation passed |
 | Claude Code | Claude Opus 4.7, `codex-agent-mem` MCP stdio only, `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2` with one Claude Code host active, `spawn_storm_warning=false`, `mem_search count=2` | Live MCP validation passed |
+| Qwen Code | Qwen Code 0.15.0, local Ollama, `qwen3.6:latest`, `standard`, `read-only`, `compact` | real MCP calls to `mem_context_pack`, `mem_search`, `mem_open_work`, `mem_completion_check`, `mem_health_runtime`; requests `8`, lazy init `true`, `spawn_storm_warning=false`, `not_modified=true` | Live local MCP validation passed |
+| Qwen local model smokes | Qwen Code 0.15.0 with Ollama models `qwen3.6:35b-a3b-q8_0` and `qwen3.5:9b` | both models answered CLI smoke tests and invoked `mem_health_runtime` through MCP stdio; requests `4`, `read_only=true`, clean `stdin_eof` exits | Live local model smokes passed |
+| DeepSeek-V3.2 | Qwen Code 0.15.0, `deepseek-v3.2:cloud` through Ollama Cloud, `standard`, `read-only`, `compact` | real MCP calls to `mem_context_pack`, `mem_search`, `mem_health_runtime`; requests `6`, `spawn_storm_warning=false`, `not_modified=true` | Live cloud-backed MCP validation passed |
+| Minimax M2.5 | Qwen Code 0.15.0, `minimax-m2.5:cloud` through Ollama Cloud, `standard`, `read-only`, `compact` | real MCP calls to `mem_context_pack`, `mem_search`, `mem_health_runtime`; requests `6`, `not_modified=true` | Live cloud-backed MCP validation passed |
+| Kimi Code CLI | Kimi Code CLI 1.38.0, `codex-agent-mem` MCP stdio, `standard`, `read-only`, `compact` | `kimi mcp test codex-agent-mem` connected and listed 17 tools; Kimi K2.5 / Kimi K2.6 full model tool-call validation remains in continuous evaluation | MCP connection validated; model-run validation not claimed |
+| Grok / xAI | External model/runtime audit; no local Grok CLI available | protocol-compatible through an MCP stdio-capable orchestrator or a thin JSON-RPC stdio wrapper | Externally audited; not live-local validated |
+
+Grok is an external audit, not a local live CLI session on this machine. Qwen Code is locally validated with Ollama-backed models and MCP stdio. DeepSeek-V3.2 and Minimax M2.5 are live-validated through Ollama Cloud-backed models, not local inference. Kimi Code CLI is MCP-connected, while Kimi K2.5 / Kimi K2.6 model-level validation is still tracked as continuous evaluation because the full models are large and require a separate runtime path. More generally, `codex-agent-mem` is model-agnostic at the MCP layer; the table lists model/runtime pairs already measured live, and new pairs are added as their live measurements are captured. For hosts without a native MCP client, the expected integration path is a thin JSON-RPC stdio wrapper or an MCP-capable orchestrator.
 
 ## Verifiable Results
 
@@ -356,7 +364,7 @@ What we can say honestly from local validation:
 
 - the public v1.0 fixtures reduced repeated context from ~22,950 source tokens to ~920 memory-pack tokens, about `96.0%` in that controlled scenario
 - individual repeated-context scenarios in the fixture suite landed between `88%` and `97%` reduction
-- live runtime checks in Gemini CLI and Claude Code confirmed compact MCP retrieval, stable process lifecycle, read-only mode, and object-root `mem_search` responses
+- live runtime checks in Gemini CLI, Claude Code, Qwen Code, DeepSeek-V3.2 through Ollama Cloud, and Minimax M2.5 through Ollama Cloud confirmed compact MCP retrieval, stable process lifecycle, read-only mode, and object-root/no-reinjection behavior where visible
 
 Examples from the public v1.0 verification sandbox:
 

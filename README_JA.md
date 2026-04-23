@@ -8,7 +8,7 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 
 すべてはこの MCP によってローカルで保存・処理されます: SQLite database、FTS index、snapshots、telemetry metadata、任意の inspector UI。`codex-agent-mem` は memory、project data、prompts、telemetry を外部サーバーへ送信しません。
 
-`codex-agent-mem` は Codex と GPT-5.x workflow のために生まれましたが、現在は Codex CLI、Codex Desktop、Gemini 3.1 Pro を使う Gemini CLI、Opus 4.7 または Sonnet 4.6 を使う Claude Code、独自の local agent stack など、MCP-compatible agent runtime 向けの portable MCP memory layer として使えます。ローカルで動作し、memory を監査可能かつ pull-based に保ち、保存済み memory を外部サービスへ送信しません。
+`codex-agent-mem` は Codex と GPT-5.x workflow のために生まれましたが、現在は Codex CLI、Codex Desktop、Gemini 3.1 Pro を使う Gemini CLI、Opus 4.7 または Sonnet 4.6 を使う Claude Code、Ollama 経由の local Qwen 3.6 / Qwen 3.5 models を使う Qwen Code、Ollama Cloud 経由の DeepSeek-V3.2 と Minimax M2.5、独自の local agent stack など、MCP-compatible agent runtime 向けの portable MCP memory layer として使えます。Continuous evaluation: Kimi Code CLI, GLM-5, Kimi K2.5, and Kimi K2.6. Kimi Code CLI は `codex-agent-mem` MCP server に stdio で接続できますが、Kimi K2.5 / Kimi K2.6 の full live model tool-call validation は別途測定してから記載します。さらに Grok / xAI と DeepSeek 系 MCP orchestrator との protocol-level compatibility について外部監査も受けています。ローカルで動作し、memory を監査可能かつ pull-based に保ち、保存済み memory を外部サービスへ送信しません。
 
 公開ベースライン。小さく検証可能なスライスで構築され、まだ進化中ですが、すでに実運用を意識した形です。
 
@@ -43,6 +43,14 @@ codex-agent-mem は、永続的なプロジェクト記憶をモデルランタ�
 | Codex Desktop | GPT-5.4、reasoning effort xhigh、v1.0 合成 fixture | 約 22,950 source tokens -> 約 920 pack tokens、約 96.0% の repeated-context 削減、繰り返し pack で `not_modified=true` | 公開・再現可能な検証 |
 | Gemini CLI | Gemini 3.1 Pro、`codex-agent-mem` MCP stdio、`standard`、`read-only`、`compact` | プロセス安定、request counter は期待どおり増加、`mem_search` は `{items, count}` の object root と `count=2` を返却 | live MCP 検証に合格 |
 | Claude Code | Claude Opus 4.7、`codex-agent-mem` MCP stdio のみ、`standard`、`read-only`、`compact` | requests `3 -> 8`、lazy init `false -> true`、Claude Code host が 1 つの状態で `same_db_process_count=2`、`spawn_storm_warning=false`、`mem_search count=2` | live MCP 検証に合格 |
+| Qwen Code | Qwen Code 0.15.0、local Ollama、`qwen3.6:latest`、`standard`、`read-only`、`compact` | `mem_context_pack`、`mem_search`、`mem_open_work`、`mem_completion_check`、`mem_health_runtime` への実 MCP call。requests `8`、lazy init `true`、`spawn_storm_warning=false`、`not_modified=true` | local live MCP 検証に合格 |
+| Qwen local model smokes | Qwen Code 0.15.0 と Ollama models `qwen3.6:35b-a3b-q8_0`、`qwen3.5:9b` | 両モデルが CLI smoke に応答し、MCP stdio 経由で `mem_health_runtime` を呼び出し。requests `4`、`read_only=true`、clean `stdin_eof` exit | local live model smoke に合格 |
+| DeepSeek-V3.2 | Qwen Code 0.15.0、Ollama Cloud 経由の `deepseek-v3.2:cloud`、`standard`、`read-only`、`compact` | `mem_context_pack`、`mem_search`、`mem_health_runtime` への実 MCP call。requests `6`、`spawn_storm_warning=false`、`not_modified=true` | cloud-backed live MCP 検証に合格 |
+| Minimax M2.5 | Qwen Code 0.15.0、Ollama Cloud 経由の `minimax-m2.5:cloud`、`standard`、`read-only`、`compact` | `mem_context_pack`、`mem_search`、`mem_health_runtime` への実 MCP call。requests `6`、`not_modified=true` | cloud-backed live MCP 検証に合格 |
+| Kimi Code CLI | Kimi Code CLI 1.38.0、`codex-agent-mem` MCP stdio、`standard`、`read-only`、`compact` | `kimi mcp test codex-agent-mem` が接続し、17 tools を表示。Kimi K2.5 / Kimi K2.6 の model tool-call validation は continuous evaluation | MCP 接続は検証済み。モデル実行の検証は主張しない |
+| Grok / xAI | 外部 model/runtime audit。ローカル Grok CLI は未使用 | MCP stdio 対応 orchestrator、または薄い JSON-RPC stdio wrapper 経由で protocol-compatible | 外部監査済み。ローカル live 検証ではない |
+
+Grok は外部 audit であり、このマシン上の local live CLI session ではありません。Qwen Code は Ollama-backed models と MCP stdio で local validation 済みです。DeepSeek-V3.2 と Minimax M2.5 は Ollama Cloud-backed models で live validation 済みですが、local inference ではありません。Kimi Code CLI は MCP 接続済みですが、Kimi K2.5 / Kimi K2.6 の model-level validation は full models に別 runtime path が必要なため continuous evaluation として扱います。一般に `codex-agent-mem` は MCP layer では model-agnostic です。この表はすでに live measurement を取得した model/runtime pairs を示し、新しい pair は測定が取れた時点で追加します。native MCP client がない host では、薄い JSON-RPC stdio wrapper または MCP-capable orchestrator が想定される integration path です。
 
 ## 検証可能な結果
 
@@ -249,7 +257,7 @@ codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 
 - 公開 v1.0 fixture では、重複コンテキストが約 22,950 source tokens から約 920 pack tokens へ減り、この制御されたシナリオでは約 `96.0%` の削減でした
 - fixture suite の各 repeated-context scenario は `88%` から `97%` の削減でした
-- Gemini CLI と Claude Code の live runtime check では、compact MCP retrieval、安定した process lifecycle、read-only mode、object-root の `mem_search` response が確認されました
+- Gemini CLI、Claude Code、Qwen Code、Ollama Cloud 経由の DeepSeek-V3.2 と Minimax M2.5 の live runtime check では、compact MCP retrieval、安定した process lifecycle、read-only mode、visible な範囲での object-root/no-reinjection behavior が確認されました
 
 公開 v1.0 verification sandbox の例:
 
