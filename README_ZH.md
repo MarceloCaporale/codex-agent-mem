@@ -1,5 +1,9 @@
 # codex-agent-mem
 
+<p align="center">
+  <img src="docs/assets/codex-agent-mem-social-preview.png" alt="codex-agent-mem: persistent local memory for MCP clients" width="100%">
+</p>
+
 其他语言版本：[English](./README.md) | [Español](./README_ES.md) | [Deutsch](./README_DE.md) | [Português do Brasil](./README_PT_BR.md) | [日本語](./README_JA.md)
 
 **面向 MCP-compatible AI agents 和 coding workflows 的可移植、可审计、local-first MCP memory。**
