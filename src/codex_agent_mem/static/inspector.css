@@ -49,6 +49,10 @@ pre,
   padding: 24px 0 40px;
 }
 
+.main-content {
+  display: block;
+}
+
 .topbar,
 .hero,
 .panel {
@@ -65,6 +69,10 @@ pre,
   border-radius: var(--radius);
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(243, 247, 255, 0.94));
   margin-bottom: 18px;
+}
+
+.topbar > div {
+  min-width: 0;
 }
 
 .topnav {
@@ -106,12 +114,12 @@ pre,
 
 .topnav-link:hover {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .topnav-link.active {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   border: 1px solid rgba(31, 111, 235, 0.16);
 }
 
@@ -138,6 +146,13 @@ pre,
   gap: 10px;
   flex-wrap: wrap;
   justify-content: end;
+  min-width: 0;
+}
+
+.meta code {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .pill,
@@ -148,7 +163,7 @@ pre,
   border-radius: 999px;
   padding: 4px 10px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   border: 1px solid rgba(31, 111, 235, 0.12);
   font-size: 0.8rem;
 }
@@ -263,7 +278,7 @@ pre,
   padding: 0 12px;
   border-radius: 999px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   font-weight: 700;
 }
 
@@ -670,7 +685,7 @@ pre,
 
 .badge-accent {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
   border-color: rgba(31, 111, 235, 0.16);
 }
 

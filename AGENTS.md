@@ -1,6 +1,6 @@
 # AGENTS
 
-This repository is intentionally optimized for coding agents, deep-research tools, and maintainers who need a fast map of what exists today.
+This repository is intentionally optimized for MCP-compatible AI agents, coding workflows, deep-research tools, and maintainers who need a fast map of what exists today.
 
 ## Public name vs import name
 
@@ -10,32 +10,23 @@ This repository is intentionally optimized for coding agents, deep-research tool
 
 ## What this project is
 
-- A portable, local-first memory layer for Codex and adjacent agent workflows
+- A portable, local-first MCP memory layer for agent continuity across MCP-compatible runtimes
 - Current durable store: local SQLite
 - Current retrieval surface: MCP stdio
-- Current capture path: Codex `notify` on `agent-turn-complete`
+- Current capture path: local agent turn ingestion, including Codex `notify` on `agent-turn-complete`
 - Current inspection surface: local FastAPI UI at `/ui`
 - Current continuity surface: generated `AGENTS.md` working-memory block when compression is favorable
-- Current extraction strategy: heuristic `session_summary` and `decision` extraction
+- Current extraction strategy: heuristic extraction of session summaries, user requests, objectives, decisions, constraints, pending/completed work, blockers, DoD items, and completion claims
 
-## codex-agent-mem Operational Continuity
+## Working rules for agents
 
-- Use the `codex-agent-mem` MCP as the source of operational continuity for this repository.
-- The user should not need to remind Codex to use `codex-agent-mem`; apply it proactively when it reduces repeated context, prevents false completion, or improves continuity.
-- At the start of a task, call `mem_context_pack` with project key `codex-agent-mem` when previous context may matter.
-- If a prior pack hash is known, pass it as `known_pack_hash`; if the tool returns `not_modified=true`, do not repeat or summarize the same context.
-- During work, use `mem_search` only when the compact pack is insufficient.
-- Before claiming completion, call `mem_open_work` and `mem_completion_check`.
-- If pending work, blockers, or DoD gaps remain, do not claim the task is complete.
-- Do not invent memory state. If the MCP is unavailable or the project is not found, say so explicitly.
-
-## What this project is not yet
-
-- Not an embeddings or vector database platform
-- Not a full analytics UI product
-- Not an App Server capture layer
-- Not a hooks-based Codex integration
-- Not a multi-agent orchestration framework
+- Preserve the local-first MCP core.
+- Do not use an operational maintainer database for tests; use temporary databases.
+- Keep hosted/web bridge experiments out of the public core unless the repository scope changes explicitly.
+- Keep compatibility and token-savings claims tied to reproducible evidence.
+- Keep the six README files equivalent in content across languages.
+- For broad/container project keys, prefer `mem_bootstrap_context` or `mem_scope_resolve` before loading `mem_context_pack(project_key)`. A project-wide pack may remain available, but it must not be treated as the active thread when candidate lanes are ambiguous.
+- Do not tag, publish, or release from a dirty tree.
 
 ## Fastest commands
 
@@ -44,6 +35,9 @@ pip install -e .[dev]
 pytest -q
 python -m compileall src
 ruff check .
+python scripts/mcp_contract_smoke.py --both
+python scripts/check_repo_hygiene.py
+python scripts/smoke_release.py --mcp-subprocess --with-ruff --with-build --with-wheel-smoke
 codex-agent-mem-smoke
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 python -m build
@@ -85,7 +79,7 @@ python -m build
 
 ## Read this before editing
 
-- Keep the current release line narrow and honest
+- Keep the current release line portable, local-first, and evidence-based
 - Do not document deferred areas as implemented
 - Preserve the distinction between public repo naming and Python import naming
 - Prefer deterministic persistence before adding semantic enrichment
@@ -101,6 +95,10 @@ python -m build
   Notify + MCP integration details
 - `docs/support-matrix.md`
   Supported and unsupported combinations
+- `docs/validation/`
+  Validation levels, client behavior, and runtime evidence
+- `docs/benchmarks/`
+  Reproducible token-savings methodology
 - `docs/design-decisions.md`
   Product and architecture decisions
 - `docs/discoverability.md`
@@ -111,5 +109,7 @@ python -m build
 - Run `ruff check .`
 - Run `python -m compileall src`
 - Run `pytest -q`
+- Run `python scripts/mcp_contract_smoke.py --both` for MCP contract changes
+- Run `python scripts/check_repo_hygiene.py` before release review
 - If packaging or install flow changed, run `python -m build`
 - If Codex integration changed, rerun `codex-agent-mem-smoke`

@@ -67,6 +67,35 @@ def compact_text_summary(data: Any, *, is_error: bool = False) -> str:
     if isinstance(data, dict):
         if data.get("not_modified"):
             return f"codex-agent-mem: continuity pack unchanged ({data.get('pack_hash', 'no-hash')})"
+        if "selection_mode" in data and "scope_resolution" in data:
+            resolution = data.get("scope_resolution") or {}
+            lanes = resolution.get("candidate_lanes") or []
+            context_pack = data.get("context_pack")
+            mode = data.get("selection_mode")
+            recommended = resolution.get("recommended_call") or {}
+            next_action = recommended.get("tool") if isinstance(recommended, dict) else str(recommended or "choose_scope")
+            guard = bool(resolution.get("do_not_fetch_project_wide_pack"))
+            return (
+                "codex-agent-mem: bootstrap_context "
+                f"selection_mode={mode} context_pack_present={bool(context_pack)} "
+                f"routing={resolution.get('routing_decision', 'unknown')} "
+                f"candidate_lanes={len(lanes)} "
+                f"do_not_fetch_project_wide_pack={guard} "
+                f"next_action={next_action}"
+            )
+        if "routing_decision" in data and "candidate_lanes" in data:
+            lanes = data.get("candidate_lanes") or []
+            recommended = data.get("recommended_call") or {}
+            next_action = recommended.get("tool") if isinstance(recommended, dict) else str(recommended or "choose_scope")
+            guard = bool(data.get("do_not_fetch_project_wide_pack"))
+            return (
+                "codex-agent-mem: scope_resolve "
+                f"routing={data.get('routing_decision', 'unknown')} "
+                f"confidence={data.get('confidence', 'unknown')} "
+                f"candidate_lanes={len(lanes)} "
+                f"do_not_fetch_project_wide_pack={guard} "
+                f"next_action={next_action}"
+            )
         if "done" in data and "reasons" in data:
             return f"codex-agent-mem: completion_check done={data.get('done')} reasons={len(data.get('reasons') or [])}"
         if "has_open_work" in data:
@@ -79,7 +108,7 @@ def compact_text_summary(data: Any, *, is_error: bool = False) -> str:
             saved = stats.get("compression_ratio")
             pack_hash = data.get("pack_hash")
             suffix = f" hash={pack_hash}" if pack_hash else ""
-            return (
+            base = (
                 "codex-agent-mem: context_pack "
                 f"budget={stats.get('budget', 'unknown')} "
                 f"pack_tokens={stats.get('approx_pack_tokens', '?')} "
@@ -87,6 +116,57 @@ def compact_text_summary(data: Any, *, is_error: bool = False) -> str:
                 f"ratio={saved if saved is not None else '?'}"
                 f"{suffix}"
             )
+            source_session_count = stats.get("source_session_count")
+            if source_session_count is None:
+                return base
+            lines = [base]
+            freshness = ""
+            if stats.get("last_operational_capture_at"):
+                freshness = (
+                    f"last_operational_capture_at={stats.get('last_operational_capture_at')} "
+                    "memory=persisted local context not live current-turn awareness"
+                )
+                if (
+                    stats.get("last_captured_turn_at")
+                    and stats.get("last_captured_turn_at") != stats.get("last_operational_capture_at")
+                ):
+                    freshness = (
+                        f"{freshness} "
+                        f"last_captured_turn_at={stats.get('last_captured_turn_at')}"
+                    )
+            elif stats.get("last_captured_turn_at"):
+                freshness = (
+                    f"last_captured_turn_at={stats.get('last_captured_turn_at')} "
+                    "memory=persisted local context not live current-turn awareness"
+                )
+            if stats.get("session_filter_applied"):
+                source_sessions = stats.get("source_sessions") or []
+                source = source_sessions[0] if source_sessions else {}
+                external_session_id = source.get("external_session_id") or source.get("id") or "unknown"
+                lines.append(f"session_filter=applied source_sessions=1 external_session_id={external_session_id}")
+                if freshness:
+                    lines.append(freshness)
+                return "\n".join(lines)
+            scope_warning = stats.get("scope_warning") or {}
+            warning_code = scope_warning.get("code") if isinstance(scope_warning, dict) else None
+            hint = ""
+            if isinstance(source_session_count, int) and source_session_count > 1:
+                hint = " use mem_session_list + session_id to narrow broad project scopes"
+            warning = f" scope_warning={warning_code}" if warning_code else ""
+            sub_scopes = stats.get("source_sub_scope_count")
+            sub_scope_text = f" sub_scopes={sub_scopes}" if sub_scopes is not None else ""
+            lines.append(f"session_filter=not_applied source_sessions={source_session_count}{sub_scope_text}{warning}{hint}")
+            recommended_narrowing = stats.get("recommended_narrowing")
+            if isinstance(recommended_narrowing, dict):
+                query_target = "<target sub-scope>"
+                lines.append(
+                    "Suggested narrowing: choose a target from candidate_sub_scopes, then call "
+                    f'mem_session_list(project_key, query="{query_target}") before treating this '
+                    "project-wide pack as active context."
+                )
+            if freshness:
+                lines.append(freshness)
+            return "\n".join(lines)
         if "score" in data and "duplicate_count" in data:
             return f"codex-agent-mem: health score={data.get('score')} open_work={data.get('open_work_count', '?')}"
         if "pid" in data and "connection_model" in data:

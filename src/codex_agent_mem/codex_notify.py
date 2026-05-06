@@ -10,6 +10,7 @@ from urllib import request
 from codex_agent_mem.config import AppConfig
 from codex_agent_mem.db import CodexAgentMemStore
 from codex_agent_mem.ingest import now_iso, normalize_event
+from codex_agent_mem.project_identity import ProjectIdentity, resolve_project_identity
 from codex_agent_mem.project_doc import sync_project_doc
 
 
@@ -35,17 +36,43 @@ def _flatten_input_messages(value: Any) -> list[str]:
 
 
 def derive_project_key(payload: dict[str, Any], explicit: str | None, project_from_cwd: bool) -> str:
-    if explicit:
-        return explicit
-    cwd = payload.get("cwd") or payload.get("cwd_path")
-    if project_from_cwd and cwd:
-        name = Path(str(cwd)).name.strip()
-        if name:
-            return name
-    return "default-project"
+    return derive_project_identity(payload, explicit, project_from_cwd).project_key
 
 
-def codex_notify_to_generic(payload: dict[str, Any], project_key: str) -> dict[str, Any]:
+def derive_project_identity(
+    payload: dict[str, Any],
+    explicit: str | None,
+    project_from_cwd: bool,
+) -> ProjectIdentity:
+    return resolve_project_identity(
+        payload,
+        explicit=explicit,
+        project_from_cwd=project_from_cwd,
+    )
+
+
+def codex_notify_to_generic(
+    payload: dict[str, Any],
+    project_key: str,
+    *,
+    project_identity: ProjectIdentity | None = None,
+) -> dict[str, Any]:
+    metadata = {
+        "codex_notification_type": payload.get("type"),
+        "model_name": payload.get("model")
+        or payload.get("model-name")
+        or payload.get("model_name"),
+    }
+    if project_identity is not None:
+        metadata.update(
+            {
+                "project_resolution_source": project_identity.source,
+                "project_resolution_confidence": project_identity.confidence,
+                "project_resolution_warnings": project_identity.warnings,
+            }
+        )
+        if project_identity.root_path:
+            metadata["project_root_path"] = project_identity.root_path
     return {
         "runtime": "codex",
         "project_key": project_key,
@@ -57,12 +84,7 @@ def codex_notify_to_generic(payload: dict[str, Any], project_key: str) -> dict[s
         "assistant_message": payload.get("last-assistant-message") or payload.get("last_assistant_message") or "",
         "tool_events": [],
         "artifacts": [],
-        "metadata": {
-            "codex_notification_type": payload.get("type"),
-            "model_name": payload.get("model")
-            or payload.get("model-name")
-            or payload.get("model_name"),
-        },
+        "metadata": metadata,
     }
 
 
@@ -130,8 +152,13 @@ def main(argv: list[str] | None = None) -> int:
     payload = json.loads(raw)
     if payload.get("type") != "agent-turn-complete":
         return 0
-    project_key = derive_project_key(payload, explicit=args.project_key, project_from_cwd=args.project_from_cwd)
-    generic_payload = codex_notify_to_generic(payload, project_key)
+    project_identity = derive_project_identity(
+        payload,
+        explicit=args.project_key,
+        project_from_cwd=args.project_from_cwd,
+    )
+    project_key = project_identity.project_key
+    generic_payload = codex_notify_to_generic(payload, project_key, project_identity=project_identity)
     if args.api_base:
         ingest_via_http(
             args.api_base,

@@ -4,31 +4,48 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-agent-mem"
-version = "1.0.0"
-description = "Portable, auditable, local-first memory layer for Codex and other agent workflows"
+version = "1.0.1"
+description = "Local-first MCP memory for AI agents with scoped continuity packs, structured payloads, and closure checks"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
+license-files = ["LICENSE", "NOTICE"]
+authors = [
+  { name = "Marcelo Caporale" },
+]
+maintainers = [
+  { name = "Marcelo Caporale" },
+]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
   "Operating System :: Microsoft :: Windows",
-  "Operating System :: POSIX",
+  "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 keywords = [
-  "codex",
   "mcp",
+  "mcp-server",
   "model-context-protocol",
-  "sqlite",
   "agent-memory",
-  "coding-agents",
+  "ai-agents",
+  "agent-continuity",
   "local-first",
-  "fastapi",
+  "sqlite",
+  "structured-content",
+  "context-packs",
+  "mcp-memory",
+  "ai-agent-memory",
+  "token-efficiency",
+  "context-compression",
+  "agent-workflows",
+  "codex",
+  "claude-code",
+  "gemini-cli",
+  "qwen",
 ]
 dependencies = [
   "fastapi>=0.111",
@@ -41,6 +58,9 @@ dependencies = [
 Homepage = "https://github.com/MarceloCaporale/codex-agent-mem"
 Repository = "https://github.com/MarceloCaporale/codex-agent-mem"
 Issues = "https://github.com/MarceloCaporale/codex-agent-mem/issues"
+"Author / X" = "https://x.com/MarceloCaporale"
+"Visual AI Media" = "https://visualaimedia.com"
+"Visual Systems Lab" = "https://visualsystemslab.com"
 
 [project.optional-dependencies]
 dev = [
@@ -67,7 +87,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py312"
 
 [tool.setuptools.packages.find]
 where = ["src"]

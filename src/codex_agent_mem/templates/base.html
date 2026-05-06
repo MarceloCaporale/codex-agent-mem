@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Local MCP memory inspector for agent turns, observations, decisions, and continuity packs.">
   <title>{% block title %}codex-agent-mem{% endblock %}</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="/static/inspector.css">
 </head>
 <body>
@@ -11,7 +13,7 @@
     <header class="topbar">
       <div>
         <a class="brand" href="/ui">codex-agent-mem</a>
-        <p class="subtitle">Local memory inspector for Codex turns, observations, and decisions.</p>
+        <p class="subtitle">Local MCP memory inspector for agent turns, observations, and decisions.</p>
       </div>
       <div class="meta">
         <span class="pill">DB</span>
@@ -43,7 +45,9 @@
       </div>
     </nav>
 
-    {% block content %}{% endblock %}
+    <main class="main-content">
+      {% block content %}{% endblock %}
+    </main>
   </div>
 </body>
 </html>

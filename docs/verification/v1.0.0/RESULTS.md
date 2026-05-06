@@ -1,26 +1,21 @@
-# v1.0.0 verification results
+# v1.0.x verification results
 
 These are reproducible, sanitized results generated from synthetic fixtures.
 
 Execution context:
 
-- Runtime: Codex Desktop in a Codex environment
-- Model: GPT-5.4
-- Reasoning effort: xhigh
-
-Scope: this validates Codex Desktop, not a ChatGPT web/app connector. Claude web / claude.ai support is also not inferred from these results.
+- Runtime: Codex Desktop
+- Model: not part of benchmark; synthetic fixtures only
+- Reasoning effort: not part of benchmark; synthetic fixtures only
 
 ## Snapshot
 
 | Scenario | Source tokens | Pack tokens | Saved | not_modified | Tools | Lazy init | Read-only |
 |---|---:|---:|---:|---|---:|---|---|
-| Small project continuity | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
-| Medium agent workflow | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
-| Large repeated audit | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
-| Sub-agent handoff example | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
-
-Across these fixtures: ~22,950 source tokens -> ~920 pack tokens.
-Approximate repeated-context reduction: 95.99% (~22,030 tokens not resent).
+| Small project continuity | 1,841 | 253 | 86.26% | true | 4 | false->true | true |
+| Medium agent workflow | 4,855 | 270 | 94.44% | true | 4 | false->true | true |
+| Large repeated audit | 9,731 | 269 | 97.24% | true | 4 | false->true | true |
+| Sub-agent handoff example | 6,523 | 276 | 95.77% | true | 4 | false->true | true |
 
 ## Token savings by scenario
 
@@ -29,56 +24,56 @@ Approximate repeated-context reduction: 95.99% (~22,030 tokens not resent).
 A short project where the agent should remember objective, constraints and open work without repeating the whole discussion.
 
 - Source context: ~1,841 tokens
-- Memory pack: ~216 tokens
-- Tokens not resent: ~1,625
-- Estimated savings: 88.27%
-- Pack hash: `9c219f1ea5993da6389c683a029e57c40aed129186e9fdfbe9de8058845967d7`
+- Memory pack: ~253 tokens
+- Tokens not resent: ~1,588
+- Estimated savings: 86.26%
+- Pack hash: `700b30ab9323f77d7c8366ebe09bcb7084645bbc31dcf7092fae5a15ca568b48`
 
 `source` [############################] 100.00%
-`pack`   [###.........................] 11.73%
-`saved`  [#########################...] 88.27%
+`pack`   [####........................] 13.74%
+`saved`  [########################....] 86.26%
 
 ### Medium agent workflow
 
 A realistic multi-step implementation with repeated decisions, pending work and DoD requirements.
 
 - Source context: ~4,855 tokens
-- Memory pack: ~233 tokens
-- Tokens not resent: ~4,622
-- Estimated savings: 95.20%
-- Pack hash: `762cd3a6bb36f47b76bf12f629b55e2c9d4c18b7e59a3a94083af580c012775b`
+- Memory pack: ~270 tokens
+- Tokens not resent: ~4,585
+- Estimated savings: 94.44%
+- Pack hash: `b5c6ecd9ec15c6463cbfd924247bba500dca7bbb3834144afc6f7a7051d00aac`
 
 `source` [############################] 100.00%
-`pack`   [#...........................] 4.80%
-`saved`  [###########################.] 95.20%
+`pack`   [##..........................] 5.56%
+`saved`  [##########################..] 94.44%
 
 ### Large repeated audit
 
 A long audit where the same constraints and decisions would normally be re-sent many times.
 
 - Source context: ~9,731 tokens
-- Memory pack: ~232 tokens
-- Tokens not resent: ~9,499
-- Estimated savings: 97.62%
-- Pack hash: `2a4983655139737e718c1a4315e1797a805eeb5294eba9e8dd5cb8472bcbad50`
+- Memory pack: ~269 tokens
+- Tokens not resent: ~9,462
+- Estimated savings: 97.24%
+- Pack hash: `6cc762e877b54779ac835bf0820712bbd3e4971472926a3cba110557221e6664`
 
 `source` [############################] 100.00%
-`pack`   [#...........................] 2.38%
-`saved`  [###########################.] 97.62%
+`pack`   [#...........................] 2.76%
+`saved`  [###########################.] 97.24%
 
 ### Sub-agent handoff example
 
 A project where an explorer sub-agent audits context and a worker sub-agent implements a bounded change.
 
 - Source context: ~6,523 tokens
-- Memory pack: ~239 tokens
-- Tokens not resent: ~6,284
-- Estimated savings: 96.34%
-- Pack hash: `55cfc4345a1ccafeb426c30e451a13fa8da84e928a501b165d8e82d5be7c4e46`
+- Memory pack: ~276 tokens
+- Tokens not resent: ~6,247
+- Estimated savings: 95.77%
+- Pack hash: `1e445aab0917fb3baef42a14ad8443e4f94b5758b84601fde013f07ae7b879e8`
 
 `source` [############################] 100.00%
-`pack`   [#...........................] 3.66%
-`saved`  [###########################.] 96.34%
+`pack`   [#...........................] 4.23%
+`saved`  [###########################.] 95.77%
 
 Sub-agent example:
 
@@ -107,16 +102,20 @@ Sub-agent example:
 | Mutating tool tested in read-only mode | `mem_snapshot_create` |
 | Mutating tool blocked | `true` |
 
+This is the v1.0.0 fixture baseline. In v1.0.1, the `minimal` profile also
+includes `mem_session_list`, `mem_scope_resolve`, and `mem_bootstrap_context`
+so broad workspaces can resolve scope before loading active context.
+
 ## Response diet
 
 Text shown to the model can be kept compact while the structured payload remains available to MCP clients.
 
 | Scenario | Compact text chars | Balanced text chars | Verbose text chars |
 |---|---:|---:|---:|
-| Small project continuity | 160 | 209 | 20,565 |
-| Medium agent workflow | 160 | 209 | 42,793 |
-| Large repeated audit | 160 | 209 | 75,965 |
-| Sub-agent handoff example | 160 | 209 | 54,476 |
+| Small project continuity | 160 | 209 | 20,715 |
+| Medium agent workflow | 160 | 209 | 42,943 |
+| Large repeated audit | 160 | 209 | 76,114 |
+| Sub-agent handoff example | 160 | 209 | 54,625 |
 
 ## Telemetry smoke
 

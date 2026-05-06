@@ -5,52 +5,16 @@ import sys
 from pathlib import Path
 
 from codex_agent_mem.config import AppConfig
-
-
-READ_ONLY_MCP_TOOLS = (
-    "mem_search",
-    "mem_get",
-    "mem_recent",
-    "mem_project_brief",
-    "mem_open_work",
-    "mem_completion_check",
-    "mem_recent_changes",
-    "mem_scope_guard",
-    "mem_context_pack",
-    "mem_provenance",
-    "mem_health",
-    "mem_health_runtime",
-    "mem_snapshot_list",
-    "mem_snapshot_create",
-    "mem_snapshot_restore",
-    "mem_policy_list",
-    "mem_policy_validate",
-    "mem_inheritance_list",
-    "mem_repair_propose",
-)
-
-MINIMAL_MCP_TOOLS = (
-    "mem_context_pack",
-    "mem_open_work",
-    "mem_completion_check",
-    "mem_health_runtime",
-)
-
-MUTATING_MCP_TOOLS = {
-    "mem_snapshot_create",
-    "mem_snapshot_restore",
-    "mem_policy_add",
-    "mem_policy_remove",
-    "mem_inheritance_add",
-    "mem_inheritance_remove",
-    "mem_repair_apply",
-}
+from codex_agent_mem.mcp_stdio import MUTATING_TOOLS, PROFILE_TOOLS
 
 
 def _tools_for_profile(profile: str, *, read_only: bool) -> tuple[str, ...]:
-    tools = MINIMAL_MCP_TOOLS if profile == "minimal" else READ_ONLY_MCP_TOOLS
+    try:
+        tools = PROFILE_TOOLS[profile]
+    except KeyError as exc:
+        raise ValueError(f"Unknown MCP profile: {profile}") from exc
     if read_only:
-        return tuple(tool for tool in tools if tool not in MUTATING_MCP_TOOLS)
+        return tuple(tool for tool in tools if tool not in MUTATING_TOOLS)
     return tools
 
 

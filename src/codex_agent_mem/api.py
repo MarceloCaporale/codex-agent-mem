@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from codex_agent_mem import __version__
-from codex_agent_mem.codex_notify import codex_notify_to_generic, derive_project_key
+from codex_agent_mem.codex_notify import codex_notify_to_generic, derive_project_identity
 from codex_agent_mem.config import AppConfig
 from codex_agent_mem.db import CodexAgentMemStore
 from codex_agent_mem.ingest import normalize_event
@@ -131,7 +131,7 @@ def _project_ui_summary(
     pack_tokens = pack_stats.get("approx_pack_tokens")
     saved_tokens = None
     saved_percent = None
-    if isinstance(source_tokens, int) and isinstance(pack_tokens, int) and source_tokens > 0:
+    if isinstance(source_tokens, int) and isinstance(pack_tokens, int) and source_tokens > pack_tokens:
         saved_tokens = max(source_tokens - pack_tokens, 0)
         saved_percent = round((saved_tokens / source_tokens) * 100)
 
@@ -188,8 +188,17 @@ def create_app(config: AppConfig | None = None) -> FastAPI:
 
     @app.post("/ingest/codex-notify")
     def ingest_codex_notify(req: CodexNotifyRequest):
-        project_key = derive_project_key(req.payload, explicit=req.project_key, project_from_cwd=req.project_from_cwd)
-        generic_payload = codex_notify_to_generic(req.payload, project_key)
+        project_identity = derive_project_identity(
+            req.payload,
+            explicit=req.project_key,
+            project_from_cwd=req.project_from_cwd,
+        )
+        project_key = project_identity.project_key
+        generic_payload = codex_notify_to_generic(
+            req.payload,
+            project_key,
+            project_identity=project_identity,
+        )
         event = normalize_event(generic_payload)
         result = store.ingest_event(req.payload, event)
         if req.sync_project_doc and event.cwd:

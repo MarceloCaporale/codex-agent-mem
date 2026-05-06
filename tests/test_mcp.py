@@ -61,9 +61,19 @@ def test_mcp_tools(tmp_path: Path):
         "params": {"name": "mem_search", "arguments": {"query": "JWT", "project_key": "demo-project"}},
     })
     body = search["result"]["structuredContent"]
-    assert isinstance(body, dict)
     assert body["count"] >= 1
+    assert body["items"]
     obs_id = body["items"][0]["id"]
+
+    recent = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 30,
+        "method": "tools/call",
+        "params": {"name": "mem_recent", "arguments": {"project_key": "demo-project"}},
+    })
+    recent_body = recent["result"]["structuredContent"]
+    assert recent_body["count"] >= 1
+    assert recent_body["items"]
 
     get_obs = server.handle_request({
         "jsonrpc": "2.0",
@@ -82,6 +92,25 @@ def test_mcp_tools(tmp_path: Path):
     assert "Working Memory" in pack["result"]["structuredContent"]["text"]
     assert "Pending work" in pack["result"]["structuredContent"]["text"]
     assert pack["result"]["structuredContent"]["stats"]["budget"] in {"micro", "normal", "full"}
+    pack_hash = pack["result"]["structuredContent"]["pack_hash"]
+    unchanged_pack = server.handle_request({
+        "jsonrpc": "2.0",
+        "id": 50,
+        "method": "tools/call",
+        "params": {
+            "name": "mem_context_pack",
+            "arguments": {
+                "project_key": "demo-project",
+                "budget": "auto",
+                "known_pack_hash": pack_hash,
+            },
+        },
+    })
+    assert unchanged_pack["result"]["structuredContent"] == {
+        "not_modified": True,
+        "pack_hash": pack_hash,
+        "message": "continuity pack unchanged",
+    }
     open_work = server.handle_request({
         "jsonrpc": "2.0",
         "id": 6,
@@ -132,20 +161,37 @@ def test_mcp_tools(tmp_path: Path):
     })
     assert runtime_health["result"]["structuredContent"]["connection_model"] == "one_process_per_connection"
     assert runtime_health["result"]["structuredContent"]["requests_count"] >= 1
+    session_id = store.list_sessions("demo-project")[0]["session_id"]
     snapshot_create = server.handle_request({
         "jsonrpc": "2.0",
         "id": 12,
         "method": "tools/call",
-        "params": {"name": "mem_snapshot_create", "arguments": {"project_key": "demo-project", "label": "mcp-checkpoint"}},
+        "params": {
+            "name": "mem_snapshot_create",
+            "arguments": {
+                "project_key": "demo-project",
+                "label": "mcp-checkpoint",
+                "session_id": session_id,
+            },
+        },
     })
-    snapshot_id = snapshot_create["result"]["structuredContent"]["id"]
+    snapshot_body = snapshot_create["result"]["structuredContent"]
+    snapshot_id = snapshot_body["id"]
+    assert snapshot_body["session_id"] == session_id
+    assert snapshot_body["external_session_id"] == "thread-1"
+    assert snapshot_body["provenance_confidence"] == "high"
     snapshot_list = server.handle_request({
         "jsonrpc": "2.0",
         "id": 13,
         "method": "tools/call",
         "params": {"name": "mem_snapshot_list", "arguments": {"project_key": "demo-project"}},
     })
-    assert snapshot_list["result"]["structuredContent"]["count"] >= 1
+    assert snapshot_list["result"]["structuredContent"]["items"]
+    listed_snapshot = snapshot_list["result"]["structuredContent"]["items"][0]
+    assert listed_snapshot["snapshot_id"] == snapshot_id
+    assert listed_snapshot["session_id"] == session_id
+    assert listed_snapshot["external_session_id"] == "thread-1"
+    assert listed_snapshot["provenance_confidence"] == "high"
     snapshot_restore = server.handle_request({
         "jsonrpc": "2.0",
         "id": 14,
@@ -186,7 +232,7 @@ def test_mcp_tools(tmp_path: Path):
         "method": "tools/call",
         "params": {"name": "mem_policy_list", "arguments": {"project_key": "demo-project"}},
     })
-    assert policy_list["result"]["structuredContent"]["count"] >= 1
+    assert policy_list["result"]["structuredContent"]["items"]
 
     base_payload = {
         "runtime": "codex",
@@ -234,7 +280,7 @@ def test_mcp_tools(tmp_path: Path):
         "method": "tools/call",
         "params": {"name": "mem_inheritance_list", "arguments": {"project_key": "demo-project"}},
     })
-    assert inheritance_list["result"]["structuredContent"]["count"] >= 1
+    assert inheritance_list["result"]["structuredContent"]["items"]
 
     repair_propose = server.handle_request({
         "jsonrpc": "2.0",
@@ -242,7 +288,10 @@ def test_mcp_tools(tmp_path: Path):
         "method": "tools/call",
         "params": {"name": "mem_repair_propose", "arguments": {"project_key": "demo-project"}},
     })
-    assert isinstance(repair_propose["result"]["structuredContent"]["items"], list)
+    repair_body = repair_propose["result"]["structuredContent"]
+    assert isinstance(repair_body, dict)
+    assert isinstance(repair_body["items"], list)
+    assert repair_body["count"] == len(repair_body["items"])
 
     policy_remove = server.handle_request({
         "jsonrpc": "2.0",

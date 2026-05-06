@@ -1,6 +1,8 @@
-# Ollama adapter note
+# Ollama-backed workflow note
 
-No Ollama adapter is implemented in v0.1.
+No native Ollama adapter is implemented in the public v1.0.x line.
+
+Current validation uses MCP-compatible CLI workflows that can run Ollama-backed models, including Qwen Code with local Qwen models and cloud-backed Ollama model routes listed in the main README.
 
 The intended future path is:
 

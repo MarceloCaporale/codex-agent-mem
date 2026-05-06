@@ -1,67 +1,75 @@
 # codex-agent-mem
 
-Otros idiomas: [English](./README.md) | [Deutsch](./README_DE.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
+Otros idiomas: [English](./README.md) | [Deutsch](./README_DE.md) | [Português do Brasil](./README_PT_BR.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
-Memoria portable, auditable y local-first para Codex, Claude y flujos con agentes de programacion en local o mediante CLI de terceros.
+**Memoria MCP portable, auditable y local-first para agentes de IA y flujos de coding compatibles con MCP.**
 
-codex-agent-mem conserva memoria duradera fuera del runtime del modelo, comprime continuidad en packs mas chicos, y arrastra estado operativo para que Codex retome con menos repeticion, menos cierres falsos y mas control sobre lo que entra en contexto.
+codex-agent-mem conserva memoria duradera fuera del runtime del modelo, comprime continuidad en packs mas chicos, y arrastra estado operativo para que agentes de IA compatibles con MCP retomen con menos repeticion, menos cierres falsos y mas control sobre lo que entra en contexto.
 
-Todo se guarda y procesa localmente en este MCP: base SQLite, indice FTS, snapshots, metadata de telemetria y UI opcional de inspeccion. `codex-agent-mem` no envia tu memoria, datos del proyecto, prompts ni telemetria a ningun servidor externo.
+Todo se guarda y procesa localmente en este MCP: base SQLite, indice FTS, snapshots, metadata de telemetria y UI opcional de inspeccion. `codex-agent-mem` no envia tu memoria, datos del proyecto, prompts ni telemetria a ningun servidor externo. Los clientes MCP pueden exponer resultados de herramientas al modelo o servicio que configures, asi que trata la memoria recuperada como salida local de herramienta entregada a ese cliente.
 
-`codex-agent-mem` nacio para Codex y flujos GPT-5.x, pero evoluciono como una capa portable de memoria MCP para runtimes compatibles con MCP como Codex CLI, Codex Desktop, Gemini CLI con Gemini 3.1 Pro, Claude Code con Opus 4.7 o Sonnet 4.6, Qwen Code con modelos locales Qwen 3.6 / Qwen 3.5 via Ollama, DeepSeek-V3.2 y Minimax M2.5 via Ollama Cloud, y agentes locales personalizados. En evaluacion continua: Kimi Code CLI, GLM-5, Kimi K2.5 y Kimi K2.6. Kimi Code CLI conecta con el servidor MCP `codex-agent-mem` via stdio; la validacion live completa con tool-calls del modelo se mide por separado antes de publicarse como validada. Tambien fue auditado externamente a nivel de protocolo para compatibilidad con Grok / xAI y orquestadores MCP tipo DeepSeek.
+Nacido para Codex y flujos GPT, `codex-agent-mem` crecio hasta convertirse en una capa portable de memoria MCP para runtimes compatibles con MCP, incluidos Codex CLI/Desktop, Claude Code, Google Gemini CLI, flujos Qwen Code usando modelos Ollama y otros stacks locales o de terceros para agentes CLI. La validacion se registra por cliente/runtime y nivel de evidencia. Los detalles especificos por modelo quedan en los docs de validacion para que este README describa la superficie publica sin sobredimensionar ningun runtime.
 
 `codex-agent-mem` vive en local, mantiene la memoria auditable y bajo demanda, y no envia tu memoria almacenada a ningun servicio externo.
 
-Distincion de alcance: la validacion en Codex CLI y Codex Desktop no equivale a una validacion de conector ChatGPT web/app, y la validacion en Claude Code no equivale a una validacion de Claude web / claude.ai. ChatGPT web/app y Claude web quedan como superficies de integracion futuras separadas, no como runtimes validados en v1.0.
-
 Baseline publica. Construida en slices chicos y verificables, todavia en evolucion, pero ya pensada para uso real.
 
-## Novedades de v1.0.0
+## Novedades v1.0.x
+
+- v1.0.1 corrige un camino de `idle-timeout` entre el daemon local y el bridge stdio que podia aparecer como falso incidente `Transport closed` cuando se usa `--daemon-url`.
+- v1.0.1 serializa el manejo compartido de requests dentro del daemon local threaded opcional para que una unica instancia SQLite no sea usada de forma concurrente.
+- v1.0.1 endurece la superficie publica local-first del daemon: bind solo a loopback, bearer token opcional para `/mcp`, `/health` sanitizado y reenvio de token desde el bridge stdio.
+- v1.0.1 agrega una guardrail de jerarquia de instrucciones en el contexto generado: la memoria recuperada es contexto auxiliar de proyecto, no una instruccion de mayor prioridad; es una guardrail basica, no una proteccion completa contra prompt injection.
+- v1.0.1 documenta que la memoria SQLite local es texto plano por defecto en la linea publica 1.0.x y no debe tratarse como vault de secretos.
+- v1.0.1 normaliza los payloads MCP de tools que devuelven listas para que `structuredContent` use raices objeto como `{items, count}` en vez de arrays raiz, mejorando compatibilidad con clientes estrictos como Claude Code.
+- v1.0.1 agrega recuperacion por sesion persistida: `mem_session_list` lista sesiones recientes, `mem_scope_resolve` prioriza lanes persistidos desde hints explicitos, `mem_bootstrap_context` evita packs project-wide de inicio cuando hay contenedores ambiguos, y `session_id` opcional filtra tools de recuperacion para que proyectos amplios no mezclen chats o agentes. Los packs project-wide que cruzan varias sesiones o sub-scopes inferidos emiten una advertencia visible y recomiendan narrowing antes de tratar el pack como contexto activo. No es conciencia live del turno actual.
+- v1.0.1 mantiene las instalaciones normales de continuidad en modo writable; `--read-only` es un modo explicito de auditoria/debug/retrieval-only, no el modo operativo por defecto.
 
 - perfiles MCP de bajo impacto: `minimal`, `standard` y `full`
-- modo `--read-only` real para bloquear tools mutantes y evitar escrituras laterales
+- modo `--read-only` explicito de auditoria/debug para bloquear tools mutantes y evitar escrituras laterales
 - inicializacion lazy de SQLite para conexiones MCP no usadas
 - respuestas MCP compactas por defecto, conservando el payload completo en `structuredContent`
 - `known_pack_hash` / `not_modified` para no reenviar packs de continuidad sin cambios
 - diagnostico runtime con heartbeat, spawn-storm warning, telemetria opcional y daemon/bridge stdio opcional
 
-Releases visibles: [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+Releases visibles: [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
 
 ## Snapshot (fixtures sinteticos v1.0)
 
 | Escenario | Perfil | Tokens fuente | Tokens pack | Ahorro | `not_modified` | Tools | Lazy init | Read-only |
 |---|---|---:|---:|---:|---|---:|---|---|
-| Small project continuity | `minimal` | 1,841 | 216 | 88.27% | true | 4 | false->true | true |
-| Medium agent workflow | `minimal` | 4,855 | 233 | 95.20% | true | 4 | false->true | true |
-| Large repeated audit | `minimal` | 9,731 | 232 | 97.62% | true | 4 | false->true | true |
-| Sub-agent handoff example | `minimal` | 6,523 | 239 | 96.34% | true | 4 | false->true | true |
+| Small project continuity | `minimal` | 1,841 | 253 | 86.26% | true | 4 | false->true | true |
+| Medium agent workflow | `minimal` | 4,855 | 270 | 94.44% | true | 4 | false->true | true |
+| Large repeated audit | `minimal` | 9,731 | 269 | 97.24% | true | 4 | false->true | true |
+| Sub-agent handoff example | `minimal` | 6,523 | 276 | 95.77% | true | 4 | false->true | true |
 
-En estos fixtures reproducibles, el contexto operativo repetido se redujo de ~22,950 tokens fuente a ~920 tokens de pack, una reduccion aproximada de 96.0%. No es una garantia universal; muestra el efecto cuando el agente normalmente reenviaria la misma continuidad del proyecto.
+En estos fixtures reproducibles, el contexto operativo repetido se redujo de ~22,950 tokens fuente a ~1,068 tokens de pack, una reduccion aproximada de 95.35%. No es una garantia universal; muestra el efecto cuando el agente normalmente reenviaria la misma continuidad del proyecto.
 
-`Tools=4` corresponde al perfil `minimal` usado en estos fixtures. El perfil `standard` expone 17 tools para recuperacion, gobernanza y auditoria mas amplias.
+`Tools=4` corresponde al perfil `minimal` previo a session-aware usado en estos fixtures. En v1.0.1, `minimal` tambien incluye `mem_session_list`, `mem_scope_resolve` y `mem_bootstrap_context`, y el perfil `standard` expone 20 tools para recuperacion, gobernanza y auditoria mas amplias.
 
 ### Snapshot de runtimes validados
 
 | Runtime | Configuracion | Metricas observadas | Resultado |
 |---|---|---|---|
-| Codex Desktop | Codex Desktop usando GPT-5.4 en este entorno Codex, razonamiento xhigh, fixtures sinteticos v1.0 | ~22,950 tokens fuente -> ~920 tokens de pack, ~96.0% menos contexto repetido, `not_modified=true` en packs repetidos | Verificacion publica reproducible |
+| Default MCP writable | Puentes locales Codex/Gemini/Claude, `read_only=false`; `full` cuando se requieren tools writable | `mem_note_create` escribio notas manuales indexadas y `mem_search` / `mem_context_pack` las recuperaron; `mem_snapshot_create(project_key, label, session_id)` registro proveniencia de alta confianza | Smokes writable de notas manuales y snapshot provenance aprobados |
+| Codex Desktop | Codex Desktop, MCP stdio, fixture retrieval-only v1.0 con `minimal`, `read-only`, `compact` | ~22,950 tokens fuente -> ~1,068 tokens de pack, ~95.35% menos contexto repetido, `not_modified=true` en packs repetidos | Validacion MCP de lectura mas verificacion publica reproducible; la continuidad writable se cubre en la fila anterior |
 | Codex CLI / `codex exec` | Ruta MCP stdio de Codex CLI, ejecucion corta / efimera | mismo servidor MCP local y estilo de config que Desktop; el lifecycle corto de CLI fue validado por separado del comportamiento del host largo-vivo de Desktop | Ruta Codex CLI validada |
-| Gemini CLI | Gemini 3.1 Pro, MCP stdio `codex-agent-mem`, `standard`, `read-only`, `compact` | proceso estable, contador de requests subio como se esperaba, `mem_search` devolvio raiz objeto `{items, count}` con `count=2` | Validacion live aprobada |
-| Claude Code | Claude Opus 4.7, solo MCP stdio `codex-agent-mem`, `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2` con un host Claude Code activo, `spawn_storm_warning=false`, `mem_search count=2` | Validacion live aprobada |
-| Qwen Code | Qwen Code 0.15.0, Ollama local, `qwen3.6:latest`, `standard`, `read-only`, `compact` | llamadas MCP reales a `mem_context_pack`, `mem_search`, `mem_open_work`, `mem_completion_check`, `mem_health_runtime`; requests `8`, lazy init `true`, `spawn_storm_warning=false`, `not_modified=true` | Validacion live local aprobada |
-| Smokes de modelos Qwen locales | Qwen Code 0.15.0 con modelos Ollama `qwen3.6:35b-a3b-q8_0` y `qwen3.5:9b` | ambos modelos respondieron smoke CLI e invocaron `mem_health_runtime` via MCP stdio; requests `4`, `read_only=true`, cierres limpios por `stdin_eof` | Smokes live locales aprobados |
-| DeepSeek-V3.2 | Qwen Code 0.15.0, `deepseek-v3.2:cloud` via Ollama Cloud, `standard`, `read-only`, `compact` | llamadas MCP reales a `mem_context_pack`, `mem_search`, `mem_health_runtime`; requests `6`, `spawn_storm_warning=false`, `not_modified=true` | Validacion MCP live cloud-backed aprobada |
-| Minimax M2.5 | Qwen Code 0.15.0, `minimax-m2.5:cloud` via Ollama Cloud, `standard`, `read-only`, `compact` | llamadas MCP reales a `mem_context_pack`, `mem_search`, `mem_health_runtime`; requests `6`, `not_modified=true` | Validacion MCP live cloud-backed aprobada |
-| Kimi Code CLI | Kimi Code CLI 1.38.0, MCP stdio `codex-agent-mem`, `standard`, `read-only`, `compact` | `kimi mcp test codex-agent-mem` conecto y listo 17 tools; la validacion completa con tool-calls de Kimi K2.5 / Kimi K2.6 sigue en evaluacion continua | Conexion MCP validada; no se afirma validacion del modelo |
-| Grok / xAI | Auditoria externa de modelo/runtime; no hay Grok CLI local disponible | compatible por protocolo mediante un orquestador MCP stdio o un wrapper JSON-RPC stdio fino | Auditado externamente; no validado live local |
+| Google Gemini CLI | MCP stdio `codex-agent-mem`, validacion retrieval-only explicita con `standard`, `read-only`; `compact` si el payload estructurado es visible, si no `verbose` | proceso estable, contador de requests subio como se esperaba, payloads con raiz objeto verificados donde fueron visibles | Validacion MCP de lectura con caveat de exposicion del cliente |
+| Claude Code | Claude Opus 4.7, solo MCP stdio `codex-agent-mem`, validacion retrieval-only explicita con `standard`, `read-only`, `compact` | requests `3 -> 8`, lazy init `false -> true`, `same_db_process_count=2` con un host Claude Code activo, `spawn_storm_warning=false`, `mem_search count=2` | Validacion MCP de lectura aprobada |
+| Qwen Code | Qwen Code 0.15.0, Ollama local, `qwen3.6:latest`, validacion retrieval-only explicita con `standard`, `read-only`, `compact` | llamadas MCP reales a `mem_context_pack`, `mem_search`, `mem_open_work`, `mem_completion_check`, `mem_health_runtime`; requests `8`, lazy init `true`, `spawn_storm_warning=false`, `not_modified=true` | Validacion MCP local de lectura aprobada |
+| Smokes de modelos Qwen locales | Qwen Code 0.15.0 con modelos Ollama `qwen3.6:35b-a3b-q8_0` y `qwen3.5:9b` | ambos modelos respondieron smoke CLI e invocaron `mem_health_runtime` via MCP stdio; retrieval-only `read_only=true`, cierres limpios por `stdin_eof` | Smokes live locales de lectura aprobados |
+| DeepSeek-V3.2 | Qwen Code 0.15.0, `deepseek-v3.2:cloud` via Ollama Cloud, validacion retrieval-only explicita con `standard`, `read-only`, `compact` | llamadas MCP reales a `mem_context_pack`, `mem_search`, `mem_health_runtime`; requests `6`, `spawn_storm_warning=false`, `not_modified=true` | Validacion MCP cloud-backed de lectura aprobada |
+| Minimax M2.5 | Qwen Code 0.15.0, `minimax-m2.5:cloud` via Ollama Cloud, validacion retrieval-only explicita con `standard`, `read-only`, `compact` | llamadas MCP reales a `mem_context_pack`, `mem_search`, `mem_health_runtime`; requests `6`, `not_modified=true` | Validacion MCP cloud-backed de lectura aprobada |
+| Kimi Code CLI | Kimi Code CLI 1.38.0, MCP stdio `codex-agent-mem`, validacion retrieval-only explicita con `standard`, `read-only`, `compact` | `kimi mcp test codex-agent-mem` conecto y listo las tools esperadas del perfil standard; la validacion completa con tool-calls de Kimi K2.5 / Kimi K2.6 sigue en evaluacion continua | Conexion MCP de lectura validada; no se afirma validacion del modelo |
+| Grok / xAI | Nota de compatibilidad a nivel protocolo | comportamiento MCP stdio / JSON-RPC revisado a nivel protocolo | Nota de protocolo |
 
-Grok es auditoria externa, no una sesion CLI live local en esta maquina. Qwen Code ya fue validado localmente con modelos Ollama y MCP stdio. DeepSeek-V3.2 y Minimax M2.5 fueron validados live con modelos cloud-backed de Ollama, no con inferencia local. Kimi Code CLI ya quedo conectado al MCP, mientras que la validacion a nivel modelo con Kimi K2.5 / Kimi K2.6 sigue como evaluacion continua porque los modelos completos requieren una via runtime separada. En general, `codex-agent-mem` es agnostico al modelo en la capa MCP; la tabla lista los pares modelo/runtime ya medidos en vivo, y se agregan nuevos pares a medida que se capturan sus mediciones live. Para hosts sin cliente MCP nativo, la via esperada es un wrapper fino JSON-RPC stdio o un orquestador compatible con MCP.
+Grok / xAI aparece como nota de compatibilidad a nivel protocolo, no como validacion live de tool-calls del modelo. Las filas validadas live son los pares cliente/modelo MCP medidos directamente: Codex Desktop/CLI, Google Gemini CLI, Claude Code, Qwen Code, smokes de modelos Qwen locales, DeepSeek-V3.2 via Ollama Cloud, Minimax M2.5 via Ollama Cloud y validacion de conexion de Kimi Code CLI. En general, `codex-agent-mem` es agnostico al modelo en la capa MCP; se agregan nuevos pares cuando sus mediciones live quedan capturadas.
 
 ## Resultados verificables
 
-`codex-agent-mem` incluye un sandbox reproducible de verificacion y un export publico de evidencia para v1.0.0.
+`codex-agent-mem` incluye un sandbox reproducible de verificacion y un export publico de evidencia para v1.0.0. El uso de fixtures reproducibles es intencional: el MCP busca optimizar el manejo repetible del contexto operativo, por eso la evidencia publica mantiene controlado ese contexto repetido en vez de convertir cada corrida en una conversacion distinta.
 
-La corrida publica actual fue ejecutada con **Codex Desktop usando GPT-5.4 en este entorno Codex, razonamiento xhigh** sobre fixtures sinteticos. Mide compresion de contexto, evitacion de reenvio con `known_pack_hash`, inicializacion lazy, perfil minimo de tools, seguridad read-only, response diet, telemetria local, control de cierre y un ejemplo con sub-agentes. Es una validacion de Codex Desktop, no una validacion de conector ChatGPT web/app.
+La evidencia publica v1.0.x combina fixtures reproducibles de verificacion con validacion MCP live en los runtimes listados arriba. Mide compresion de contexto, evitacion de reenvio con `known_pack_hash`, inicializacion lazy, perfil minimo de tools, seguridad del modo read-only explicito, response diet, telemetria local, control de cierre y un ejemplo con sub-agentes.
 
 Ver: [Verification Evidence](./docs/verification/) y [v1.0.0 Results](./docs/verification/v1.0.0/RESULTS.md).
 
@@ -73,16 +81,25 @@ Si ya usas `claude-mem`, ambas herramientas pueden coexistir tecnicamente. Para 
 
 Usa `codex-agent-mem` si prefieres memoria local-first, auditable, pull-based, con recuperacion explicita y cierre determinista. Usa plugins de memoria adicionales solo cuando busques intencionalmente su comportamiento automatico basado en hooks.
 
-Para flujos Claude Code sensibles a tokens, `codex-agent-mem` esta pensado para ser barato por defecto: sin inyeccion al inicio de sesion, sin resumen por stop hook, respuestas compactas, presupuestos explicitos y atajo `pack_hash` / `not_modified` cuando el pack no cambio.
+Para flujos Claude Code sensibles a tokens, `codex-agent-mem` esta pensado para operar con bajo overhead por defecto: sin inyeccion al inicio de sesion, sin resumen por stop hook, respuestas compactas, presupuestos explicitos y atajo `pack_hash` / `not_modified` cuando el pack no cambio.
+
+## Complemento opcional: clean-process-ended
+
+`codex-agent-mem` v1.0.1 y `clean-process-ended` ([GitHub](https://github.com/MarceloCaporale/clean-process-ended)) v0.7.2 funcionan de forma independiente, pero resuelven problemas vecinos en flujos locales con agentes.
+
+- `codex-agent-mem` preserva continuidad: memoria de proyecto, packs de contexto acotados, notas manuales, snapshots, trabajo abierto, blockers y chequeos deterministas de cierre.
+- `clean-process-ended` cubre higiene de procesos locales: diagnostico ownership-first, chequeos de cierre en dry-run y recibos compactos de janitor.
+
+Juntos mejoran los cierres de tarea: recuperar contexto, terminar el trabajo, revisar estado local de procesos y guardar evidencia compacta de cierre sin convertir ninguno de los dos MCP en dependencia obligatoria del otro.
 
 ## Lo que ofrece
 
 ### Continuidad
 
 - **Continuidad compacta**: convierte contexto repetido en packs mas chicos para `AGENTS.md` solo cuando realmente conviene
-- **Estado operativo persistente**: mantiene objetivo, restricciones, pendientes, blockers, Definition of Done y guardarrailes de alcance
-- **Integracion nativa con Codex**: pensado para `notify`, MCP stdio, sincronizacion opcional de `AGENTS.md` y cierre defensivo del runtime
-- **Ahorro practico de tokens**: reduce repeticion de continuidad cuando gana el pack compacto; los fixtures publicos de v1.0 muestran reducciones de 88% a 97% en escenarios de contexto repetido
+- **Estado operativo persistente entre sesiones y agentes**: mantiene objetivo, restricciones, pendientes, blockers, Definition of Done y guardarrailes de alcance para que el contexto no quede rehen de una sola plataforma, una sola sesion o un solo modelo
+- **Integracion MCP-nativa**: corre como servidor MCP stdio local para Codex, Claude Code, Google Gemini CLI, Qwen Code y otros clientes compatibles con MCP; `notify` de Codex y la sincronizacion opcional de `AGENTS.md` siguen disponibles cuando aportan valor
+- **Economia de tokens para flujos con agentes**: mejora el uso de tokens en trabajo repetido con agentes al reducir replay de continuidad cuando gana el pack compacto; los fixtures publicos de v1.0 muestran reducciones de 86% a 97% en escenarios de contexto repetido
 
 ### Control de cierre
 
@@ -92,13 +109,17 @@ Para flujos Claude Code sensibles a tokens, `codex-agent-mem` esta pensado para 
 ### Gobernanza y auditoria
 
 - **Seleccion gobernada de memoria**: aplica policies, inheritance y repairs en vez de mezclar memoria sin criterio
+- **Memoria MCP inspeccionable**: la UI local `/ui` permite navegar cambios recientes, scope guard, provenance, health, snapshots, estado de gobernanza y memoria almacenada sin abrir la base SQLite a mano
 - **Todo local y auditable**: SQLite + FTS5, provenance, health, snapshots y UI local, sin servicio externo de memoria ni sincronizacion saliente de memoria
+- **Frontera local de seguridad clara**: v1.0.1 endurece acceso loopback al daemon, bearer token opcional, `/health` sanitizado y jerarquia de instrucciones del contexto generado; no es una proteccion completa contra prompt injection, y la base SQLite publica 1.0.x sigue en texto plano por defecto y no debe usarse como vault de secretos
+
+Docs clave: [AGENTS.md](./AGENTS.md) | [Quickstart](./docs/quickstart.md) | [Integracion Codex](./docs/codex-integration.md) | [Nota Codex Desktop](./docs/codex-desktop-lifecycle-note.md) | [Support Matrix](./docs/support-matrix.md) | [Design Decisions](./docs/design-decisions.md)
 
 Sirve para auditorias largas, continuidad de proyectos complejos y sesiones donde el problema no es solo recordar decisiones, sino no perder alcance ni dar por terminado algo que sigue abierto.
 
 ## Estado
 
-`1.0.0` es la release base actual.
+`1.0.1` es la release actual de mantenimiento 1.0.x. `1.0.0` sigue siendo la base publica de verificacion para las metricas reproducibles de abajo.
 
 Hoy funciona:
 
@@ -119,10 +140,20 @@ Hoy funciona:
 - provenance de memoria persistida por observacion y consultable con `mem_provenance`
 - diagnostico de salud del proyecto con `mem_health`
 - diagnostico runtime del servidor MCP con `mem_health_runtime`
+- notas operativas manuales con `mem_note_create`, indexadas para `mem_search` y elegibles para `mem_context_pack`
 - snapshots versionados del proyecto con `mem_snapshot_create`, `mem_snapshot_list` y `mem_snapshot_restore`
 - policies de memoria gobernada con `mem_policy_validate`, `mem_policy_add`, `mem_policy_list` y `mem_policy_remove`
 - inheritance selectiva entre proyectos con `mem_inheritance_add`, `mem_inheritance_list` y `mem_inheritance_remove`
 - propuestas de repair y repairs derivados con `mem_repair_propose` y `mem_repair_apply`
+- perfiles MCP de bajo impacto con `--profile minimal|standard|full`
+- modo MCP read-only explicito de auditoria/debug con `--read-only`
+- texto MCP compacto con `structuredContent` completo
+- reutilizacion de packs de continuidad con `known_pack_hash` / `not_modified`
+- cache in-process corto para tools de lectura costosas
+- inicializacion lazy de SQLite para conexiones MCP baratas no usadas
+- runtime health enriquecido con perfil, mutabilidad, cache, lazy init, heartbeat y diagnostico spawn-storm
+- telemetria runtime local opcional con `--telemetry-mode off|summary|debug`
+- daemon local opcional con `codex-agent-mem-daemon` y modo bridge stdio con `--daemon-url`
 - API de inspeccion con FastAPI
 - UI local de inspeccion en `/ui`, incluyendo cambios recientes, scope guard, provenance, health, snapshots y estado de gobernanza
 - CLI local de policies con `codex-agent-mem-policy`
@@ -130,6 +161,9 @@ Hoy funciona:
   - `mem_search`
   - `mem_get`
   - `mem_recent`
+  - `mem_session_list`
+  - `mem_scope_resolve`
+  - `mem_bootstrap_context`
   - `mem_project_brief`
   - `mem_open_work`
   - `mem_completion_check`
@@ -140,6 +174,7 @@ Hoy funciona:
   - `mem_health`
   - `mem_health_runtime`
   - `mem_snapshot_list`
+  - `mem_note_create`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
   - `mem_policy_list`
@@ -162,16 +197,57 @@ Lo que todavia queda fuera de alcance a proposito:
 - adaptador para Ollama
 - orquestacion multiagente
 
-## Expectativa importante
+## Por que existe este repositorio
 
-Codex hoy no instala herramientas MCP arbitrarias desde una URL de GitHub en un solo paso.
+- Los flujos con agentes suelen necesitar contexto duradero fuera de un unico proceso runtime.
+- La recuperacion por si sola no resuelve el fallo mayor: perder alcance y obligar al usuario a repetir contexto previo.
+- Un bloque compacto de continuidad o un context pack MCP puede reducir cuanto contexto anterior hay que repetir manualmente.
+- Guardar solo decisiones no alcanza; el runtime tambien necesita objetivo activo, trabajo abierto, blockers y una regla contra el cierre falso.
+- SQLite mantiene la implementacion local-first, auditable y facil de inspeccionar.
+- La release actual se enfoca a proposito en un slice estrecho y verificable, no en una plataforma amplia sin terminar.
+- Hosts MCP largos y cortos pueden comportarse distinto bajo carga; los docs de validacion definen el limite exacto.
 
-El camino soportado sigue siendo:
+## Modelo de instalacion
 
-1. instalar el paquete Python
-2. apuntar `notify` y `mcp_servers` de Codex a los comandos instalados
+`codex-agent-mem` se instala como paquete Python local y se expone a clientes compatibles con MCP mediante comandos stdio.
 
-Este repositorio esta preparado para que ese flujo sea limpio y repetible.
+El patron estable es:
+
+1. instalar el paquete
+2. apuntar el cliente MCP al comando instalado
+3. mantener la base de memoria local y auditable
+
+Los snippets especificos de Codex para `notify` y `mcp_servers` los genera `codex-agent-mem-bootstrap-codex`; otros clientes MCP usan sus propios archivos de configuracion.
+
+## Quickstart
+
+Si quieres el camino mas corto desde clone hasta un setup local funcional:
+
+### PowerShell / Windows
+
+```powershell
+git clone https://github.com/MarceloCaporale/codex-agent-mem.git
+cd codex-agent-mem
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e .[dev]
+codex-agent-mem-smoke
+codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+### bash / macOS / Linux
+
+```bash
+git clone https://github.com/MarceloCaporale/codex-agent-mem.git
+cd codex-agent-mem
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+codex-agent-mem-smoke
+codex-agent-mem-bootstrap-codex --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
+En Codex, pega el snippet generado en `~/.codex/config.toml`. En otros clientes MCP, usa el comando stdio comun de [Configurar clientes MCP](#configurar-clientes-mcp).
 
 ## Instalacion
 
@@ -179,13 +255,27 @@ Este repositorio esta preparado para que ese flujo sea limpio y repetible.
 
 Instala directo desde la URL del repositorio:
 
+```bash
+pipx install "git+https://github.com/MarceloCaporale/codex-agent-mem.git"
+codex-agent-mem-smoke
+```
+
 ```powershell
 pipx install "git+https://github.com/MarceloCaporale/codex-agent-mem.git"
 codex-agent-mem-smoke
-codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
 ### Opcion B: instalacion local de desarrollo
+
+```bash
+git clone https://github.com/MarceloCaporale/codex-agent-mem.git
+cd codex-agent-mem
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+pytest -q
+codex-agent-mem-smoke
+```
 
 ```powershell
 git clone https://github.com/MarceloCaporale/codex-agent-mem.git
@@ -197,15 +287,35 @@ pytest -q
 codex-agent-mem-smoke
 ```
 
-## Configurar Codex
+## Configurar clientes MCP
+
+El punto de entrada del servidor MCP es el mismo para cualquier cliente compatible:
+
+```bash
+codex-agent-mem-mcp --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
+```powershell
+codex-agent-mem-mcp --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+Apunta tu cliente compatible con MCP a ese comando stdio instalado. Las rutas publicas validadas en v1.0.x incluyen Codex CLI/Desktop, Claude Code, Google Gemini CLI, Qwen Code con modelos Qwen locales via Ollama, DeepSeek-V3.2 y Minimax M2.5 via Ollama Cloud, ademas de validacion de conexion en Kimi Code CLI.
+
+### Helper para Codex
 
 Genera un snippet listo para pegar:
+
+```bash
+codex-agent-mem-bootstrap-codex --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
 
 ```powershell
 codex-agent-mem-bootstrap-codex --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
 
-Eso imprime el bloque `notify`, el bloque `[mcp_servers."codex-agent-mem"]`, un idle timeout explicito para stdio y las aprobaciones read-only de las tools MCP para pegar en `~/.codex/config.toml`.
+Para Codex, eso imprime el bloque `notify`, el bloque `[mcp_servers."codex-agent-mem"]`, un idle timeout explicito para stdio y las aprobaciones de las tools MCP para pegar en `~/.codex/config.toml`.
+
+Para sesiones largas de Codex Desktop, prefiere un MCP idle timeout mas largo, por ejemplo `--idle-timeout-seconds 1800`, para reducir la probabilidad de que el thread de Desktop conserve un transporte stdio cerrado. Para corridas CLI cortas o `codex exec`, `300` segundos suele ser suficiente y limpia mas rapido.
 
 Si tambien quieres reinyeccion automatica en `AGENTS.md`, agrega `--sync-project-doc` al comando `notify`.
 
@@ -215,18 +325,23 @@ Una vez configurado, el agente debe usar `codex-agent-mem` de forma proactiva cu
 
 Patron recomendado:
 
-- empezar con `mem_context_pack` cuando puedan importar decisiones previas, trabajo pendiente, blockers, restricciones o estado del proyecto
+- empezar con `mem_bootstrap_context` cuando puedan importar decisiones previas, trabajo pendiente, blockers, restricciones o estado del proyecto; pasar titulo de chat, thread, cwd o repo cuando el host lo exponga
+- llamar `mem_context_pack` directamente solo cuando el alcance ya sea explicito, idealmente con `session_id` en workspaces amplios
 - pasar `known_pack_hash` en chequeos repetidos para que los packs sin cambios devuelvan `not_modified` en vez de reenviar contexto
 - usar `mem_search` solo cuando el pack compacto no alcance
 - antes de decir que algo esta terminado, llamar `mem_open_work` y `mem_completion_check` en tareas de implementacion, validacion, publicacion, migracion o documentacion
 
-De ahi sale el ahorro practico de tokens: continuidad compacta primero, expansion puntual solo cuando hace falta, y no reenviar el mismo pack si nada cambio.
+De ahi sale la economia practica de tokens: continuidad compacta primero, expansion puntual solo cuando hace falta, y no reenviar el mismo pack si nada cambio.
 
-Tambien hay ejemplos en [examples/codex](./examples/codex/).
+Tambien hay ejemplos en [examples/codex](./examples/codex/) y notas de flujos via Ollama en [examples/ollama](./examples/ollama/).
 
 ## Ejecucion local
 
 Levanta la API de inspeccion:
+
+```bash
+codex-agent-mem-api --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
 
 ```powershell
 codex-agent-mem-api --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
@@ -240,13 +355,35 @@ http://127.0.0.1:37770/ui
 
 Levanta el servidor MCP:
 
+```bash
+codex-agent-mem-mcp --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
+
 ```powershell
 codex-agent-mem-mcp --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+```
+
+El transporte MCP actual es stdio. Eso significa que un proceso por conexion del host es normal; no es un daemon singleton. El idle timeout defensivo permite que instancias no usadas o huerfanas salgan limpiamente.
+
+Defaults recomendados: usa un timeout mas largo para sesiones Codex Desktop, por ejemplo `1800` segundos, y uno mas corto para ejecuciones CLI/efimeras, por ejemplo `300` segundos.
+
+Reconstruye manualmente el bloque de continuidad generado para un directorio:
+
+```bash
+codex-agent-mem-refresh-context --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db" --project-key YOUR_PROJECT --cwd /path/to/project
+```
+
+```powershell
+codex-agent-mem-refresh-context --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db --project-key YOUR_PROJECT --cwd C:\Path\To\Project
 ```
 
 ## Verificacion rapida
 
 Corre el smoke test:
+
+```bash
+codex-agent-mem-smoke --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+```
 
 ```powershell
 codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
@@ -254,32 +391,65 @@ codex-agent-mem-smoke --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 
 Eso inserta un turno de ejemplo, extrae observaciones y verifica recuperacion reciente y generacion de `project_brief`.
 
+## Economia de tokens: que ahorra tokens hoy
+
+- El paquete compila un pack de working memory mas chico a partir de turnos recientes, decisiones duraderas y estado operativo derivado.
+- Cuando `--sync-project-doc` esta activo y ese pack es realmente mas chico que el contexto fuente, se sincroniza en `AGENTS.md` para el directorio de trabajo.
+- La recuperacion MCP y la sincronizacion opcional de `AGENTS.md` permiten iniciar sesiones futuras con continuidad comprimida en vez de obligarte a repetir el alcance viejo.
+- `mem_context_pack` expone el mismo pack compacto por MCP para recuperacion bajo demanda.
+- El pack arrastra pendientes y blockers, asi una ejecucion futura puede recuperar "que falta" y no solo "que se decidio".
+
+Esto es economia de tokens para flujos con agentes, no compresion magica. `codex-agent-mem` mejora la economia de contexto al reducir contexto repetido de proyecto, reutilizar packs sin cambios con `known_pack_hash` y permitir que el agente expanda solo la memoria que necesita.
+
 ## Ahorro aproximado de tokens
 
-En lenguaje simple: esto busca reducir la cantidad de contexto repetido que hay que volver a pasarle a Codex. No lo elimina por completo, pero si puede recortarlo de forma util.
+En lenguaje simple: esto busca reducir la cantidad de contexto repetido que hay que volver a pasarle al agente. No lo elimina por completo, pero si puede recortarlo de forma util.
 
 Lo que hoy podemos decir honestamente a partir de validaciones locales:
 
-- los fixtures publicos de v1.0 redujeron contexto repetido de ~22,950 tokens fuente a ~920 tokens de pack, cerca de `96.0%` en ese escenario controlado
-- los escenarios individuales del sandbox quedaron entre `88%` y `97%` de reduccion
-- las validaciones live en Gemini CLI, Claude Code, Qwen Code, DeepSeek-V3.2 via Ollama Cloud y Minimax M2.5 via Ollama Cloud confirmaron recuperacion MCP compacta, proceso estable, modo read-only y comportamiento de raiz objeto/no-reinyeccion donde fue visible
+- los fixtures publicos de v1.0 redujeron contexto repetido de ~22,950 tokens fuente a ~1,068 tokens de pack, cerca de `95.35%` en ese escenario controlado
+- los escenarios individuales del sandbox quedaron entre `86%` y `97%` de reduccion
+- las validaciones live confirmaron recuperacion MCP compacta, proceso estable, comportamiento de raiz objeto/no-reinyeccion donde fue visible y snapshot provenance writable en los puentes locales Codex/Gemini/Claude
 
 Ejemplos del sandbox publico v1.0:
 
-- `1,841 -> 216` tokens aproximados
-- `4,855 -> 233` tokens aproximados
-- `9,731 -> 232` tokens aproximados
-- `6,523 -> 239` tokens aproximados
+- `1,841 -> 253` tokens aproximados
+- `4,855 -> 270` tokens aproximados
+- `9,731 -> 269` tokens aproximados
+- `6,523 -> 276` tokens aproximados
 
 Importante: no es una garantia fija por prompt. Si el pack generado no es realmente mas chico que el contexto fuente, `codex-agent-mem` no lo reinyecta y evita fingir un ahorro que no existe.
+
+## Que ayuda a detectar hoy
+
+- perder el objetivo original despues de algunas corridas
+- achicar el alcance en silencio cuando el usuario pidio mas
+- declarar terminado mientras todavia hay trabajo pendiente
+- olvidar blockers y volver a entrar en la siguiente ejecucion como si la tarea ya estuviera cerrada
 
 ## Estructura del repositorio
 
 - [src/codex_agent_mem](./src/codex_agent_mem/) - codigo del paquete
 - [tests](./tests/) - tests ejecutables
 - [examples/codex](./examples/codex/) - ejemplos de integracion con Codex
+- [examples/ollama](./examples/ollama/) - notas para flujos via Ollama
 - [scripts](./scripts/) - helpers de bootstrap local
 - [docs](./docs/) - arquitectura y notas de release
+
+## Mapa de documentacion
+
+- [AGENTS.md](./AGENTS.md) - mapa del repo y guia operativa para agentes de IA compatibles con MCP
+- [docs/quickstart.md](./docs/quickstart.md) - camino mas corto de instalacion y primera ejecucion
+- [docs/codex-integration.md](./docs/codex-integration.md) - como encajan notify y MCP en Codex
+- [docs/verification](./docs/verification/) - metricas publicas reproducibles y evidencia v1.0.0
+- [docs/support-matrix.md](./docs/support-matrix.md) - soporte actual y gaps conocidos
+- [docs/codex-desktop-lifecycle-note.md](./docs/codex-desktop-lifecycle-note.md) - comportamiento observado de Codex Desktop y mitigaciones practicas
+- [docs/design-decisions.md](./docs/design-decisions.md) - decisiones explicitas de producto y arquitectura
+- [docs/architecture.md](./docs/architecture.md) - arquitectura tecnica portable de la release actual
+- [docs/validation](./docs/validation/) - niveles de validacion, soporte runtime, comportamiento de clientes y notas publicas de evidencia
+- [CONTRIBUTING.md](./CONTRIBUTING.md) - flujo de contribucion y barra de calidad
+- [SECURITY.md](./SECURITY.md) - alcance de soporte y guia de reporte de seguridad
+- [docs/discoverability.md](./docs/discoverability.md) - descripcion GitHub, topics y framing de release sugeridos
 
 ## Superficie de release
 
@@ -292,3 +462,11 @@ Este repositorio incluye:
 - workflow de CI
 - licencia
 - changelog
+
+## Autor
+
+Creado y mantenido por Marcelo Caporale.
+
+- X: [@MarceloCaporale](https://x.com/MarceloCaporale)
+- Estudio: [Visual AI Media](https://visualaimedia.com)
+- Lab: [Visual Systems Lab](https://visualsystemslab.com)

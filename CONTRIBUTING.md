@@ -4,15 +4,15 @@ Thanks for contributing to `codex-agent-mem`.
 
 ## Current scope
 
-The current release line is intentionally narrow:
+The current release line focuses on:
 
-- Codex notify capture
+- local-first MCP memory
 - local SQLite persistence
-- MCP retrieval
-- heuristic extraction
-- FastAPI inspection surface
+- runtime/client compatibility
+- reliability and release hygiene
+- validation, documentation, and packaging
 
-Please keep changes aligned with the current scope unless the repository issue or milestone explicitly expands it.
+Please keep changes aligned with the local-first MCP design. Larger architecture changes should start with an issue or discussion before a pull request.
 
 ## Local setup
 
@@ -30,6 +30,7 @@ Run these before opening a pull request:
 ruff check .
 python -m compileall src
 pytest -q
+python scripts/mcp_contract_smoke.py
 codex-agent-mem-smoke
 ```
 
@@ -45,19 +46,26 @@ python -m build
   - repo and CLI name: `codex-agent-mem`
   - Python package name: `codex_agent_mem`
 - Keep Windows paths and TOML examples copy-pasteable
-- Do not add broad platform claims that the code does not yet support
+- Back new compatibility or performance claims with evidence, tests, or validation notes
 - Prefer small, explicit interfaces over hidden automation
 - Keep documentation aligned with the actual implementation
+- Use temporary databases for tests and smoke checks; never rely on a maintainer's operational database
 
 ## Documentation expectations
 
 If you change behavior, update the relevant docs:
 
 - `README.md`
+- `README_ES.md`
+- `README_DE.md`
+- `README_JA.md`
+- `README_ZH.md`
 - `docs/quickstart.md`
-- `docs/codex-integration.md`
 - `docs/support-matrix.md`
+- `docs/validation/`
 - `docs/design-decisions.md`
+
+The README files are equivalent documents in different languages. Content changes should stay aligned across all of them.
 
 ## Pull request guidance
 

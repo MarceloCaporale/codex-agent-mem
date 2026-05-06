@@ -193,6 +193,41 @@ def test_api_ingest_and_read(tmp_path: Path):
     assert closure_metrics.json()["total_events"] >= 1
 
 
+def test_api_codex_notify_resolves_project_from_mentioned_repo(tmp_path: Path):
+    workspace = tmp_path / "workspace"
+    repo = workspace / "trip-studio"
+    repo.mkdir(parents=True)
+    (repo / "AGENTS.md").write_text("Scope: `trip-studio`\n", encoding="utf-8")
+    app = create_app(AppConfig(db_path=tmp_path / "codex_agent_mem.db"))
+    client = TestClient(app)
+
+    ingest = client.post(
+        "/ingest/codex-notify",
+        json={
+            "payload": {
+                "type": "agent-turn-complete",
+                "thread-id": "th-trip",
+                "turn-id": "tu-trip",
+                "cwd": str(workspace),
+                "input-messages": [
+                    f"Implementa en el repo `{repo}` el frente TECNICO de v1.3_calidad_producto."
+                ],
+                "last-assistant-message": "Pending: validate health and smoke.",
+                "timestamp": "2026-04-29T00:00:00Z",
+            },
+            "project_from_cwd": True,
+        },
+    )
+
+    assert ingest.status_code == 200
+    assert ingest.json()["project_key"] == "trip-studio"
+    brief = client.get("/projects/trip-studio/brief")
+    assert brief.status_code == 200
+    assert brief.json()["project"]["root_path"] == str(repo)
+    broad_brief = client.get(f"/projects/{workspace.name}/brief")
+    assert broad_brief.status_code == 404
+
+
 def test_inspector_routes_render(tmp_path: Path):
     (tmp_path / "demo-repo").mkdir()
     app = create_app(AppConfig(db_path=tmp_path / "codex_agent_mem.db"))

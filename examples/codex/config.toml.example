@@ -1,6 +1,11 @@
 # Example for ~/.codex/config.toml
 # Use single-quoted TOML strings on Windows so backslashes stay literal.
 # Replace the paths with your real install paths.
+# This is the normal writable continuity configuration.
+# Use config.read-only-audit.example.toml only for explicit retrieval-only audit/debug runs.
+# This example uses the full profile so note, snapshot, governance, repair,
+# and restore tools are available. Review the approved tools before pasting if
+# you want a narrower surface.
 
 notify = [
   'C:\Path\To\python.exe',
@@ -8,7 +13,7 @@ notify = [
   'codex_agent_mem.codex_notify',
   '--project-from-cwd',
   '--db-path',
-  'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db'
+  'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db',
 ]
 # Add '--sync-project-doc' before '--db-path' if you want automatic AGENTS.md reinjection.
 
@@ -20,13 +25,36 @@ args = [
   '--idle-timeout-seconds',
   '300',
   '--profile',
-  'minimal',
+  'full',
   '--response-mode',
   'compact',
-  '--read-only',
   '--db-path',
-  'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db'
+  'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db',
 ]
+
+[mcp_servers."codex-agent-mem".tools.mem_search]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_get]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_recent]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_note_create]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_session_list]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_scope_resolve]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_bootstrap_context]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_project_brief]
+approval_mode = "approve"
 
 [mcp_servers."codex-agent-mem".tools.mem_open_work]
 approval_mode = "approve"
@@ -50,4 +78,40 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers."codex-agent-mem".tools.mem_health_runtime]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_snapshot_list]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_snapshot_create]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_snapshot_restore]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_policy_list]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_policy_validate]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_policy_add]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_policy_remove]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_inheritance_list]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_inheritance_add]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_inheritance_remove]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_repair_propose]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_repair_apply]
 approval_mode = "approve"

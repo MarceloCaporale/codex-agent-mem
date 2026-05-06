@@ -29,35 +29,8 @@ from codex_agent_mem.runtime_efficiency import (
 
 _EOF = object()
 
-PROFILE_TOOLS: dict[str, set[str]] = {
-    "minimal": {
-        "mem_context_pack",
-        "mem_open_work",
-        "mem_completion_check",
-        "mem_health_runtime",
-    },
-    "standard": {
-        "mem_context_pack",
-        "mem_open_work",
-        "mem_completion_check",
-        "mem_health_runtime",
-        "mem_search",
-        "mem_get",
-        "mem_recent",
-        "mem_project_brief",
-        "mem_recent_changes",
-        "mem_scope_guard",
-        "mem_health",
-        "mem_provenance",
-        "mem_snapshot_list",
-        "mem_policy_list",
-        "mem_policy_validate",
-        "mem_inheritance_list",
-        "mem_repair_propose",
-    },
-}
-
 MUTATING_TOOLS = {
+    "mem_note_create",
     "mem_snapshot_create",
     "mem_snapshot_restore",
     "mem_policy_add",
@@ -65,6 +38,51 @@ MUTATING_TOOLS = {
     "mem_inheritance_add",
     "mem_inheritance_remove",
     "mem_repair_apply",
+}
+
+FULL_PROFILE_TOOLS = (
+    "mem_search",
+    "mem_get",
+    "mem_recent",
+    "mem_note_create",
+    "mem_session_list",
+    "mem_scope_resolve",
+    "mem_bootstrap_context",
+    "mem_project_brief",
+    "mem_open_work",
+    "mem_completion_check",
+    "mem_recent_changes",
+    "mem_scope_guard",
+    "mem_context_pack",
+    "mem_provenance",
+    "mem_health",
+    "mem_health_runtime",
+    "mem_snapshot_list",
+    "mem_snapshot_create",
+    "mem_snapshot_restore",
+    "mem_policy_list",
+    "mem_policy_validate",
+    "mem_policy_add",
+    "mem_policy_remove",
+    "mem_inheritance_list",
+    "mem_inheritance_add",
+    "mem_inheritance_remove",
+    "mem_repair_propose",
+    "mem_repair_apply",
+)
+
+PROFILE_TOOLS: dict[str, tuple[str, ...]] = {
+    "minimal": (
+        "mem_session_list",
+        "mem_scope_resolve",
+        "mem_bootstrap_context",
+        "mem_open_work",
+        "mem_completion_check",
+        "mem_context_pack",
+        "mem_health_runtime",
+    ),
+    "standard": tuple(tool for tool in FULL_PROFILE_TOOLS if tool not in MUTATING_TOOLS),
+    "full": FULL_PROFILE_TOOLS,
 }
 
 CACHEABLE_TOOLS = {
@@ -278,16 +296,29 @@ class CodexAgentMemMCPServer:
     def store(self) -> CodexAgentMemStore:
         return self._store_provider.get()
 
+    @staticmethod
+    def _session_id_arg(arguments: dict[str, Any]) -> int | None:
+        value = arguments.get("session_id")
+        if value is None or value == "":
+            return None
+        return int(value)
+
+    @staticmethod
+    def _limit_arg(arguments: dict[str, Any], *, default: int, maximum: int) -> int:
+        value = int(arguments.get("limit", default))
+        return max(1, min(value, maximum))
+
     def list_tools(self) -> list[dict[str, Any]]:
         tools = [
             {
                 "name": "mem_search",
-                "description": "Search stored codex-agent-mem observations for a project or across all projects.",
+                "description": "Search stored codex-agent-mem observations for a project or, when provided, one persisted session within that project.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "query": {"type": "string"},
                         "project_key": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                         "limit": {"type": "integer", "minimum": 1, "maximum": 50},
                     },
                     "required": ["query"],
@@ -306,44 +337,132 @@ class CodexAgentMemMCPServer:
             },
             {
                 "name": "mem_recent",
-                "description": "Return recent observations, optionally scoped to one project.",
+                "description": "Return recent observations, optionally scoped to one project or persisted session.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "project_key": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                         "limit": {"type": "integer", "minimum": 1, "maximum": 50},
                     },
                 },
             },
             {
-                "name": "mem_project_brief",
-                "description": "Return a compact brief for one project: counts, recent observations, and recent decisions.",
+                "name": "mem_note_create",
+                "description": "Create one manual operational memory note that is indexed for mem_search and eligible for context packs.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "project_key": {"type": "string"},
+                        "text": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
+                        "title": {"type": "string"},
+                        "tags": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "maxItems": 20,
+                        },
+                        "importance": {"type": "integer", "minimum": 1, "maximum": 5},
+                    },
+                    "required": ["project_key", "text"],
+                },
+            },
+            {
+                "name": "mem_session_list",
+                "description": "List recent persisted sessions/chats for one project so agents can select a scoped continuity lane.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                        "query": {"type": "string"},
+                        "sub_scope_hint": {"type": "string"},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_scope_resolve",
+                "description": (
+                    "Resolve a broad project plus optional thread/path hint into persisted "
+                    "session/sub-scope candidates before requesting active context."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "hint": {"type": "string"},
+                        "current_cwd": {"type": "string"},
+                        "repo_path": {"type": "string"},
+                        "mentioned_files": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "maxItems": 20,
+                        },
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_bootstrap_context",
+                "description": (
+                    "Return defensive startup context: resolve scope from optional "
+                    "thread/path hints and avoid project-wide packs for ambiguous containers."
+                ),
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "hint": {"type": "string"},
+                        "thread_hint": {"type": "string"},
+                        "chat_title": {"type": "string"},
+                        "active_chat_label": {"type": "string"},
+                        "current_cwd": {"type": "string"},
+                        "repo_path": {"type": "string"},
+                        "mentioned_files": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "maxItems": 20,
+                        },
+                        "session_id": {"type": "integer", "minimum": 1},
+                        "budget": {"type": "string", "enum": ["auto", "micro", "normal", "full"]},
+                    },
+                    "required": ["project_key"],
+                },
+            },
+            {
+                "name": "mem_project_brief",
+                "description": "Return a compact brief for one project, optionally scoped to one persisted session.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "project_key": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                     },
                     "required": ["project_key"],
                 },
             },
             {
                 "name": "mem_open_work",
-                "description": "Return deterministic open work for one project: pending items, blockers, Definition of Done gaps, and closure guardrails.",
+                "description": "Return deterministic open work for one project, optionally scoped to one persisted session.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "project_key": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                     },
                     "required": ["project_key"],
                 },
             },
             {
                 "name": "mem_completion_check",
-                "description": "Return a deterministic closure check for one project.",
+                "description": "Return a deterministic closure check for one project, optionally scoped to one persisted session.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "project_key": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                     },
                     "required": ["project_key"],
                 },
@@ -355,24 +474,26 @@ class CodexAgentMemMCPServer:
                     "type": "object",
                     "properties": {
                         "project_key": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                     },
                     "required": ["project_key"],
                 },
             },
             {
                 "name": "mem_scope_guard",
-                "description": "Return compact scope guardrails for one project: constraints, must-not-drop items, and closure conflicts.",
+                "description": "Return compact scope guardrails for one project, optionally scoped to one persisted session.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
                         "project_key": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                     },
                     "required": ["project_key"],
                 },
             },
             {
                 "name": "mem_context_pack",
-                "description": "Return a compact continuity pack optimized to carry project context forward with fewer tokens.",
+                "description": "Return a compact continuity pack optimized to carry project or persisted-session context forward with fewer tokens.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -380,6 +501,7 @@ class CodexAgentMemMCPServer:
                         "budget": {"type": "string", "enum": ["auto", "micro", "normal", "full"]},
                         "max_chars": {"type": "integer", "minimum": 400, "maximum": 6000},
                         "known_pack_hash": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                     },
                     "required": ["project_key"],
                 },
@@ -434,6 +556,7 @@ class CodexAgentMemMCPServer:
                     "properties": {
                         "project_key": {"type": "string"},
                         "label": {"type": "string"},
+                        "session_id": {"type": "integer", "minimum": 1},
                     },
                     "required": ["project_key", "label"],
                 },
@@ -563,14 +686,12 @@ class CodexAgentMemMCPServer:
             },
         ]
         allowed_tools = PROFILE_TOOLS.get(self.runtime.profile)
-        if allowed_tools is not None:
-            tools = [tool for tool in tools if str(tool["name"]) in allowed_tools]
-        if self.runtime.read_only:
-            tools = [tool for tool in tools if str(tool["name"]) not in MUTATING_TOOLS]
-        return tools
+        if allowed_tools is None:
+            return tools
+        allowed_tool_names = set(allowed_tools)
+        return [tool for tool in tools if str(tool["name"]) in allowed_tool_names]
 
     def _tool_result(self, data: Any, is_error: bool = False) -> dict[str, Any]:
-        structured = self._structured_content(data)
         if self.runtime.response_mode == "verbose":
             text = json.dumps(data, ensure_ascii=False, indent=2)
         elif self.runtime.response_mode == "balanced":
@@ -580,11 +701,12 @@ class CodexAgentMemMCPServer:
             text = compact_text_summary(data, is_error=is_error)
         return {
             "content": [{"type": "text", "text": text}],
-            "structuredContent": structured,
+            "structuredContent": self._structured_content(data),
             "isError": is_error,
         }
 
-    def _structured_content(self, data: Any) -> dict[str, Any]:
+    @staticmethod
+    def _structured_content(data: Any) -> dict[str, Any]:
         if isinstance(data, dict):
             return data
         if isinstance(data, list):
@@ -645,16 +767,17 @@ class CodexAgentMemMCPServer:
             name = params.get("name")
             arguments = params.get("arguments") or {}
             try:
-                if self.runtime.read_only and name in MUTATING_TOOLS:
-                    raise PermissionError(f"Tool is disabled in read-only mode: {name}")
                 listed_tools = {tool["name"] for tool in self.list_tools()}
                 if name not in listed_tools:
                     raise ValueError(f"Tool unavailable in profile '{self.runtime.profile}': {name}")
+                if self.runtime.read_only and name in MUTATING_TOOLS:
+                    raise PermissionError(f"Tool is disabled in read-only mode: {name}")
                 if name == "mem_search":
                     data = self.store.search_observations(
                         query=arguments.get("query", ""),
                         project_key=arguments.get("project_key"),
-                        limit=int(arguments.get("limit", 10)),
+                        session_id=self._session_id_arg(arguments),
+                        limit=self._limit_arg(arguments, default=10, maximum=50),
                     )
                 elif name == "mem_get":
                     data = self.store.get_observation(int(arguments["observation_id"]))
@@ -663,13 +786,67 @@ class CodexAgentMemMCPServer:
                 elif name == "mem_recent":
                     data = self.store.recent_observations(
                         project_key=arguments.get("project_key"),
-                        limit=int(arguments.get("limit", 10)),
+                        session_id=self._session_id_arg(arguments),
+                        limit=self._limit_arg(arguments, default=10, maximum=50),
                     )
+                elif name == "mem_note_create":
+                    raw_tags = arguments.get("tags")
+                    tags = raw_tags if isinstance(raw_tags, list) else ([str(raw_tags)] if raw_tags is not None else [])
+                    data = self.store.create_manual_note(
+                        arguments["project_key"],
+                        str(arguments["text"]),
+                        session_id=self._session_id_arg(arguments),
+                        title=str(arguments["title"]) if arguments.get("title") is not None else None,
+                        tags=[str(item) for item in tags],
+                        importance=int(arguments["importance"]) if arguments.get("importance") is not None else None,
+                    )
+                    if data is None:
+                        raise ValueError("Project not found")
+                elif name == "mem_session_list":
+                    data = self.store.list_sessions(
+                        arguments["project_key"],
+                        limit=self._limit_arg(arguments, default=20, maximum=100),
+                        query=arguments.get("query"),
+                        sub_scope_hint=arguments.get("sub_scope_hint"),
+                    )
+                elif name == "mem_scope_resolve":
+                    raw_files = arguments.get("mentioned_files")
+                    mentioned_files = raw_files if isinstance(raw_files, list) else None
+                    data = self.store.scope_resolve(
+                        arguments["project_key"],
+                        hint=arguments.get("hint"),
+                        current_cwd=arguments.get("current_cwd"),
+                        repo_path=arguments.get("repo_path"),
+                        mentioned_files=[str(item) for item in mentioned_files] if mentioned_files else None,
+                        limit=self._limit_arg(arguments, default=8, maximum=20),
+                    )
+                    if data is None:
+                        raise ValueError("Project not found")
+                elif name == "mem_bootstrap_context":
+                    raw_files = arguments.get("mentioned_files")
+                    mentioned_files = raw_files if isinstance(raw_files, list) else None
+                    data = self.store.bootstrap_context(
+                        arguments["project_key"],
+                        hint=arguments.get("hint"),
+                        thread_hint=arguments.get("thread_hint"),
+                        chat_title=arguments.get("chat_title"),
+                        active_chat_label=arguments.get("active_chat_label"),
+                        current_cwd=arguments.get("current_cwd"),
+                        repo_path=arguments.get("repo_path"),
+                        mentioned_files=[str(item) for item in mentioned_files] if mentioned_files else None,
+                        session_id=self._session_id_arg(arguments),
+                        budget=str(arguments.get("budget", "micro")),
+                    )
+                    if data is None:
+                        raise ValueError("Project not found")
                 elif name == "mem_project_brief":
                     data = self._cached_call(
                         name,
                         arguments,
-                        lambda: self.store.project_brief(arguments["project_key"]),
+                        lambda: self.store.project_brief(
+                            arguments["project_key"],
+                            session_id=self._session_id_arg(arguments),
+                        ),
                     )
                     if data is None:
                         raise ValueError("Project not found")
@@ -677,23 +854,36 @@ class CodexAgentMemMCPServer:
                     data = self._cached_call(
                         name,
                         arguments,
-                        lambda: self.store.open_work_report(arguments["project_key"]),
+                        lambda: self.store.open_work_report(
+                            arguments["project_key"],
+                            session_id=self._session_id_arg(arguments),
+                        ),
                     )
                     if data is None:
                         raise ValueError("Project not found")
                 elif name == "mem_completion_check":
-                    data = self.store.completion_check(arguments["project_key"], record=not self.runtime.read_only)
+                    data = self.store.completion_check(
+                        arguments["project_key"],
+                        session_id=self._session_id_arg(arguments),
+                        record=not self.runtime.read_only,
+                    )
                     if data is None:
                         raise ValueError("Project not found")
                 elif name == "mem_recent_changes":
-                    data = self.store.recent_changes(arguments["project_key"])
+                    data = self.store.recent_changes(
+                        arguments["project_key"],
+                        session_id=self._session_id_arg(arguments),
+                    )
                     if data is None:
                         raise ValueError("Project not found")
                 elif name == "mem_scope_guard":
                     data = self._cached_call(
                         name,
                         arguments,
-                        lambda: self.store.scope_guard(arguments["project_key"]),
+                        lambda: self.store.scope_guard(
+                            arguments["project_key"],
+                            session_id=self._session_id_arg(arguments),
+                        ),
                     )
                     if data is None:
                         raise ValueError("Project not found")
@@ -705,17 +895,21 @@ class CodexAgentMemMCPServer:
                             arguments["project_key"],
                             budget=str(arguments.get("budget", "auto")),
                             max_chars=int(arguments["max_chars"]) if arguments.get("max_chars") is not None else None,
+                            session_id=self._session_id_arg(arguments),
                         ),
                     )
                     if data is None:
                         raise ValueError("Project not found")
                     stats = dict(data.get("stats") or {})
                     stats.pop("build_ms", None)
+                    stats.pop("memory_age_seconds", None)
+                    stats.pop("operational_memory_age_seconds", None)
                     pack_hash = stable_hash(
                         {
                             "text": data.get("text"),
                             "stats": stats,
                             "project_key": arguments["project_key"],
+                            "session_id": self._session_id_arg(arguments),
                         }
                     )
                     known_pack_hash = arguments.get("known_pack_hash")
@@ -750,6 +944,7 @@ class CodexAgentMemMCPServer:
                     data = self.store.snapshot_create(
                         arguments["project_key"],
                         label=str(arguments["label"]),
+                        session_id=self._session_id_arg(arguments),
                     )
                     if data is None:
                         raise ValueError("Project not found")
@@ -834,12 +1029,32 @@ def _write_response(message: dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
-def _forward_to_daemon(daemon_url: str, message: dict[str, Any]) -> dict[str, Any] | None:
+def _daemon_headers(daemon_token: str | None = None) -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    if daemon_token is not None:
+        headers["Authorization"] = f"Bearer {daemon_token}"
+    return headers
+
+
+def _validate_daemon_token(daemon_token: str | None) -> str | None:
+    if daemon_token is None:
+        return None
+    if daemon_token == "":
+        raise ValueError("--daemon-token cannot be empty.")
+    return daemon_token
+
+
+def _forward_to_daemon(
+    daemon_url: str,
+    message: dict[str, Any],
+    *,
+    daemon_token: str | None = None,
+) -> dict[str, Any] | None:
     body = json.dumps(message, ensure_ascii=True).encode("utf-8")
     request = urllib.request.Request(
         daemon_url.rstrip("/") + "/mcp",
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers=_daemon_headers(daemon_token),
         method="POST",
     )
     try:
@@ -849,9 +1064,27 @@ def _forward_to_daemon(daemon_url: str, message: dict[str, Any]) -> dict[str, An
             raw = response.read().decode("utf-8")
     except urllib.error.HTTPError as exc:
         raw = exc.read().decode("utf-8", errors="replace")
+        error_message = f"daemon HTTP {exc.code}"
         if raw:
-            return json.loads(raw)
-        raise
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict) and payload.get("jsonrpc") == "2.0":
+                return payload
+            if isinstance(payload, dict) and isinstance(payload.get("error"), str):
+                error_message = f"{error_message}: {payload['error']}"
+        return {
+            "jsonrpc": "2.0",
+            "id": message.get("id"),
+            "error": {"code": -32001, "message": error_message},
+        }
+    except (urllib.error.URLError, OSError) as exc:
+        return {
+            "jsonrpc": "2.0",
+            "id": message.get("id"),
+            "error": {"code": -32002, "message": f"daemon transport error: {exc}"},
+        }
     return json.loads(raw)
 
 
@@ -890,6 +1123,18 @@ def _install_signal_handlers(runtime: MCPRuntimeState, stop_event: threading.Eve
             signal.signal(sig, _handler)
         except (ValueError, OSError, RuntimeError):  # pragma: no cover - platform dependent
             continue
+
+
+def _resolve_idle_timeout_seconds(
+    configured_timeout: int | None,
+    *,
+    daemon_url: str | None,
+) -> int | None:
+    if configured_timeout is not None:
+        return configured_timeout if configured_timeout > 0 else None
+    if daemon_url is not None:
+        return None
+    return 300
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -932,17 +1177,33 @@ def main(argv: list[str] | None = None) -> int:
         help="Forward stdio JSON-RPC requests to an already running codex-agent-mem daemon.",
     )
     parser.add_argument(
+        "--daemon-token",
+        default=None,
+        help="Optional bearer token sent when forwarding requests to a daemon that was started with --auth-token.",
+    )
+    parser.add_argument(
         "--idle-timeout-seconds",
         type=int,
-        default=300,
-        help="Defensive shutdown after this much MCP inactivity. Use 0 to disable.",
+        default=None,
+        help=(
+            "Defensive shutdown after this much MCP inactivity. Use 0 to disable. "
+            "Defaults to 300 for direct stdio and disabled when --daemon-url is used."
+        ),
     )
     args = parser.parse_args(argv)
+    try:
+        args.daemon_token = _validate_daemon_token(args.daemon_token)
+    except ValueError as exc:
+        parser.error(str(exc))
     _configure_stdio()
     stop_event = threading.Event()
+    idle_timeout_seconds = _resolve_idle_timeout_seconds(
+        args.idle_timeout_seconds,
+        daemon_url=args.daemon_url,
+    )
     runtime = MCPRuntimeState(
         db_path=args.db_path,
-        idle_timeout_seconds=args.idle_timeout_seconds if args.idle_timeout_seconds > 0 else None,
+        idle_timeout_seconds=idle_timeout_seconds,
         profile=args.profile,
         read_only=bool(args.read_only),
         response_mode=args.response_mode,
@@ -1014,7 +1275,7 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 message = json.loads(line)
                 response = (
-                    _forward_to_daemon(args.daemon_url, message)
+                    _forward_to_daemon(args.daemon_url, message, daemon_token=args.daemon_token)
                     if args.daemon_url is not None
                     else server.handle_request(message)
                 )

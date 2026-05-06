@@ -4,8 +4,8 @@
 
 | Version line | Status |
 | --- | --- |
-| `0.4.x` | Supported |
-| `< 0.4.0` | Not supported |
+| `1.0.x` | Supported local-first MCP core |
+| `< 1.0.0` | Best-effort only |
 
 ## Scope
 
@@ -16,8 +16,20 @@ Security reports are most relevant for:
 - local inspection UI
 - generated AGENTS.md working-memory sync
 - MCP stdio surface
-- Codex notify ingestion
+- agent turn ingestion, including Codex notify
 - packaging and install workflow
+
+The supported public scope is local-first: local SQLite, local MCP stdio, the optional loopback daemon/stdio bridge, local API/UI, and documented local agent runtime configuration.
+
+## Local data and daemon security
+
+`codex-agent-mem` stores local memory in a plaintext SQLite database by default. Treat that file as sensitive project data. Do not use it as a secrets vault, avoid storing credentials or API keys in prompts or memory, and keep the database under a local user-protected path. Encryption at rest is not part of the public `1.0.x` line.
+
+The optional daemon in `1.0.x` is local-first and loopback-only. It rejects remote bind hosts by default, can require `Authorization: Bearer <token>` for `/mcp`, and exposes only sanitized runtime metadata on `/health`. The bearer token is a local safeguard, not hosted authentication, TLS, OAuth, or a remote access-control layer.
+
+Generated continuity packs include retrieved memory as advisory project context. Current system, developer, and user instructions still override retrieved memory. This is a basic guardrail against instruction confusion, not a guarantee that prompt injection is impossible.
+
+The public `1.0.x` package does not provide hosted authentication, multi-tenant isolation, remote telemetry, or built-in encryption. If you need stronger local protection, place the SQLite database on an encrypted volume or inside an operating-system-protected user profile.
 
 ## Reporting a vulnerability
 
@@ -40,4 +52,4 @@ Preferred path:
 
 ## Response expectations
 
-This is an early public release line. The project aims to respond pragmatically and quickly, but no formal SLA is promised yet.
+The project aims to respond pragmatically and quickly, but no formal SLA is promised.

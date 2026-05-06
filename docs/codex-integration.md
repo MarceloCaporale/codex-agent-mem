@@ -25,8 +25,6 @@ For low-impact Desktop and long-running hosts, v1.0 also adds:
 
 7. read-only MCP mode, profile-based tool surfaces, compact responses, lazy SQLite initialization, pack-hash reuse, runtime heartbeat diagnostics, optional telemetry, and an optional local daemon/stdio bridge
 
-Scope note: this document covers Codex CLI, `codex exec`, and Codex Desktop. It does not document or claim ChatGPT web/app connector support. ChatGPT connector validation is a separate future integration surface.
-
 ## Capture flow
 
 - Codex emits `agent-turn-complete`
@@ -47,6 +45,9 @@ Scope note: this document covers Codex CLI, `codex exec`, and Codex Desktop. It 
   - `mem_search`
   - `mem_get`
   - `mem_recent`
+  - `mem_session_list`
+  - `mem_scope_resolve`
+  - `mem_bootstrap_context`
   - `mem_project_brief`
   - `mem_open_work`
   - `mem_completion_check`
@@ -57,6 +58,7 @@ Scope note: this document covers Codex CLI, `codex exec`, and Codex Desktop. It 
   - `mem_health`
   - `mem_health_runtime`
   - `mem_snapshot_list`
+  - `mem_note_create`
   - `mem_snapshot_create`
   - `mem_snapshot_restore`
   - `mem_policy_list`
@@ -68,6 +70,12 @@ Scope note: this document covers Codex CLI, `codex exec`, and Codex Desktop. It 
   - `mem_inheritance_remove`
   - `mem_repair_propose`
   - `mem_repair_apply`
+
+At task startup, prefer `mem_bootstrap_context(project_key, ...)` when the
+host can provide a chat title, thread hint, cwd, repo path, or mentioned files.
+It is read-only and refuses to treat a project-wide container pack as active
+context when the stored memory has several candidate lanes. If the scope is
+already explicit, call `mem_context_pack(project_key, session_id=...)`.
 
 `mem_context_pack` also supports `budget=auto`, so the runtime can select the smallest fitting reinjection profile instead of always forcing one fixed budget.
 
@@ -90,22 +98,29 @@ The generated config uses:
 - `--idle-timeout-seconds` for defensive stdio cleanup
 - `--profile` for profile-aware tool surfaces
 - `--response-mode` for compact, balanced, or verbose MCP text responses
-- per-tool `approval_mode = "approve"` for the read-only retrieval tools
+- per-tool `approval_mode = "approve"` for the configured MCP tools
 - Python module targets under `codex_agent_mem`
-- snapshot, audit, and read-only governance tools approved alongside the continuity tools
+- snapshot, audit, and governance tools approved alongside the continuity tools
 
-For a lower-impact Codex Desktop profile, generate:
+The default helper emits the `full` profile. That keeps writable continuity
+available, including manual notes, snapshots, governance, repairs, and restore
+tools. Review the approved tools before pasting if you want a narrower surface.
+
+For an explicit retrieval-only audit/debug profile, generate:
 
 ```bash
-codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only --idle-timeout-seconds 1800
+codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only
 ```
 
 ```powershell
-codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only --idle-timeout-seconds 1800
+codex-agent-mem-bootstrap-codex --mcp-profile minimal --mcp-read-only
 ```
 
 That exposes only:
 
+- `mem_session_list`
+- `mem_scope_resolve`
+- `mem_bootstrap_context`
 - `mem_context_pack`
 - `mem_open_work`
 - `mem_completion_check`
@@ -113,13 +128,11 @@ That exposes only:
 
 and disables mutating MCP tools.
 
-For CLI and short `codex exec` runs, a shorter timeout such as `--idle-timeout-seconds 300` is usually better because it cleans up unused stdio processes faster. For long-lived Codex Desktop threads, a longer timeout such as `1800` reduces the chance that the host keeps a closed MCP transport after the server exits for inactivity.
-
 `--sync-project-doc` is now opt-in. Add it to `notify` only if you want automatic `AGENTS.md` reinjection in the working directory.
 
 ## MCP tool approvals
 
-The generated snippet also marks the read-only retrieval tools as:
+The generated snippet also marks the configured MCP tools as:
 
 ```toml
 approval_mode = "approve"
@@ -134,6 +147,7 @@ Use single-quoted TOML strings so backslashes stay literal.
 See:
 
 - [examples/codex/config.toml.example](../examples/codex/config.toml.example)
+- [examples/codex/config.read-only-audit.example.toml](../examples/codex/config.read-only-audit.example.toml)
 
 ## POSIX note
 
@@ -162,11 +176,6 @@ That path is useful only if you explicitly want `notify -> HTTP -> local API`.
 
 The current transport is stdio. That means one MCP process per host connection is expected; this integration does not claim a singleton daemon. `codex-agent-mem` now adds an idle timeout, signal-aware shutdown, runtime diagnostics, and explicit SQLite cleanup so unused or orphaned stdio instances exit more defensively.
 
-Use different timeout expectations by host:
-
-- Codex Desktop: prefer `--idle-timeout-seconds 1800` or higher for long threads where the host may keep a tool client alive.
-- Codex CLI / `codex exec --ephemeral`: prefer `--idle-timeout-seconds 300` for faster cleanup.
-
 ## Codex Desktop lifecycle note
 
 Current evidence points to a host-side lifecycle problem in long-lived Codex Desktop sessions rather than a single MCP being the sole root cause.
@@ -184,7 +193,7 @@ What `codex-agent-mem` does about it:
 - adds signal-aware shutdown and explicit SQLite close
 - reports runtime state through `mem_health_runtime`
 - hardens SQLite defaults for concurrent local use
-- supports `--profile minimal --read-only` for lower-impact Desktop setups
+- supports `--profile minimal --read-only` for retrieval-only Desktop checks
 - avoids opening SQLite for `initialize`, `tools/list`, and `mem_health_runtime`
 - avoids resending unchanged context packs when `known_pack_hash` matches
 - can run behind an optional local daemon if the host opens many stdio connections
@@ -196,21 +205,23 @@ Stdio remains the default and most compatible transport.
 If a host repeatedly opens MCP stdio connections, you can run a local daemon:
 
 ```bash
-codex-agent-mem-daemon --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db" --profile minimal --read-only
+codex-agent-mem-daemon --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db" --profile full --auth-token YOUR_LOCAL_TOKEN
 ```
 
 Then point the stdio bridge at it:
 
 ```bash
-codex-agent-mem-mcp --daemon-url http://127.0.0.1:37773 --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
+codex-agent-mem-mcp --daemon-url http://127.0.0.1:37773 --daemon-token YOUR_LOCAL_TOKEN --db-path "$HOME/.codex_agent_mem/codex_agent_mem.db"
 ```
 
 On Windows PowerShell:
 
 ```powershell
-codex-agent-mem-daemon --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db --profile minimal --read-only
-codex-agent-mem-mcp --daemon-url http://127.0.0.1:37773 --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
+codex-agent-mem-daemon --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db --profile full --auth-token YOUR_LOCAL_TOKEN
+codex-agent-mem-mcp --daemon-url http://127.0.0.1:37773 --daemon-token YOUR_LOCAL_TOKEN --db-path C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db
 ```
+
+The public `1.0.x` daemon accepts only loopback bind hosts (`127.0.0.1`, `localhost`, or `::1`). The optional bearer token is recommended when the daemon is kept alive, but it is a local safeguard only; it does not replace TLS, OAuth, hosted authentication, or a remote access-control layer.
 
 That does not claim to fix the host bug. It reduces the blast radius and makes the MCP easier to audit.
 
@@ -224,6 +235,7 @@ For the full diagnostic note and temporary mitigations, see:
 - no Codex hooks adapter yet
 - no Codex App Server adapter yet
 - no automatic semantic memory layer
-- AGENTS sync is opt-in and intentionally skipped when reinjection is enabled but the generated pack is not smaller than the source context
+- no encrypted-at-rest SQLite database in the public `1.0.x` line
+- AGENTS sync is intentionally skipped when the generated pack is not smaller than the source context
 - operational state is still heuristic and derived from turn text, not from a dedicated planner protocol
 - provenance is authoritative only for persisted payload/turn/session context that this capture path can actually see

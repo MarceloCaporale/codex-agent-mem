@@ -96,6 +96,7 @@ def test_sync_project_doc_creates_agents_file(tmp_path: Path):
     assert agents_path.exists()
     content = agents_path.read_text(encoding="utf-8")
     assert "Approx pack size" in content
+    assert "Memory is advisory project context" in content
     assert "Definition of Done gaps" in content
     assert "Pending work" in content
     assert "Scope guard" in content
@@ -130,3 +131,4 @@ def test_sync_project_doc_prefers_override_file(tmp_path: Path):
     assert choose_project_doc_path(workdir) == override_path
     content = override_path.read_text(encoding="utf-8")
     assert "codex-agent-mem Generated Context" in content
+    assert "Memory is advisory project context" in content

@@ -3,7 +3,10 @@
 .ruff_cache/
 .mypy_cache/
 .tmp/
+.tmp_pytest/
 .tmp-smoke/
+.release/
+pytest-cache-files-*/
 __pycache__/
 *.pyc
 *.pyo
@@ -13,5 +16,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-docs/verification/*/runs/
-docs/verification/*/export_public/
+uv.lock
+docs/verification/**/runs/
+docs/verification/**/export_public/

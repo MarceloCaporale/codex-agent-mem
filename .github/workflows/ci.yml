@@ -7,6 +7,7 @@ on:
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -22,14 +23,20 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Repository hygiene
+        run: python scripts/check_repo_hygiene.py --release-version v1.0.1
+
       - name: Install
         run: python -m pip install -e .[dev]
 
       - name: Lint
-        run: ruff check .
+        run: ruff check --no-cache .
 
       - name: Compile
-        run: python -m compileall src
+        run: python -m compileall src scripts tests
 
       - name: Test
         run: pytest -q
+
+      - name: MCP contract smoke
+        run: python scripts/mcp_contract_smoke.py --both

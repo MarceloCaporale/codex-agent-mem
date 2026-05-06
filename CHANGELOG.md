@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.1 - Prepared 2026-05-06
+
+- Stabilized the public local-first MCP runtime for multi-client use while keeping the core package local, auditable, and SQLite-backed.
+- Normalized MCP `structuredContent` so list-returning tools expose object roots as `{items, count}` instead of root arrays. This is a wire-format compatibility fix for stricter MCP clients, not a data migration.
+- Added session-aware retrieval for persisted memory: agents can list recent sessions with `mem_session_list` and pass optional `session_id` to retrieval tools to avoid cross-session context bleed in broad project scopes. This is retrieval over stored local memory, not live current-turn awareness.
+- Added defensive startup scope resolution for broad workspaces: `mem_scope_resolve` exposes candidate lanes from explicit hints, and `mem_bootstrap_context` returns a session-scoped pack only when `session_id` is explicit; otherwise it returns narrowing guidance instead of silently loading a project-wide pack or auto-selecting a session.
+- Added `mem_note_create` as the explicit writable path for manual operational memory. Notes are persisted as indexed observations, can be scoped to a validated `session_id`, are blocked by `--read-only`, appear in `mem_search`, and are eligible for `mem_context_pack`; snapshots remain versioned state captures, not the manual note mechanism.
+- Hardened `mem_snapshot_create` / `mem_snapshot_list` provenance for broad project scopes: snapshots can be tied to an explicit internal `session_id`, invalid cross-project session IDs are rejected, and unscoped snapshots are no longer silently associated with the latest project turn.
+- Recalibrated public quickstart, Codex config examples, runtime guidance, and the MCP contract smoke so normal continuity installations are writable by default; `--read-only` remains an explicit retrieval-only audit/debug mode.
+- Aligned Codex bootstrap tool approvals with the MCP profile definitions and added anti-drift coverage so `minimal`, `standard`, and `full` approval surfaces stay matched to `tools/list`.
+- Split public validation claims into retrieval-only and writable-continuity evidence so read-only client smokes are no longer presented as full continuity validation.
+- Extended the MCP contract smoke to verify later-process continuity: a manual note written through one writable MCP subprocess must be found by `mem_search`, included in `mem_context_pack`, and return `not_modified=true` from a later subprocess over the same temporary SQLite database.
+- Documented that `mem_note_create` requires an existing `project_key`, and that the `full` Codex example approves writable note, snapshot, governance, repair, and restore tools.
+- Hardened Codex notify/API project identity resolution so broad workspace roots and technical working directories are not persisted as accidental project keys when the captured turn identifies a narrower repository, AGENTS scope, or project-state canonical name.
+- Hardened broad project-scope retrieval with visible multi-session scope warnings, project-wide candidate objective labeling, retrieval dedupe, per-session dominance caps, clearer session labels, search provenance, and persisted-memory freshness cues.
+- Kept the hardening conservative by excluding volatile age from stable pack hashes, deduping by type/status/text so operational states remain distinct, overfetching before search dedupe, preserving protected operational items under dominance caps, and reporting session-level version metadata without claiming per-observation capture certainty.
+- Added response-diet no-regression coverage for post-hardening retrieval: compact text keeps only scope breadcrumbs, unchanged packs still return `not_modified=true`, and public token-savings claims remain tied to reproducible fixtures rather than universal guarantees.
+- Kept compact `content.text` as the default response diet for clients that consume `structuredContent`, and documented when Google Gemini CLI / Google Antigravity should use `response_mode=verbose` to expose useful payload text to the model.
+- Changed the stdio bridge default so `codex-agent-mem-mcp --daemon-url ...` no longer exits after the defensive 300 second idle timeout unless `--idle-timeout-seconds` is explicitly provided.
+- Kept direct stdio behavior unchanged: direct `codex-agent-mem-mcp` still defaults to a 300 second defensive idle shutdown, and `--idle-timeout-seconds 0` still disables it.
+- Serialized MCP request handling inside the optional threaded local daemon so one shared SQLite-backed server instance is not driven concurrently.
+- Hardened the optional local daemon for the public local-first line: loopback-only bind validation, optional bearer token auth for `/mcp`, sanitized public `/health`, and bearer-token forwarding from the stdio bridge.
+- Added a generated-context guardrail that marks retrieved memory as advisory project context rather than higher-priority instruction, plus public documentation that `1.0.x` local SQLite storage is plaintext by default and must not be used as a secrets vault.
+- Added release validation coverage for bridge idle-timeout resolution, local daemon request handling, `known_pack_hash` / `not_modified`, and object-root list payloads.
+- This release keeps hosted/web/OAuth bridge work outside the public core and keeps token-savings claims tied to reproducible methodology rather than universal guarantees.
+
 ## 1.0.0 - 2026-04-21
 
 - Added low-impact MCP runtime modes with `--profile minimal|standard|full`, `--read-only`, and enriched `mem_health_runtime` fields for profile, mutability, cache, lazy initialization, and spawn-storm diagnostics.

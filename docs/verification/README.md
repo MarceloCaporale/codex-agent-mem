@@ -2,14 +2,12 @@
 
 This directory contains reproducible, sanitized evidence for codex-agent-mem.
 
-The current v1.0.0 public run was executed with Codex Desktop using GPT-5.4 in a Codex environment, reasoning effort xhigh. This evidence validates the Codex Desktop path; it is not a ChatGPT web/app connector validation.
+The current public run uses synthetic fixtures and records local runtime metadata for the `1.0.x` release line. It is not an external model benchmark.
 
-All verification data is synthetic. The runner uses local SQLite files and local JSON/Markdown outputs only; it does not send memory, prompts, telemetry, or project data to external servers.
-
-The v1.0.0 verification set covers:
+The verification set covers:
 
 - context compression and token savings;
-- repeated-pack avoidance with `known_pack_hash`; 
+- repeated-pack avoidance with `known_pack_hash`;
 - lazy MCP initialization;
 - minimal tool surface;
 - read-only safety;
@@ -23,4 +21,7 @@ Start here:
 - `v1.0.0/RESULTS.md`
 - `v1.0.0/results.json`
 - `v1.0.0/METHODOLOGY.md`
-- `v1.0.0/checksums_sha256.txt`
+- `v1.0.1/release-gate-summary.md`
+- `v1.0.1/writable-defaults-v1.0.1.md`
+- `v1.0.1/manual-notes-v1.0.1.md`
+- `v1.0.1/checksums_sha256.txt`

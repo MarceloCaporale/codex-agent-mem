@@ -1,15 +1,15 @@
 {
-  "codex_agent_mem_version": "1.0.0",
+  "codex_agent_mem_version": "1.0.1",
   "execution_context": {
     "agent_runtime": "Codex Desktop",
-    "model": "GPT-5.4",
-    "reasoning_effort": "xhigh"
+    "model": "not_part_of_benchmark_synthetic_fixtures_only",
+    "reasoning_effort": "not_part_of_benchmark_synthetic_fixtures_only"
   },
-  "fixtures_sha256": "2e7e4dacf44727ae9b6181fb488c4ce062ba37af9c23e212ded4bab9b6105149",
-  "generated_at_utc": "2026-04-22T21:26:42.784943+00:00",
-  "privacy": "Synthetic fixtures only. No private chats, real sessions, credentials, user project data, or external memory/telemetry upload.",
-  "run_id": "v1.0.0__2026-04-22_212638_UTC",
-  "runner_sha256": "e1fc6244f71b731d3ee7c88f86f1a02c10bcad53d9b9d66399d3809543d1ccb0",
+  "fixtures_sha256": "1064a3b2e1c74960cd3ae4da13bfb33c949b9f11b805bf58cf9d5c21b719c3ef",
+  "generated_at_utc": "2026-04-26T05:25:57.368390+00:00",
+  "privacy": "No private chats, real sessions, credentials, or user project data.",
+  "run_id": "v1.0.0__2026-04-26_052552_UTC",
+  "runner_sha256": "7dd20a791cf6df1419ff1cf153d7c2029b690e21e16439621192000dc7ee8816",
   "scenarios": [
     {
       "closure_control": {
@@ -21,12 +21,12 @@
         "primary_reason": "pending_items_open"
       },
       "context_compression": {
-        "build_ms": 0.56,
-        "compression_ratio": 0.117,
-        "pack_hash": "9c219f1ea5993da6389c683a029e57c40aed129186e9fdfbe9de8058845967d7",
-        "pack_tokens": 216,
-        "saved_tokens": 1625,
-        "savings_percent": 88.27,
+        "build_ms": 0.57,
+        "compression_ratio": 0.137,
+        "pack_hash": "700b30ab9323f77d7c8366ebe09bcb7084645bbc31dcf7092fae5a15ca568b48",
+        "pack_tokens": 253,
+        "saved_tokens": 1588,
+        "savings_percent": 86.26,
         "source_tokens": 1841
       },
       "id": "small_project_continuity",
@@ -45,7 +45,7 @@
       },
       "not_modified": {
         "message": "continuity pack unchanged",
-        "pack_hash": "9c219f1ea5993da6389c683a029e57c40aed129186e9fdfbe9de8058845967d7",
+        "pack_hash": "700b30ab9323f77d7c8366ebe09bcb7084645bbc31dcf7092fae5a15ca568b48",
         "supported": true
       },
       "plain_language": "A short project where the agent should remember objective, constraints and open work without repeating the whole discussion.",
@@ -66,8 +66,8 @@
           "content_text_tokens_estimate": 40
         },
         "verbose": {
-          "content_text_chars": 20565,
-          "content_text_tokens_estimate": 5141
+          "content_text_chars": 20715,
+          "content_text_tokens_estimate": 5179
         }
       },
       "runtime": {
@@ -77,7 +77,7 @@
         "read_only": true,
         "response_mode": "compact",
         "same_db_process_count": 2,
-        "server_version": "1.0.0",
+        "server_version": "1.0.1",
         "spawn_storm_warning": false
       },
       "seed": {
@@ -97,12 +97,12 @@
         "primary_reason": "pending_items_open"
       },
       "context_compression": {
-        "build_ms": 0.66,
-        "compression_ratio": 0.048,
-        "pack_hash": "762cd3a6bb36f47b76bf12f629b55e2c9d4c18b7e59a3a94083af580c012775b",
-        "pack_tokens": 233,
-        "saved_tokens": 4622,
-        "savings_percent": 95.2,
+        "build_ms": 0.89,
+        "compression_ratio": 0.056,
+        "pack_hash": "b5c6ecd9ec15c6463cbfd924247bba500dca7bbb3834144afc6f7a7051d00aac",
+        "pack_tokens": 270,
+        "saved_tokens": 4585,
+        "savings_percent": 94.44,
         "source_tokens": 4855
       },
       "id": "medium_agent_workflow",
@@ -121,7 +121,7 @@
       },
       "not_modified": {
         "message": "continuity pack unchanged",
-        "pack_hash": "762cd3a6bb36f47b76bf12f629b55e2c9d4c18b7e59a3a94083af580c012775b",
+        "pack_hash": "b5c6ecd9ec15c6463cbfd924247bba500dca7bbb3834144afc6f7a7051d00aac",
         "supported": true
       },
       "plain_language": "A realistic multi-step implementation with repeated decisions, pending work and DoD requirements.",
@@ -142,8 +142,8 @@
           "content_text_tokens_estimate": 40
         },
         "verbose": {
-          "content_text_chars": 42793,
-          "content_text_tokens_estimate": 10698
+          "content_text_chars": 42943,
+          "content_text_tokens_estimate": 10736
         }
       },
       "runtime": {
@@ -153,7 +153,7 @@
         "read_only": true,
         "response_mode": "compact",
         "same_db_process_count": 2,
-        "server_version": "1.0.0",
+        "server_version": "1.0.1",
         "spawn_storm_warning": false
       },
       "seed": {
@@ -173,12 +173,12 @@
         "primary_reason": "pending_items_open"
       },
       "context_compression": {
-        "build_ms": 1.14,
-        "compression_ratio": 0.024,
-        "pack_hash": "2a4983655139737e718c1a4315e1797a805eeb5294eba9e8dd5cb8472bcbad50",
-        "pack_tokens": 232,
-        "saved_tokens": 9499,
-        "savings_percent": 97.62,
+        "build_ms": 1.01,
+        "compression_ratio": 0.028,
+        "pack_hash": "6cc762e877b54779ac835bf0820712bbd3e4971472926a3cba110557221e6664",
+        "pack_tokens": 269,
+        "saved_tokens": 9462,
+        "savings_percent": 97.24,
         "source_tokens": 9731
       },
       "id": "large_repeated_audit",
@@ -197,7 +197,7 @@
       },
       "not_modified": {
         "message": "continuity pack unchanged",
-        "pack_hash": "2a4983655139737e718c1a4315e1797a805eeb5294eba9e8dd5cb8472bcbad50",
+        "pack_hash": "6cc762e877b54779ac835bf0820712bbd3e4971472926a3cba110557221e6664",
         "supported": true
       },
       "plain_language": "A long audit where the same constraints and decisions would normally be re-sent many times.",
@@ -218,8 +218,8 @@
           "content_text_tokens_estimate": 40
         },
         "verbose": {
-          "content_text_chars": 75965,
-          "content_text_tokens_estimate": 18991
+          "content_text_chars": 76114,
+          "content_text_tokens_estimate": 19028
         }
       },
       "runtime": {
@@ -229,7 +229,7 @@
         "read_only": true,
         "response_mode": "compact",
         "same_db_process_count": 2,
-        "server_version": "1.0.0",
+        "server_version": "1.0.1",
         "spawn_storm_warning": false
       },
       "seed": {
@@ -249,12 +249,12 @@
         "primary_reason": "pending_items_open"
       },
       "context_compression": {
-        "build_ms": 0.88,
-        "compression_ratio": 0.037,
-        "pack_hash": "55cfc4345a1ccafeb426c30e451a13fa8da84e928a501b165d8e82d5be7c4e46",
-        "pack_tokens": 239,
-        "saved_tokens": 6284,
-        "savings_percent": 96.34,
+        "build_ms": 0.94,
+        "compression_ratio": 0.042,
+        "pack_hash": "1e445aab0917fb3baef42a14ad8443e4f94b5758b84601fde013f07ae7b879e8",
+        "pack_tokens": 276,
+        "saved_tokens": 6247,
+        "savings_percent": 95.77,
         "source_tokens": 6523
       },
       "id": "subagent_handoff_example",
@@ -273,7 +273,7 @@
       },
       "not_modified": {
         "message": "continuity pack unchanged",
-        "pack_hash": "55cfc4345a1ccafeb426c30e451a13fa8da84e928a501b165d8e82d5be7c4e46",
+        "pack_hash": "1e445aab0917fb3baef42a14ad8443e4f94b5758b84601fde013f07ae7b879e8",
         "supported": true
       },
       "plain_language": "A project where an explorer sub-agent audits context and a worker sub-agent implements a bounded change.",
@@ -294,8 +294,8 @@
           "content_text_tokens_estimate": 40
         },
         "verbose": {
-          "content_text_chars": 54476,
-          "content_text_tokens_estimate": 13619
+          "content_text_chars": 54625,
+          "content_text_tokens_estimate": 13656
         }
       },
       "runtime": {
@@ -305,7 +305,7 @@
         "read_only": true,
         "response_mode": "compact",
         "same_db_process_count": 2,
-        "server_version": "1.0.0",
+        "server_version": "1.0.1",
         "spawn_storm_warning": false
       },
       "seed": {

@@ -1,0 +1,49 @@
+# Example for an explicit retrieval-only audit/debug Codex run.
+# This is not the normal continuity configuration because it blocks writes.
+# Use config.toml.example for normal writable continuity.
+
+notify = [
+  'C:\Path\To\python.exe',
+  '-m',
+  'codex_agent_mem.codex_notify',
+  '--project-from-cwd',
+  '--db-path',
+  'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db',
+]
+
+[mcp_servers."codex-agent-mem"]
+command = 'C:\Path\To\python.exe'
+args = [
+  '-m',
+  'codex_agent_mem.mcp_stdio',
+  '--idle-timeout-seconds',
+  '300',
+  '--profile',
+  'minimal',
+  '--response-mode',
+  'compact',
+  '--read-only',
+  '--db-path',
+  'C:\Users\YOU\.codex_agent_mem\codex_agent_mem.db',
+]
+
+[mcp_servers."codex-agent-mem".tools.mem_session_list]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_scope_resolve]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_bootstrap_context]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_open_work]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_completion_check]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_context_pack]
+approval_mode = "approve"
+
+[mcp_servers."codex-agent-mem".tools.mem_health_runtime]
+approval_mode = "approve"
