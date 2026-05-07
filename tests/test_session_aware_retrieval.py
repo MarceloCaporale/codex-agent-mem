@@ -360,25 +360,25 @@ def test_scope_guard_project_wide_exposes_lane_inventory(tmp_path: Path):
 
 def test_project_wide_retrieval_filters_sessions_outside_project_root(tmp_path: Path):
     store = CodexAgentMemStore(tmp_path / "codex_agent_mem.db")
-    active_repo = tmp_path / "IA_OFICINA_v5"
+    active_repo = tmp_path / "active-workspace"
     external_cwd = tmp_path / "external-tools"
     active_repo.mkdir()
     external_cwd.mkdir()
 
     good_raw = {
         "runtime": "codex",
-        "project_key": "IA_OFICINA_v5",
+        "project_key": "active-workspace",
         "session_id": "office-thread",
         "turn_id": "office-turn",
         "cwd": str(active_repo),
         "timestamp": "2026-04-27T00:00:00Z",
-        "input_messages": ["Objective: verify IA_OFICINA_v5 release closure."],
-        "assistant_message": "Pending: finish IA_OFICINA_v5 local checks.",
+        "input_messages": ["Objective: verify active-workspace release closure."],
+        "assistant_message": "Pending: finish active-workspace local checks.",
         "metadata": {"project_root_path": str(active_repo), "project_resolution_source": "cwd:AGENTS.md"},
     }
     bad_raw = {
         "runtime": "codex",
-        "project_key": "IA_OFICINA_v5",
+        "project_key": "active-workspace",
         "session_id": "doors-thread",
         "turn_id": "doors-turn",
         "cwd": str(external_cwd),
@@ -393,23 +393,23 @@ def test_project_wide_retrieval_filters_sessions_outside_project_root(tmp_path: 
     store.ingest_event(good_raw, normalize_event(good_raw))
     store.ingest_event(bad_raw, normalize_event(bad_raw))
 
-    pack = store.context_pack("IA_OFICINA_v5", budget="full")
+    pack = store.context_pack("active-workspace", budget="full")
 
     assert pack is not None
-    assert "IA_OFICINA_v5 release closure" in pack["text"]
+    assert "active-workspace release closure" in pack["text"]
     assert "doors-api" not in pack["text"]
     assert pack["stats"]["source_session_count"] == 1
     assert pack["stats"]["source_sessions"][0]["external_session_id"] == "office-thread"
 
-    search_results = store.search_observations("doors-api", project_key="IA_OFICINA_v5", limit=5)
+    search_results = store.search_observations("doors-api", project_key="active-workspace", limit=5)
     assert search_results == []
 
     doors_session_id = _session_id_by_external(
         store,
         "doors-thread",
-        project_key="IA_OFICINA_v5",
+        project_key="active-workspace",
     )
-    scoped_pack = store.context_pack("IA_OFICINA_v5", budget="full", session_id=doors_session_id)
+    scoped_pack = store.context_pack("active-workspace", budget="full", session_id=doors_session_id)
     assert scoped_pack is not None
     assert "doors-api" in scoped_pack["text"]
     assert scoped_pack["stats"]["source_sessions"][0]["external_session_id"] == "doors-thread"
@@ -1387,8 +1387,8 @@ def test_upsert_session_merges_metadata_without_clobbering_existing_keys(tmp_pat
     assert metadata["model"] == "gpt-test"
     assert metadata["source"] == "codex-second"
     assert "empty_note" not in metadata
-    assert metadata["producer_version_first_seen"] == "1.0.1"
-    assert metadata["producer_version_last_seen"] == "1.0.1"
+    assert metadata["producer_version_first_seen"] == "1.0.2"
+    assert metadata["producer_version_last_seen"] == "1.0.2"
 
 
 def test_session_list_can_filter_by_query_and_sub_scope_hint(tmp_path: Path):

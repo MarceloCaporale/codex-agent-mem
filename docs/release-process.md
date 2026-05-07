@@ -39,7 +39,7 @@ For the final release gate, checksum files must already exist and must match
 the artifacts produced by the same isolated build:
 
 ```bash
-python scripts/smoke_release.py --final --mcp-subprocess --export-artifacts-dir .release/v1.0.1
+python scripts/smoke_release.py --final --mcp-subprocess --export-artifacts-dir .release/v1.0.2
 ```
 
 The release smoke should confirm:
@@ -66,21 +66,21 @@ The release smoke should confirm:
   rebuilt from the release source.
 - The checksum file lists release asset file names, not a committed `dist/`
   directory.
-- The v1.0.1 release checksum file is excluded from the sdist so the sdist does
+- The current release checksum file is excluded from the sdist so the sdist does
   not contain the hash of itself.
 - Do not reuse checksums from an earlier version.
-- If a v1.0.1 verification folder is created, keep it separate from v1.0.0
+- If a new verification folder is created, keep it separate from v1.0.0
   historical evidence.
 
 To generate checksums from an isolated build:
 
 ```bash
-python scripts/smoke_release.py --mcp-subprocess --with-ruff --with-build --with-wheel-smoke --write-checksums --export-artifacts-dir .release/v1.0.1
+python scripts/smoke_release.py --mcp-subprocess --with-ruff --with-build --with-wheel-smoke --write-checksums --export-artifacts-dir .release/v1.0.2
 ```
 
 Review and commit the checksum file before running `--final`, or publish it as a
 GitHub Release asset. If it is committed, `MANIFEST.in` still excludes the
-v1.0.1 checksum file from the sdist to avoid a circular hash.
+current release checksum file from the sdist to avoid a circular hash.
 The export directory is ignored by Git. It receives the verified wheel and sdist
 only after build, wheel smoke, and checksum writing or validation pass; those
 files are the release assets to upload. Do not rebuild artifacts later outside
@@ -109,7 +109,7 @@ Use a conservative classifier if any relevant gap remains:
 5. Build final artifacts from the committed source and generate checksums.
 6. Commit the checksum file if it is part of the public source release, keeping
    it excluded from the sdist.
-7. Run `python scripts/smoke_release.py --final --mcp-subprocess --export-artifacts-dir .release/v1.0.1`.
+7. Run `python scripts/smoke_release.py --final --mcp-subprocess --export-artifacts-dir .release/v1.0.2`.
 8. Ask for explicit approval to tag.
 9. Ask for explicit approval to push and publish the release.
 

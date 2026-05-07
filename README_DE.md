@@ -20,6 +20,7 @@ Ursprünglich für Codex- und GPT-Workflows gebaut, ist `codex-agent-mem` zu ein
 
 ## Neu in v1.0.x
 
+- v1.0.2 behebt einen Project-Identity-Edge-Case, bei dem von `codex-agent-mem` generierter Kontext in `AGENTS.md` von MCP-Hosts oder Agent-Clients als aktiver Project Scope missverstanden werden konnte. Ausserdem koennen Manual Notes einen fehlenden lokalen Project Record initialisieren, und bestehende `root_path`-Metadaten bleiben bei widerspruechlichen Updates erhalten.
 - v1.0.1 behebt einen lokalen Daemon/stdio-Bridge-Idle-Timeout-Pfad, der bei Nutzung von `--daemon-url` als falscher `Transport closed`-Vorfall erscheinen konnte.
 - v1.0.1 serialisiert die gemeinsame Request-Verarbeitung im optionalen threaded lokalen Daemon, damit eine einzelne SQLite-gestuetzte Serverinstanz nicht parallel angesteuert wird.
 - v1.0.1 haertet die oeffentliche local-first Daemon-Oberflaeche: nur Loopback-Bind, optionales Bearer-Token fuer `/mcp`, bereinigtes `/health` und Token-Weitergabe aus der stdio-Bridge.
@@ -36,7 +37,7 @@ Ursprünglich für Codex- und GPT-Workflows gebaut, ist `codex-agent-mem` zu ein
 - `known_pack_hash` / `not_modified`, damit unveränderte Continuity-Packs nicht erneut gesendet werden
 - Runtime-Diagnostik mit Heartbeat, Spawn-Storm-Warnung, optionaler Telemetrie und optionalem Daemon/stdio-Bridge
 
-Sichtbare Releases: [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+Sichtbare Releases: [v1.0.2 Identity + Scope Patch](./CHANGELOG.md#102---2026-05-07) | [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21)
 
 ## Snapshot (synthetische v1.0-Fixtures)
 
@@ -123,7 +124,7 @@ Geeignet für lange Audits, komplexe Projektkontinuität und Sessions, in denen 
 
 ## Status
 
-`1.0.1` ist die aktuelle 1.0.x-Wartungsrelease. `1.0.0` bleibt die oeffentliche Verifikationsbasis fuer die reproduzierbaren Metriken unten.
+`1.0.2` ist die aktuelle 1.0.x-Wartungsrelease. `1.0.0` bleibt die oeffentliche Verifikationsbasis fuer die reproduzierbaren Metriken unten.
 
 Was heute funktioniert:
 

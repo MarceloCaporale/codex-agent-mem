@@ -507,6 +507,19 @@ class CodexAgentMemStore:
         return project_key.replace("-", " ").replace("_", " ").strip() or project_key
 
     @staticmethod
+    def _root_path_key(root_path: str | None) -> str:
+        if not root_path:
+            return ""
+        text = str(root_path).strip()
+        if not text:
+            return ""
+        try:
+            text = str(Path(text).resolve(strict=False))
+        except (OSError, RuntimeError, ValueError):
+            pass
+        return text.replace("/", "\\").rstrip("\\").casefold()
+
+    @staticmethod
     def _snapshot_slug(label: str) -> str:
         compact = "".join(ch.lower() if ch.isalnum() else "-" for ch in label).strip("-")
         while "--" in compact:
@@ -561,21 +574,41 @@ class CodexAgentMemStore:
     def upsert_project(self, project_key: str, root_path: str | None) -> int:
         now = self._now()
         name = self._project_name(project_key)
+        incoming_root = str(root_path).strip() if root_path else None
         with self.conn:
+            existing = self.conn.execute(
+                "SELECT id, root_path FROM projects WHERE project_key = ?",
+                (project_key,),
+            ).fetchone()
+            if existing is None:
+                cur = self.conn.execute(
+                    """
+                    INSERT INTO projects(project_key, name, root_path, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (project_key, name, incoming_root, now, now),
+                )
+                return int(cur.lastrowid)
+            existing_root = existing["root_path"]
+            if (
+                incoming_root
+                and (
+                    not existing_root
+                    or self._root_path_key(existing_root) == self._root_path_key(incoming_root)
+                )
+            ):
+                next_root = incoming_root
+            else:
+                next_root = existing_root
             self.conn.execute(
                 """
-                INSERT INTO projects(project_key, name, root_path, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(project_key) DO UPDATE SET
-                  name = excluded.name,
-                  root_path = COALESCE(excluded.root_path, projects.root_path),
-                  updated_at = excluded.updated_at
+                UPDATE projects
+                SET name = ?, root_path = ?, updated_at = ?
+                WHERE id = ?
                 """,
-                (project_key, name, root_path, now, now),
+                (name, next_root, now, int(existing["id"])),
             )
-        row = self.conn.execute("SELECT id FROM projects WHERE project_key = ?", (project_key,)).fetchone()
-        assert row is not None
-        return int(row["id"])
+            return int(existing["id"])
 
     def _session_metadata_for_upsert(self, project_id: int, event: GenericEventEnvelope) -> dict[str, Any]:
         row = self.conn.execute(
@@ -880,12 +913,14 @@ class CodexAgentMemStore:
         tags: list[str] | None = None,
         importance: int | None = None,
     ) -> dict[str, Any] | None:
-        project = self._project_row(project_key)
-        if project is None:
-            return None
         note_text = " ".join(str(text or "").split())
         if not note_text:
             raise ValueError("Note text is required")
+        project = self._project_row(project_key)
+        if project is None:
+            self.upsert_project(project_key, None)
+            project = self._project_row(project_key)
+            assert project is not None
         raw_tags = [tags] if isinstance(tags, str) else (tags or [])
         normalized_tags = []
         for tag in raw_tags:

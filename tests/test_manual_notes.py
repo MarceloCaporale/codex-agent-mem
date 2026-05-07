@@ -95,6 +95,44 @@ def _create_codex_release_freeze_note(store: CodexAgentMemStore, project_key: st
     return note
 
 
+def test_upsert_project_preserves_existing_root_path_on_conflicting_update(tmp_path: Path):
+    store = CodexAgentMemStore(tmp_path / "codex_agent_mem.db")
+    original_root = str(tmp_path / "active-project")
+    conflicting_root = str(tmp_path / "other-project")
+
+    first_id = store.upsert_project("stable-project", original_root)
+    second_id = store.upsert_project("stable-project", conflicting_root)
+
+    assert second_id == first_id
+    project = store._project_row("stable-project")  # noqa: SLF001
+    assert project is not None
+    assert project["root_path"] == original_root
+
+
+def test_manual_note_create_initializes_missing_project_without_sqlite_manual_step(tmp_path: Path):
+    store = CodexAgentMemStore(tmp_path / "codex_agent_mem.db")
+    phrase = "first manual note initializes this memory project"
+
+    note = store.create_manual_note(
+        "new-manual-project",
+        phrase,
+        title="Initial manual note",
+        tags=["init", "manual"],
+        importance=4,
+    )
+
+    assert note is not None
+    assert note["project_key"] == "new-manual-project"
+    assert note["source_kind"] == "manual_note"
+    assert note["session_id"] is None
+    project = store._project_row("new-manual-project")  # noqa: SLF001
+    assert project is not None
+    assert project["root_path"] is None
+    search = store.search_observations(phrase, project_key="new-manual-project")
+    assert search
+    assert search[0]["id"] == note["observation_id"]
+
+
 def test_manual_note_create_is_searchable_packable_and_auditable(tmp_path: Path):
     store = CodexAgentMemStore(tmp_path / "codex_agent_mem.db")
     session_id = _seed_session(store, tmp_path)
@@ -397,9 +435,9 @@ def test_manual_note_project_specific_terms_win(tmp_path: Path):
     assert results[0]["id"] != codex_note["observation_id"]
 
 
-def test_lab_stress_clean_process_query_is_not_contaminated_by_codex_notes(tmp_path: Path):
+def test_multi_project_stress_clean_process_query_is_not_contaminated_by_codex_notes(tmp_path: Path):
     store = CodexAgentMemStore(tmp_path / "codex_agent_mem.db")
-    project_key = "__LAB_desarrollo_IDEAS"
+    project_key = "multi-project-workspace"
     _seed_session(store, tmp_path, project_key=project_key, external_session_id="codex-agent-mem-thread")
     _seed_session(store, tmp_path, project_key=project_key, external_session_id="clean-process-ended-thread")
     codex_note = _create_codex_release_freeze_note(store, project_key=project_key)
@@ -407,7 +445,7 @@ def test_lab_stress_clean_process_query_is_not_contaminated_by_codex_notes(tmp_p
         project_key,
         (
             "Validation note for codex-agent-mem manual-note search: "
-            "paquetes_gpt5.5-PRO codigo planes_y_roadmaps reportes_PTOI manifiesto auditoria "
+            "external-feedback-package implementation-plans audit-reports release-manifest "
             "must not retrieve codex-agent-mem."
         ),
         title="codex-agent-mem v1.0.1 manual-note relevance gate local",
@@ -419,7 +457,7 @@ def test_lab_stress_clean_process_query_is_not_contaminated_by_codex_notes(tmp_p
         (
             "clean-process-ended v0.2 current state. SPEC_TARGET_v0.2, "
             "VALIDATION_LOG_v0.1 and README_VERSION_v0.1 define the package audit plan. "
-            "Use paquetes_gpt5.5-PRO as external feedback evidence."
+            "Use external-feedback-package as external feedback evidence."
         ),
         title="clean-process-ended v0.2 validation package",
         tags=["clean-process-ended", "current-state", "baseline"],
@@ -427,7 +465,7 @@ def test_lab_stress_clean_process_query_is_not_contaminated_by_codex_notes(tmp_p
     )
 
     results = store.search_observations(
-        "SPEC_TARGET_v0.2 VALIDATION_LOG_v0.1 README_VERSION_v0.1 paquetes_gpt5.5-PRO",
+        "SPEC_TARGET_v0.2 VALIDATION_LOG_v0.1 README_VERSION_v0.1 external-feedback-package",
         project_key=project_key,
     )
 
@@ -440,15 +478,15 @@ def test_lab_stress_clean_process_query_is_not_contaminated_by_codex_notes(tmp_p
     assert meta_note["observation_id"] not in ids
 
 
-def test_lab_stress_negative_package_query_does_not_return_meta_note(tmp_path: Path):
+def test_multi_project_stress_negative_package_query_does_not_return_meta_note(tmp_path: Path):
     store = CodexAgentMemStore(tmp_path / "codex_agent_mem.db")
-    project_key = "__LAB_desarrollo_IDEAS"
+    project_key = "multi-project-workspace"
     _seed_session(store, tmp_path, project_key=project_key)
     meta_note = store.create_manual_note(
         project_key,
         (
             "Validation note for codex-agent-mem manual-note search: "
-            "paquetes_gpt5.5-PRO codigo planes_y_roadmaps reportes_PTOI manifiesto auditoria "
+            "external-feedback-package implementation-plans audit-reports release-manifest "
             "must remain empty for unrelated project searches."
         ),
         title="codex-agent-mem v1.0.1 manual-note relevance gate local",
@@ -457,7 +495,7 @@ def test_lab_stress_negative_package_query_does_not_return_meta_note(tmp_path: P
     )
 
     results = store.search_observations(
-        "paquetes_gpt5.5-PRO codigo planes_y_roadmaps reportes_PTOI manifiesto auditoria",
+        "external-feedback-package implementation-plans audit-reports release-manifest",
         project_key=project_key,
     )
 
@@ -695,6 +733,24 @@ def test_mcp_mem_note_create_contract_and_read_only_guard(tmp_path: Path):
         }
     )
     assert phrase in pack["result"]["structuredContent"]["text"]
+
+    first_project_note = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 45,
+            "method": "tools/call",
+            "params": {
+                "name": "mem_note_create",
+                "arguments": {
+                    "project_key": "mcp-new-manual-project",
+                    "text": "first MCP note creates a project record",
+                    "title": "First MCP note",
+                },
+            },
+        }
+    )
+    assert first_project_note["result"]["isError"] is False
+    assert first_project_note["result"]["structuredContent"]["project_key"] == "mcp-new-manual-project"
 
     read_only_server = CodexAgentMemMCPServer(
         store,

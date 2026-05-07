@@ -9,6 +9,11 @@ from typing import Any
 WINDOWS_ABS_RE = re.compile(r"[A-Za-z]:[\\/][^\s`\"<>|]+")
 POSIX_ABS_RE = re.compile(r"(?<!\w)/(?:[^\s`\"<>|]+/)*[^\s`\"<>|]+")
 SCOPE_RE = re.compile(r"^\s*Scope:\s*`?([^`\r\n]+)`?\s*$", re.IGNORECASE | re.MULTILINE)
+CODEX_AGENT_MEM_GENERATED_CONTEXT_RE = re.compile(
+    r"<!--\s*codex-agent-mem:generated-context:start\s*-->.*?"
+    r"(?:<!--\s*codex-agent-mem:generated-context:end\s*-->|$)",
+    re.IGNORECASE | re.DOTALL,
+)
 CANONICAL_RE = re.compile(
     r"Nombre\s+canonico:\s*(?:\r?\n\s*-\s*)?`?([^`\r\n]+)`?",
     re.IGNORECASE,
@@ -306,6 +311,7 @@ def _scope_from_agents(root: Path) -> str | None:
         text = path.read_text(encoding="utf-8", errors="ignore")
     except OSError:
         return None
+    text = CODEX_AGENT_MEM_GENERATED_CONTEXT_RE.sub("", text)
     match = SCOPE_RE.search(text)
     if not match:
         return None

@@ -20,6 +20,7 @@ Public baseline. Built in small, testable slices and still evolving, but already
 
 ## What’s new in v1.0.x
 
+- v1.0.2 fixes a project identity edge case where generated `codex-agent-mem` context inside `AGENTS.md` could be mistaken for active project scope by MCP hosts or agent clients. It also lets manual notes initialize a missing local project record and preserves existing project root metadata on conflicting updates.
 - v1.0.1 fixes one local daemon/stdio bridge idle-timeout path that could surface as a false `Transport closed` incident when `--daemon-url` is used.
 - v1.0.1 serializes shared request handling inside the optional threaded local daemon so one SQLite-backed server instance is not driven concurrently.
 - v1.0.1 hardens the public local-first daemon surface: loopback-only bind validation, optional bearer-token auth for `/mcp`, sanitized `/health`, and token forwarding from the stdio bridge.
@@ -36,7 +37,7 @@ Public baseline. Built in small, testable slices and still evolving, but already
 - `known_pack_hash` / `not_modified` support so unchanged continuity packs are not resent
 - runtime heartbeat diagnostics, spawn-storm warning, optional telemetry, and an optional daemon/stdio bridge
 
-Latest releases: [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+Latest releases: [v1.0.2 Identity + Scope Patch](./CHANGELOG.md#102---2026-05-07) | [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21)
 
 ## Snapshot (synthetic v1.0 fixtures)
 
@@ -123,7 +124,7 @@ Built for long audits, multi-step project continuity, and workflows where the re
 
 ## Status
 
-`1.0.1` is the current 1.0.x maintenance release. `1.0.0` remains the public verification baseline for the reproducible metrics below.
+`1.0.2` is the current 1.0.x maintenance release. `1.0.0` remains the public verification baseline for the reproducible metrics below.
 
 What works today:
 

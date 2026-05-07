@@ -355,6 +355,14 @@ def _verify_checksum_file(
     return findings
 
 
+def _is_release_artifact_checksum_file(path: Path) -> bool:
+    try:
+        header = "\n".join(path.read_text(encoding="utf-8").splitlines()[:8]).casefold()
+    except (UnicodeDecodeError, OSError):
+        return False
+    return "release artifact checksums" in header or "github release assets" in header
+
+
 def _walk_repo(root: Path) -> tuple[list[Path], list[Path]]:
     dirs: list[Path] = []
     files: list[Path] = []
@@ -465,11 +473,15 @@ def collect_findings(
                 )
             )
         if _is_versioned_verification_checksum(candidate, root):
+            require_local_targets = (
+                candidate.resolve() != expected_checksum.resolve()
+                and not _is_release_artifact_checksum_file(candidate)
+            )
             findings.extend(
                 _verify_checksum_file(
                     candidate,
                     root,
-                    require_local_targets=candidate.resolve() != expected_checksum.resolve(),
+                    require_local_targets=require_local_targets,
                 )
             )
     if not expected_checksum.exists():
@@ -512,7 +524,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=REPO_ROOT, help="Repository root to scan.")
     parser.add_argument(
         "--release-version",
-        default="v1.0.1",
+        default="v1.0.2",
         help="Release folder expected under docs/verification/.",
     )
     parser.add_argument(

@@ -31,7 +31,7 @@ This document captures the metadata and phrasing that best describes the current
 
 ## Recommended release framing
 
-`1.0.1` is the current public maintenance release for the stable `1.0.x`
+`1.0.2` is the current public maintenance release for the stable `1.0.x`
 local-first MCP core.
 The `1.0.x` line is a stable local-first MCP continuity layer for
 MCP-compatible AI agents built on SQLite, scoped continuity packs, deterministic closure
@@ -42,7 +42,7 @@ lazy SQLite initialization, runtime heartbeat diagnostics, optional telemetry,
 an optional local daemon/stdio bridge, MCP retrieval, and a local inspection
 UI.
 
-`v1.0.1` also hardens daemon/stdio transport behavior, documents client
+`v1.0.2` also keeps the identity/scope hardening current, while `v1.0.1` hardens daemon/stdio transport behavior, documents client
 response-mode differences, keeps object-root MCP `structuredContent` for list
 results, and adds release hygiene gates. `1.0.0` remains the reproducible
 verification baseline for the original token-reduction fixtures.

@@ -20,6 +20,7 @@ Baseline pública. Construída em slices pequenos e testáveis, ainda em evoluç
 
 ## Novidades na v1.0.x
 
+- v1.0.2 corrige um caso limite de identidade de projeto em que o contexto gerado por `codex-agent-mem` dentro de `AGENTS.md` podia ser confundido com o scope ativo do projeto por hosts MCP ou clientes de agentes. Também permite que notas manuais inicializem um registro local de projeto ausente e preserva a metadata `root_path` existente em atualizações conflitantes.
 - v1.0.1 corrige um caminho de `idle-timeout` entre o daemon local e a bridge stdio que podia aparecer como falso incidente `Transport closed` quando `--daemon-url` era usado.
 - v1.0.1 serializa o tratamento compartilhado de requests dentro do daemon local threaded opcional para que uma única instância SQLite não seja usada de forma concorrente.
 - v1.0.1 endurece a superfície pública local-first do daemon: bind apenas em loopback, bearer token opcional para `/mcp`, `/health` sanitizado e encaminhamento de token pela bridge stdio.
@@ -36,7 +37,7 @@ Baseline pública. Construída em slices pequenos e testáveis, ainda em evoluç
 - suporte a `known_pack_hash` / `not_modified` para não reenviar packs de continuidade sem mudanças
 - diagnósticos runtime com heartbeat, spawn-storm warning, telemetria opcional e daemon/bridge stdio opcional
 
-Releases recentes: [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+Releases recentes: [v1.0.2 Identity + Scope Patch](./CHANGELOG.md#102---2026-05-07) | [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21)
 
 ## Snapshot (fixtures sintéticos v1.0)
 
@@ -123,7 +124,7 @@ Criado para auditorias longas, continuidade de projetos em múltiplos passos e f
 
 ## Status
 
-`1.0.1` é a release atual de manutenção 1.0.x. `1.0.0` continua sendo a baseline pública de verificação para as métricas reproduzíveis abaixo.
+`1.0.2` é a release atual de manutenção 1.0.x. `1.0.0` continua sendo a baseline pública de verificação para as métricas reproduzíveis abaixo.
 
 Funciona hoje:
 

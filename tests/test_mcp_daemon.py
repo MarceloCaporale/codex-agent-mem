@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 
+from codex_agent_mem import __version__
 from codex_agent_mem.db import CodexAgentMemStore
 from codex_agent_mem.ingest import normalize_event
 from codex_agent_mem.mcp_daemon import _make_handler, _validate_bind_host
@@ -132,7 +133,7 @@ def test_daemon_http_smoke_uses_temp_db_without_opening_store(tmp_path: Path):
             health = get_json(base_url, "/health")
             assert health["profile"] == "minimal"
             assert health["read_only"] is True
-            assert health["server_version"] == "1.0.1"
+            assert health["server_version"] == __version__
             assert "db_path" not in health
 
             initialized = post_json(
@@ -188,7 +189,7 @@ def test_daemon_auth_token_protects_mcp_but_not_health(tmp_path: Path):
     try:
         with run_server(handler) as base_url:
             health = get_json(base_url, "/health")
-            assert health["server_version"] == "1.0.1"
+            assert health["server_version"] == __version__
             assert "db_path" not in health
             assert token not in json.dumps(health, ensure_ascii=True)
 

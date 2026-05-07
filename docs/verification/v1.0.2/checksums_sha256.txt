@@ -1,0 +1,9 @@
+# codex-agent-mem v1.0.2 release artifact checksums
+# Generated from isolated release build output.
+# File names refer to GitHub release assets, not a committed dist/ directory.
+# These hashes identify the official release assets built by the release gate.
+# They are not a cross-platform bit-for-bit reproducible-build guarantee.
+# This file is excluded from the v1.0.2 sdist to avoid self-referential hashes.
+
+f8ca244a48b6ffce0aac93366e56f8d2d0b458fd183f4ca710a417a6bff0af81  codex_agent_mem-1.0.2-py3-none-any.whl
+bec0b066639586bcb96ac133c290c839126a76c6654943b3fc54327e89070ff2  codex_agent_mem-1.0.2.tar.gz

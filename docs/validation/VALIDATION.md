@@ -23,7 +23,7 @@ universal token-savings guarantee.
 
 | Area | Level | Evidence |
 | --- | --- | --- |
-| Version identity | L1 | `pyproject.toml` and `src/codex_agent_mem/__init__.py` report `1.0.1`. |
+| Version identity | L1 | `pyproject.toml` and `src/codex_agent_mem/__init__.py` report `1.0.2`. |
 | MCP list payload shape | L1 | `structuredContent` returns object roots; list values are wrapped as `{items, count}` in `src/codex_agent_mem/mcp_stdio.py` and covered by `tests/test_mcp.py`. |
 | `content.text` response diet | L1 | Compact, balanced, and verbose text modes are covered by `tests/test_mcp_v1_runtime_efficiency.py` and fixture results. |
 | `pack_hash` / `known_pack_hash` / `not_modified` | L1 | `mem_context_pack` returns a stable `pack_hash`; repeated calls with `known_pack_hash` return `not_modified=true` when unchanged. |

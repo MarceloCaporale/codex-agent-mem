@@ -20,6 +20,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 
 ## v1.0.x 新增内容
 
+- v1.0.2 修复一个 project identity 边界情况：`AGENTS.md` 内由 `codex-agent-mem` 生成的上下文，可能被 MCP hosts 或 agent clients 误当成当前 active project scope。它也允许 manual notes 初始化缺失的 local project record，并在冲突更新时保留既有 `root_path` metadata。
 - v1.0.1 修复了 local daemon / stdio bridge 的一个 idle-timeout 路径，该路径在使用 `--daemon-url` 时可能表现为误报的 `Transport closed` incident。
 - v1.0.1 对 optional threaded local daemon 内的共享 request 处理进行串行化，避免同一个 SQLite-backed server instance 被并发驱动。
 - v1.0.1 加固 public local-first daemon surface：loopback-only bind validation、`/mcp` optional bearer-token auth、sanitized `/health`，以及 stdio bridge 的 token forwarding。
@@ -36,7 +37,7 @@ codex-agent-mem 将持久化项目记忆放在模型运行时之外，把连续�
 - `known_pack_hash` / `not_modified`，避免重复发送未变化的连续性 pack
 - heartbeat、spawn-storm warning、可选 telemetry，以及可选 daemon/stdio bridge
 
-可见版本: [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+可见版本: [v1.0.2 Identity + Scope Patch](./CHANGELOG.md#102---2026-05-07) | [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21)
 
 ## Snapshot（v1.0 合成 fixtures）
 
@@ -123,7 +124,7 @@ Grok / xAI 作为 protocol-level compatibility note 列出，不是 live model t
 
 ## 状态
 
-`1.0.1` 是当前的 1.0.x maintenance release。`1.0.0` 仍然是下面 reproducible metrics 的 public verification baseline。
+`1.0.2` 是当前的 1.0.x maintenance release。`1.0.0` 仍然是下面 reproducible metrics 的 public verification baseline。
 
 当前已实现：
 

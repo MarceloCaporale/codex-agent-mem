@@ -20,6 +20,7 @@ Codex と GPT workflow から生まれた `codex-agent-mem` は、いまでは C
 
 ## v1.0.x の追加点
 
+- v1.0.2 は、`AGENTS.md` 内の `codex-agent-mem` 生成コンテキストが MCP hosts や agent clients に active project scope と誤認される可能性がある project identity の edge case を修正します。また、manual notes が不足している local project record を初期化できるようにし、競合する更新時にも既存の `root_path` metadata を保持します。
 - v1.0.1 は、`--daemon-url` 利用時に false `Transport closed` incident として見える可能性があった local daemon / stdio bridge の idle-timeout 経路を修正します。
 - v1.0.1 は、optional threaded local daemon 内の共有 request 処理を serial 化し、1 つの SQLite-backed server instance が同時に駆動されないようにします。
 - v1.0.1 は public local-first daemon surface を harden します: loopback-only bind validation、`/mcp` の optional bearer-token auth、sanitized `/health`、stdio bridge からの token forwarding。
@@ -36,7 +37,7 @@ Codex と GPT workflow から生まれた `codex-agent-mem` は、いまでは C
 - 変更のない continuity pack を再送しない `known_pack_hash` / `not_modified`
 - heartbeat、spawn-storm warning、任意 telemetry、任意 daemon/stdio bridge による runtime diagnostics
 
-参照しやすいリリース: [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21) | [v0.9.0 Governance + Runtime Hardening](./CHANGELOG.md#090---2026-04-18)
+参照しやすいリリース: [v1.0.2 Identity + Scope Patch](./CHANGELOG.md#102---2026-05-07) | [v1.0.1 Transport + Local Security Hotfix](./CHANGELOG.md#101---prepared-2026-05-06) | [v1.0.0 Low-Impact Runtime](./CHANGELOG.md#100---2026-04-21)
 
 ## Snapshot (合成 v1.0 fixture)
 
@@ -123,7 +124,7 @@ token に敏感な Claude Code workflow では、`codex-agent-mem` はデフォ�
 
 ## 状態
 
-`1.0.1` は現在の 1.0.x maintenance release です。`1.0.0` は、下記の reproducible metrics の public verification baseline として残ります。
+`1.0.2` は現在の 1.0.x maintenance release です。`1.0.0` は、下記の reproducible metrics の public verification baseline として残ります。
 
 現在動作しているもの:
 

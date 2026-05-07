@@ -54,11 +54,11 @@ def test_project_identity_prefers_mentioned_repo_over_broad_cwd(tmp_path: Path):
 
 
 def test_project_identity_prefers_cwd_project_over_external_mentioned_path(tmp_path: Path):
-    active_repo = tmp_path / "IA_OFICINA_v5"
+    active_repo = tmp_path / "active-workspace"
     external_repo = tmp_path / "doors-api"
     active_repo.mkdir()
     external_repo.mkdir()
-    (active_repo / "AGENTS.md").write_text("Scope: `IA_OFICINA_v5`\n", encoding="utf-8")
+    (active_repo / "AGENTS.md").write_text("Scope: `active-workspace`\n", encoding="utf-8")
     (external_repo / "AGENTS.md").write_text("Scope: `doors-api`\n", encoding="utf-8")
     payload = {
         "type": "agent-turn-complete",
@@ -73,7 +73,7 @@ def test_project_identity_prefers_cwd_project_over_external_mentioned_path(tmp_p
 
     identity = derive_project_identity(payload, explicit=None, project_from_cwd=True)
 
-    assert identity.project_key == "IA_OFICINA_v5"
+    assert identity.project_key == "active-workspace"
     assert identity.root_path == str(active_repo)
     assert identity.source == "cwd:AGENTS.md"
     assert "mentioned_path_ignored_due_to_cwd_project" in identity.warnings
@@ -128,6 +128,38 @@ def test_project_identity_uses_agents_scope_from_cwd(tmp_path: Path):
     }
 
     assert derive_project_key(payload, explicit=None, project_from_cwd=True) == "trip-studio"
+
+
+def test_project_identity_ignores_generated_memory_scope_from_agents(tmp_path: Path):
+    repo = tmp_path / "active-project"
+    repo.mkdir()
+    (repo / "AGENTS.md").write_text(
+        """
+# Project guidance
+
+<!-- codex-agent-mem:generated-context:start -->
+## codex-agent-mem Generated Context
+
+Scope: `stale-project`
+
+### Objective
+- stale generated memory from a previous context
+<!-- codex-agent-mem:generated-context:end -->
+""",
+        encoding="utf-8",
+    )
+    payload = {
+        "type": "agent-turn-complete",
+        "thread-id": "th-active",
+        "turn-id": "tu-active",
+        "cwd": str(repo),
+    }
+
+    identity = derive_project_identity(payload, explicit=None, project_from_cwd=True)
+
+    assert identity.project_key == "active-project"
+    assert identity.root_path == str(repo)
+    assert identity.source == "cwd:project_marker"
 
 
 def test_project_identity_uses_project_state_canonical_name(tmp_path: Path):
@@ -214,11 +246,11 @@ def test_direct_ingest_uses_resolved_project_root(tmp_path: Path):
 
 
 def test_direct_ingest_keeps_active_cwd_project_when_prompt_mentions_external_repo(tmp_path: Path):
-    active_repo = tmp_path / "IA_OFICINA_v5"
+    active_repo = tmp_path / "active-workspace"
     external_repo = tmp_path / "doors-api"
     active_repo.mkdir()
     external_repo.mkdir()
-    (active_repo / "AGENTS.md").write_text("Scope: `IA_OFICINA_v5`\n", encoding="utf-8")
+    (active_repo / "AGENTS.md").write_text("Scope: `active-workspace`\n", encoding="utf-8")
     (external_repo / "AGENTS.md").write_text("Scope: `doors-api`\n", encoding="utf-8")
     db_path = tmp_path / "codex_agent_mem.db"
     payload = {
@@ -227,7 +259,7 @@ def test_direct_ingest_keeps_active_cwd_project_when_prompt_mentions_external_re
         "turn-id": "tu-office",
         "cwd": str(active_repo),
         "input-messages": [f"Revisa IA; no cambies de proyecto aunque se mencione {external_repo}."],
-        "last-assistant-message": "Decision: stay on the active IA_OFICINA_v5 project.",
+        "last-assistant-message": "Decision: stay on the active workspace project.",
         "timestamp": "2026-04-29T00:00:00Z",
     }
     identity = derive_project_identity(payload, explicit=None, project_from_cwd=True)
@@ -235,10 +267,49 @@ def test_direct_ingest_keeps_active_cwd_project_when_prompt_mentions_external_re
 
     result = ingest_direct(db_path, payload, generic)
 
-    assert result["project_key"] == "IA_OFICINA_v5"
+    assert result["project_key"] == "active-workspace"
     with sqlite3.connect(db_path) as con:
         rows = con.execute("SELECT project_key, root_path FROM projects ORDER BY project_key").fetchall()
-    assert rows == [("IA_OFICINA_v5", str(active_repo))]
+    assert rows == [("active-workspace", str(active_repo))]
+
+
+def test_direct_ingest_does_not_use_generated_memory_scope_as_project_identity(tmp_path: Path):
+    repo = tmp_path / "active-project"
+    repo.mkdir()
+    (repo / "AGENTS.md").write_text(
+        """
+# Project guidance
+
+<!-- codex-agent-mem:generated-context:start -->
+## codex-agent-mem Generated Context
+
+Scope: `stale-project`
+
+### Objective
+- stale generated memory from a previous context
+<!-- codex-agent-mem:generated-context:end -->
+""",
+        encoding="utf-8",
+    )
+    db_path = tmp_path / "codex_agent_mem.db"
+    payload = {
+        "type": "agent-turn-complete",
+        "thread-id": "th-active",
+        "turn-id": "tu-active",
+        "cwd": str(repo),
+        "input-messages": ["Objective: register the active project start."],
+        "last-assistant-message": "Decision: continue in active-project.",
+        "timestamp": "2026-05-07T00:00:00Z",
+    }
+    identity = derive_project_identity(payload, explicit=None, project_from_cwd=True)
+    generic = codex_notify_to_generic(payload, identity.project_key, project_identity=identity)
+
+    result = ingest_direct(db_path, payload, generic)
+
+    assert result["project_key"] == "active-project"
+    with sqlite3.connect(db_path) as con:
+        rows = con.execute("SELECT project_key, root_path FROM projects ORDER BY project_key").fetchall()
+    assert rows == [("active-project", str(repo))]
 
 
 def test_http_ingest_preserves_codex_contract(monkeypatch):

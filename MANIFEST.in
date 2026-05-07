@@ -11,12 +11,14 @@ include SECURITY.md
 include CONTRIBUTING.md
 include AGENTS.md
 include RELEASE_NOTES_v1.0.1.md
+include RELEASE_NOTES_v1.0.2.md
 recursive-include src/codex_agent_mem *.sql
 recursive-include src/codex_agent_mem/templates *.html
 recursive-include src/codex_agent_mem/static *.css
 recursive-include docs *.md *.json *.py
 include docs/verification/v1.0.0/checksums_sha256.txt
 exclude docs/verification/v1.0.1/checksums_sha256.txt
+exclude docs/verification/v1.0.2/checksums_sha256.txt
 recursive-include scripts *.py *.ps1 *.sh
 prune docs/verification/runs
 prune docs/verification/export_public
@@ -24,6 +26,8 @@ prune docs/verification/v1.0.0/runs
 prune docs/verification/v1.0.0/export_public
 prune docs/verification/v1.0.1/runs
 prune docs/verification/v1.0.1/export_public
+prune docs/verification/v1.0.2/runs
+prune docs/verification/v1.0.2/export_public
 global-exclude *.py[cod]
 global-exclude __pycache__/*
 global-exclude .pytest_cache/*

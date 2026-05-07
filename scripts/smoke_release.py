@@ -273,7 +273,7 @@ def _write_checksums(release_version: str, output_dir: Path | None) -> StepResul
         "# File names refer to GitHub release assets, not a committed dist/ directory.",
         "# These hashes identify the official release assets built by the release gate.",
         "# They are not a cross-platform bit-for-bit reproducible-build guarantee.",
-        "# This file is excluded from the v1.0.1 sdist to avoid self-referential hashes.",
+        f"# This file is excluded from the {release_version} sdist to avoid self-referential hashes.",
         "",
     ]
     for artifact in artifacts:
@@ -409,7 +409,7 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Use real stdio subprocess for MCP smoke.",
     )
-    parser.add_argument("--release-version", default="v1.0.1")
+    parser.add_argument("--release-version", default="v1.0.2")
     parser.add_argument("--step-timeout-seconds", type=int, default=300)
     parser.add_argument("--dev-skip-hygiene", action="store_true")
     parser.add_argument("--dev-skip-compileall", action="store_true")

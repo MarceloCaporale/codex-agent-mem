@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 - 2026-05-07
+
+- Fixed a project identity edge case where generated `codex-agent-mem` context inside `AGENTS.md` could be mistaken for the active project scope by MCP hosts or agent clients.
+- Preserved existing project `root_path` metadata when a later conflicting project update is observed, preventing accidental project-root drift.
+- Allowed `mem_note_create` to initialize a missing local project record before storing the first manual note, while keeping `--read-only` protections unchanged.
+- Added synthetic regression coverage for generated-context scope stripping, first-note project initialization, and conflicting project-root updates without publishing private workspace identifiers.
+
 ## 1.0.1 - Prepared 2026-05-06
 
 - Stabilized the public local-first MCP runtime for multi-client use while keeping the core package local, auditable, and SQLite-backed.

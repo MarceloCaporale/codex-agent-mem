@@ -32,17 +32,17 @@ isolated build, and wheel package-data smoke.
 Generate release checksums from isolated build output:
 
 ```bash
-python scripts/smoke_release.py --mcp-subprocess --with-ruff --with-build --with-wheel-smoke --write-checksums --export-artifacts-dir .release/v1.0.1
+python scripts/smoke_release.py --mcp-subprocess --with-ruff --with-build --with-wheel-smoke --write-checksums --export-artifacts-dir .release/v1.0.2
 ```
 
-Review `docs/verification/v1.0.1/checksums_sha256.txt`, then commit it if the
-release source will carry checksum evidence. `MANIFEST.in` excludes that v1.0.1
+Review `docs/verification/v1.0.2/checksums_sha256.txt`, then commit it if the
+release source will carry checksum evidence. `MANIFEST.in` excludes that v1.0.2
 checksum file from the sdist so the sdist does not contain the hash of itself.
 
 Final gate:
 
 ```bash
-python scripts/smoke_release.py --final --mcp-subprocess --export-artifacts-dir .release/v1.0.1
+python scripts/smoke_release.py --final --mcp-subprocess --export-artifacts-dir .release/v1.0.2
 ```
 
 The final gate verifies checksums against artifacts built in that same run. It
@@ -59,7 +59,7 @@ reproducible-build guarantee.
 ## Human gates
 
 - Ask explicitly before commit.
-- After commit, recreate/move the local `v1.0.1` tag only with explicit approval.
+- After commit, create the local `v1.0.2` tag only with explicit approval.
 - Ask explicitly before pushing the branch.
 - Ask explicitly before pushing the tag.
 - Ask explicitly before publishing a GitHub release.
