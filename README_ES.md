@@ -4,6 +4,8 @@
   <img src="docs/assets/codex-agent-mem-social-preview.png" alt="codex-agent-mem: persistent local memory for MCP clients" width="100%">
 </p>
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/MarceloCaporale/codex-agent-mem)
+
 Otros idiomas: [English](./README.md) | [Deutsch](./README_DE.md) | [Português do Brasil](./README_PT_BR.md) | [中文](./README_ZH.md) | [日本語](./README_JA.md)
 
 **Memoria MCP portable, auditable y local-first para agentes de IA y flujos de coding compatibles con MCP.**
