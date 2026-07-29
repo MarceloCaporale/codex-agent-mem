@@ -1,5 +1,7 @@
 # codex-agent-mem
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2FMarceloCaporale%2Fcodex-agent-mem.svg)](https://mcptoplist.com/server/glama%2FMarceloCaporale%2Fcodex-agent-mem)
+
 <p align="center">
   <img src="docs/assets/codex-agent-mem-social-preview.png" alt="codex-agent-mem: persistent local memory for MCP clients" width="100%">
 </p>
